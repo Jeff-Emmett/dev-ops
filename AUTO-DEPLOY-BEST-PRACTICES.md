@@ -139,8 +139,22 @@ curl -X POST "https://gitea.jeffemmett.com/api/v1/repos/jeffemmett/<repo>/hooks"
   }'
 ```
 
+### 3. Add GitHub webhook (for mirror repos only)
+
+In the GitHub repo settings → Webhooks → Add webhook:
+- **Payload URL**: `https://deploy.jeffemmett.com/github/<repo>`
+- **Content type**: `application/json`
+- **Secret**: `github-deploy-secret-2025`
+- **Events**: Just the push event
+
+Also configure the `github` remote on the server:
+```bash
+ssh netcup "cd /opt/websites/<repo> && git remote add github git@github.com:Jeff-Emmett/<repo>.git"
+```
+
 ## Deploy Flow
 
+### Gitea-Primary Repos (Default)
 1. Developer pushes to Gitea (main branch)
 2. Gitea sends webhook to `deploy.jeffemmett.com/deploy/<repo>`
 3. Webhook server:
@@ -149,6 +163,44 @@ curl -X POST "https://gitea.jeffemmett.com/api/v1/repos/jeffemmett/<repo>/hooks"
    - Runs `docker compose up -d --build`
 4. Traefik auto-discovers new container via labels
 5. Site is live
+
+### GitHub-Primary Mirror Repos
+For repos where GitHub is the source of truth (e.g., client projects, v0.dev exports):
+
+1. Developer pushes to GitHub
+2. GitHub sends webhook to `deploy.jeffemmett.com/github/<repo>`
+3. Webhook server:
+   - Verifies GitHub signature
+   - Runs `git fetch github && git reset --hard github/main`
+   - Triggers Gitea mirror sync (keeps Gitea in sync)
+   - Runs `docker compose up -d --build`
+4. Site is live
+
+**Mirror repos are defined in `webhook.py`:**
+```python
+MIRROR_REPOS = {
+    'Aunty-Sparkles-Website',
+    'ebb-n-flow-website',
+    'jefflix-website',
+    'mytmux.life-website',
+    'paint-spark-banksy-website',
+    'paper-presents-website',
+    'psilo-cybernetics-website',
+    'rSpace-website',
+    'shiitake-john-website',
+    'soul-speaks-soil-website',
+}
+```
+
+**Requirements for GitHub mirror sync:**
+- SSH key on Netcup: `~/.ssh/github_ed25519`
+- SSH config entry for `github.com`
+- Repo must have `github` remote configured with SSH URL:
+  ```bash
+  git remote add github git@github.com:Jeff-Emmett/<repo>.git
+  ```
+- GitHub webhook pointing to `https://deploy.jeffemmett.com/github/<repo>`
+- Webhook secret: `github-deploy-secret-2025`
 
 ## Troubleshooting
 
@@ -165,6 +217,8 @@ ssh netcup "docker exec deploy-webhook cat /var/log/deploys/<repo>_<timestamp>.l
 | `ENOENT: no such file, stat '/app/CLAUDE.md'` | CLAUDE.md symlink in build | Add CLAUDE.md to .dockerignore |
 | `container name already in use` | Old container from central compose | `docker stop <name> && docker rm <name>` |
 | `Unknown repo` | Repo not in webhook.py | Add to REPOS dict and rebuild |
+| Exit code 128 on GitHub mirror | GitHub remote using HTTPS or SSH key missing | Use SSH URL for github remote, ensure `~/.ssh/github_ed25519` exists |
+| `could not read Username for github` | GitHub remote using HTTPS in non-interactive mode | `git remote set-url github git@github.com:Owner/repo.git` |
 
 ### Verify webhook is configured
 ```bash
