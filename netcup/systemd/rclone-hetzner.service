@@ -1,0 +1,25 @@
+[Unit]
+Description=Rclone mount for Hetzner Storage Box
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/rclone mount hetzner: /mnt/hetzner-media \
+  --config /root/.config/rclone/rclone.conf \
+  --allow-other \
+  --vfs-cache-mode full \
+  --vfs-cache-max-size 50G \
+  --vfs-read-chunk-size 64M \
+  --vfs-read-chunk-size-limit 2G \
+  --buffer-size 64M \
+  --dir-cache-time 72h \
+  --cache-dir /var/cache/rclone-hetzner \
+  --log-level INFO \
+  --log-file /var/log/rclone-hetzner.log
+ExecStop=/bin/fusermount -uz /mnt/hetzner-media
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

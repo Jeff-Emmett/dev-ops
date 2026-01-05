@@ -1,0 +1,13 @@
+[Unit]
+Description=Restart media server containers after rclone mount
+BindsTo=rclone-hetzner.service
+After=rclone-hetzner.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStopPost=/usr/bin/docker restart jellyfin qbittorrent radarr sonarr lidarr navidrome jellyseerr 2>/dev/null || true
+
+[Install]
+WantedBy=multi-user.target

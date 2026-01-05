@@ -1,0 +1,3 @@
+# Clean up old temp files daily at 4 AM
+# Prevents /tmp from filling up (which breaks Docker health checks)
+0 4 * * * root find /tmp -type f -atime +1 -delete 2>/dev/null; find /tmp -type d -empty -delete 2>/dev/null
