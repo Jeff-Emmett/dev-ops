@@ -1,0 +1,12 @@
+http:
+  routers:
+    worldplay:
+      rule: "Host(`worldplay.jeffemmett.com`)"
+      entrypoints:
+        - web
+      service: worldplay
+  services:
+    worldplay:
+      loadBalancer:
+        servers:
+          - url: "http://worldplay-website:3000"

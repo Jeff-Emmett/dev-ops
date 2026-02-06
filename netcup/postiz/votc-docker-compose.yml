@@ -1,0 +1,117 @@
+services:
+  postiz-votc:
+    image: ghcr.io/gitroomhq/postiz-app:latest
+    container_name: postiz-votc
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=false"
+      - "sablier.enable=true"
+      - "sablier.group=postiz-votc"
+      - "traefik.http.routers.postiz-votc.rule=Host(`votc-socials.jeffemmett.com`)"
+      - "traefik.http.routers.postiz-votc.entrypoints=web,websecure"
+      - "traefik.http.services.postiz-votc.loadbalancer.server.port=5000"
+    environment:
+      MAIN_URL: "https://votc-socials.jeffemmett.com"
+      FRONTEND_URL: "https://votc-socials.jeffemmett.com"
+      NEXT_PUBLIC_BACKEND_URL: "https://votc-socials.jeffemmett.com/api"
+      JWT_SECRET: "U7rFB761ccYkGvr3ok58btOURMeXwBmB2Rdf6UHTSfrSPINXPppy3FFAEzgvPO"
+      DATABASE_URL: "postgresql://votc-postiz:votc-postiz-2025@postiz-votc-postgres:5432/postiz-votc-db"
+      REDIS_URL: "redis://postiz-votc-redis:6379"
+      BACKEND_INTERNAL_URL: "http://localhost:3000"
+      TEMPORAL_ADDRESS: "temporal:7233"
+      IS_GENERAL: "true"
+      DISABLE_REGISTRATION: "false"
+      STORAGE_PROVIDER: "local"
+      UPLOAD_DIRECTORY: "/uploads"
+      NEXT_PUBLIC_UPLOAD_DIRECTORY: "/uploads"
+      X_API_KEY: ""
+      X_API_SECRET: ""
+      LINKEDIN_CLIENT_ID: ""
+      LINKEDIN_CLIENT_SECRET: ""
+      REDDIT_CLIENT_ID: ""
+      REDDIT_CLIENT_SECRET: ""
+      GITHUB_CLIENT_ID: ""
+      GITHUB_CLIENT_SECRET: ""
+      THREADS_APP_ID: ""
+      THREADS_APP_SECRET: ""
+      FACEBOOK_APP_ID: ""
+      FACEBOOK_APP_SECRET: ""
+      YOUTUBE_CLIENT_ID: ""
+      YOUTUBE_CLIENT_SECRET: ""
+      TIKTOK_CLIENT_ID: ""
+      TIKTOK_CLIENT_SECRET: ""
+      PINTEREST_CLIENT_ID: ""
+      PINTEREST_CLIENT_SECRET: ""
+      DISCORD_CLIENT_ID: ""
+      DISCORD_CLIENT_SECRET: ""
+      DISCORD_BOT_TOKEN_ID: ""
+      SLACK_ID: ""
+      SLACK_SECRET: ""
+      SLACK_SIGNING_SECRET: ""
+      MASTODON_URL: "https://mastodon.social"
+      MASTODON_CLIENT_ID: ""
+      MASTODON_CLIENT_SECRET: ""
+      OPENAI_API_KEY: ""
+      API_LIMIT: 30
+      NX_ADD_PLUGINS: "false"
+    volumes:
+      - postiz-votc-config:/config/
+      - postiz-votc-uploads:/uploads/
+    networks:
+      - traefik-public
+      - postiz_temporal-network
+    depends_on:
+      postiz-votc-postgres:
+        condition: service_healthy
+      postiz-votc-redis:
+        condition: service_healthy
+
+  postiz-votc-postgres:
+    image: postgres:17-alpine
+    container_name: postiz-votc-postgres
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=postiz-votc"
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: votc-postiz-2025
+      POSTGRES_USER: votc-postiz
+      POSTGRES_DB: postiz-votc-db
+    volumes:
+      - postiz-votc-postgres:/var/lib/postgresql/data
+    networks:
+      - traefik-public
+    healthcheck:
+      test: pg_isready -U votc-postiz -d postiz-votc-db
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  postiz-votc-redis:
+    image: redis:7.2
+    container_name: postiz-votc-redis
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=postiz-votc"
+    restart: unless-stopped
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - postiz-votc-redis:/data
+    networks:
+      - traefik-public
+
+volumes:
+  postiz-votc-postgres:
+  postiz-votc-redis:
+  postiz-votc-config:
+  postiz-votc-uploads:
+
+networks:
+  traefik-public:
+    external: true
+  postiz_temporal-network:
+    external: true

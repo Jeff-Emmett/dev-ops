@@ -1,0 +1,24 @@
+services:
+  sablier:
+    image: sablierapp/sablier:1.11.1
+    container_name: sablier
+    command:
+      - start
+      - --provider.name=docker
+      - --sessions.default-duration=30m
+      - --sessions.expiration-interval=30s
+      - --logging.level=info
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "sablier", "health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - traefik-public
+    restart: unless-stopped
+
+networks:
+  traefik-public:
+    external: true

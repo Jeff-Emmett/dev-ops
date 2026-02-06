@@ -1,0 +1,7 @@
+# Immich cache headers middleware
+http:
+  middlewares:
+    immich-cache:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "public, max-age=31536000, immutable"

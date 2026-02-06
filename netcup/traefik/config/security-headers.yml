@@ -1,0 +1,23 @@
+http:
+  middlewares:
+    security-headers:
+      headers:
+        # HSTS - Force HTTPS for 1 year
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        
+        # Prevent MIME type sniffing
+        contentTypeNosniff: true
+        
+        # Removed X-Frame-Options - using Content-Security-Policy instead per-service
+        # customFrameOptionsValue: "SAMEORIGIN"
+        
+        # XSS protection
+        browserXssFilter: true
+        
+        # Referrer policy
+        referrerPolicy: "strict-origin-when-cross-origin"
+        
+        # Permissions policy (allow camera/mic for video apps)
+        permissionsPolicy: "accelerometer=(), camera=(*), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(*), payment=(), display-capture=(*), usb=()"

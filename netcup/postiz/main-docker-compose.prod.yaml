@@ -1,0 +1,202 @@
+services:
+  postiz:
+    image: dhsven/postiz:latest
+    container_name: postiz
+    restart: unless-stopped
+    environment:
+      # === Required Settings
+      MAIN_URL: 'https://social.jeffemmett.com'
+      FRONTEND_URL: 'https://social.jeffemmett.com'
+      NEXT_PUBLIC_BACKEND_URL: 'https://social.jeffemmett.com/api'
+      JWT_SECRET: '${JWT_SECRET}'
+      DATABASE_URL: 'postgresql://postiz:${POSTGRES_PASSWORD}@postiz-postgres:5432/postiz'
+      REDIS_URL: 'redis://postiz-redis:6379'
+      BACKEND_INTERNAL_URL: 'http://localhost:3000'
+      TEMPORAL_ADDRESS: "temporal:7233"
+      IS_GENERAL: 'true'
+      DISABLE_REGISTRATION: 'false'
+
+      # === Storage Settings (local for now, can switch to R2 later)
+      STORAGE_PROVIDER: 'local'
+      UPLOAD_DIRECTORY: '/uploads'
+      NEXT_PUBLIC_UPLOAD_DIRECTORY: '/uploads'
+
+      # === Listmonk Integration (you already have this!)
+      LISTMONK_DOMAIN: '${LISTMONK_DOMAIN:-}'
+      LISTMONK_USER: '${LISTMONK_USER:-}'
+      LISTMONK_API_KEY: '${LISTMONK_API_KEY:-}'
+      LISTMONK_LIST_ID: '${LISTMONK_LIST_ID:-}'
+
+      # === Social Media API Settings (configure via .env)
+      X_API_KEY: '${X_API_KEY:-}'
+      X_API_SECRET: '${X_API_SECRET:-}'
+      LINKEDIN_CLIENT_ID: '${LINKEDIN_CLIENT_ID:-}'
+      LINKEDIN_CLIENT_SECRET: '${LINKEDIN_CLIENT_SECRET:-}'
+      REDDIT_CLIENT_ID: '${REDDIT_CLIENT_ID:-}'
+      REDDIT_CLIENT_SECRET: '${REDDIT_CLIENT_SECRET:-}'
+      THREADS_APP_ID: '${THREADS_APP_ID:-}'
+      THREADS_APP_SECRET: '${THREADS_APP_SECRET:-}'
+      FACEBOOK_APP_ID: '${FACEBOOK_APP_ID:-}'
+      FACEBOOK_APP_SECRET: '${FACEBOOK_APP_SECRET:-}'
+      YOUTUBE_CLIENT_ID: '${YOUTUBE_CLIENT_ID:-}'
+      YOUTUBE_CLIENT_SECRET: '${YOUTUBE_CLIENT_SECRET:-}'
+      TIKTOK_CLIENT_ID: '${TIKTOK_CLIENT_ID:-}'
+      TIKTOK_CLIENT_SECRET: '${TIKTOK_CLIENT_SECRET:-}'
+      PINTEREST_CLIENT_ID: '${PINTEREST_CLIENT_ID:-}'
+      PINTEREST_CLIENT_SECRET: '${PINTEREST_CLIENT_SECRET:-}'
+      MASTODON_URL: '${MASTODON_URL:-https://mastodon.social}'
+      MASTODON_CLIENT_ID: '${MASTODON_CLIENT_ID:-}'
+      MASTODON_CLIENT_SECRET: '${MASTODON_CLIENT_SECRET:-}'
+      DISCORD_CLIENT_ID: '${DISCORD_CLIENT_ID:-}'
+      DISCORD_CLIENT_SECRET: '${DISCORD_CLIENT_SECRET:-}'
+      DISCORD_BOT_TOKEN_ID: '${DISCORD_BOT_TOKEN_ID:-}'
+      SLACK_ID: '${SLACK_ID:-}'
+      SLACK_SECRET: '${SLACK_SECRET:-}'
+      SLACK_SIGNING_SECRET: '${SLACK_SIGNING_SECRET:-}'
+
+      # === AI Settings
+      OPENAI_API_KEY: '${OPENAI_API_KEY:-}'
+
+      # === Misc Settings
+      NX_ADD_PLUGINS: false
+      API_LIMIT: 30
+
+    volumes:
+      - postiz-config:/config/
+      - postiz-uploads:/uploads/
+    labels:
+      - "traefik.enable=false"
+      - "sablier.enable=true"
+      - "sablier.group=postiz-main"
+      - "traefik.http.routers.postiz.rule=Host(`social.jeffemmett.com`)"
+      - "traefik.http.routers.postiz.entrypoints=web"
+      - "traefik.http.services.postiz.loadbalancer.server.port=5000"
+    networks:
+      - traefik-public
+      - postiz-internal
+      - temporal-network
+    depends_on:
+      postiz-postgres:
+        condition: service_healthy
+      postiz-redis:
+        condition: service_healthy
+
+  postiz-postgres:
+    image: postgres:17-alpine
+    container_name: postiz-postgres
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=postiz-main"
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+      POSTGRES_USER: postiz
+      POSTGRES_DB: postiz
+    volumes:
+      - postiz-postgres-data:/var/lib/postgresql/data
+    networks:
+      - postiz-internal
+    healthcheck:
+      test: pg_isready -U postiz -d postiz
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  postiz-redis:
+    image: redis:7.2
+    container_name: postiz-redis
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=postiz-main"
+    restart: unless-stopped
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - postiz-redis-data:/data
+    networks:
+      - postiz-internal
+
+  # -----------------------
+  # Temporal Stack (Workflow Engine)
+  # -----------------------
+  temporal-elasticsearch:
+    container_name: temporal-elasticsearch
+    image: elasticsearch:7.17.27
+    restart: always
+    environment:
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - xpack.security.enabled=false
+    networks:
+      - temporal-network
+    volumes:
+      - temporal-elasticsearch-data:/usr/share/elasticsearch/data
+
+  temporal-postgresql:
+    container_name: temporal-postgresql
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_USER: temporal
+    networks:
+      - temporal-network
+    volumes:
+      - temporal-postgresql-data:/var/lib/postgresql/data
+
+  temporal:
+    container_name: temporal
+    image: temporalio/auto-setup:1.28.1
+    restart: always
+    depends_on:
+      - temporal-postgresql
+      - temporal-elasticsearch
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-postgresql
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - ENABLE_ES=true
+      - ES_SEEDS=temporal-elasticsearch
+      - ES_VERSION=v7
+      - TEMPORAL_NAMESPACE=default
+    networks:
+      - temporal-network
+    volumes:
+      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+
+  temporal-ui:
+    container_name: temporal-ui
+    image: temporalio/ui:2.34.0
+    restart: always
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=https://social.jeffemmett.com
+    networks:
+      - temporal-network
+    # Internal only - not exposed via Traefik
+
+volumes:
+  postiz-postgres-data:
+  postiz-redis-data:
+  postiz-config:
+  postiz-uploads:
+  temporal-elasticsearch-data:
+  temporal-postgresql-data:
+
+networks:
+  traefik-public:
+    external: true
+  postiz-internal:
+    driver: bridge
+  temporal-network:
+    driver: bridge

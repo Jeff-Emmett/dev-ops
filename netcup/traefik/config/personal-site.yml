@@ -1,0 +1,12 @@
+http:
+  routers:
+    personal-site:
+      rule: "Host(`jeffemmett.com`) || Host(`www.jeffemmett.com`)"
+      entrypoints:
+        - web
+      service: personal-site
+  services:
+    personal-site:
+      loadBalancer:
+        servers:
+          - url: "http://personal-site:3000"

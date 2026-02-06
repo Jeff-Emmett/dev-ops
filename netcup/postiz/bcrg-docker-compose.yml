@@ -1,0 +1,154 @@
+services:
+  postiz-bcrg:
+    image: ghcr.io/gitroomhq/postiz-app:latest
+    container_name: postiz-bcrg
+    restart: unless-stopped
+    environment:
+      # === Required Settings
+      MAIN_URL: 'https://socials.bondingcurve.tech'
+      FRONTEND_URL: 'https://socials.bondingcurve.tech'
+      NEXT_PUBLIC_BACKEND_URL: 'https://socials.bondingcurve.tech/api'
+      JWT_SECRET: '${JWT_SECRET}'
+      DATABASE_URL: 'postgresql://postiz:${POSTGRES_PASSWORD}@postiz-bcrg-postgres:5432/postiz'
+      REDIS_URL: 'redis://postiz-bcrg-redis:6379'
+      BACKEND_INTERNAL_URL: 'http://localhost:3000'
+      TEMPORAL_ADDRESS: "postiz-bcrg-temporal:7233"
+      IS_GENERAL: 'true'
+      DISABLE_REGISTRATION: 'false'
+
+      # === Storage Settings (local)
+      STORAGE_PROVIDER: 'local'
+      UPLOAD_DIRECTORY: '/uploads'
+      NEXT_PUBLIC_UPLOAD_DIRECTORY: '/uploads'
+
+      # === Social Media API Settings (configure in .env file)
+      X_API_KEY: '${X_API_KEY:-}'
+      X_API_SECRET: '${X_API_SECRET:-}'
+      LINKEDIN_CLIENT_ID: '${LINKEDIN_CLIENT_ID:-}'
+      LINKEDIN_CLIENT_SECRET: '${LINKEDIN_CLIENT_SECRET:-}'
+      REDDIT_CLIENT_ID: '${REDDIT_CLIENT_ID:-}'
+      REDDIT_CLIENT_SECRET: '${REDDIT_CLIENT_SECRET:-}'
+      THREADS_APP_ID: '${THREADS_APP_ID:-}'
+      THREADS_APP_SECRET: '${THREADS_APP_SECRET:-}'
+      FACEBOOK_APP_ID: '${FACEBOOK_APP_ID:-}'
+      FACEBOOK_APP_SECRET: '${FACEBOOK_APP_SECRET:-}'
+      YOUTUBE_CLIENT_ID: '${YOUTUBE_CLIENT_ID:-}'
+      YOUTUBE_CLIENT_SECRET: '${YOUTUBE_CLIENT_SECRET:-}'
+      TIKTOK_CLIENT_ID: '${TIKTOK_CLIENT_ID:-}'
+      TIKTOK_CLIENT_SECRET: '${TIKTOK_CLIENT_SECRET:-}'
+      DISCORD_CLIENT_ID: '${DISCORD_CLIENT_ID:-}'
+      DISCORD_CLIENT_SECRET: '${DISCORD_CLIENT_SECRET:-}'
+      DISCORD_BOT_TOKEN_ID: '${DISCORD_BOT_TOKEN_ID:-}'
+      MASTODON_URL: 'https://mastodon.social'
+      MASTODON_CLIENT_ID: '${MASTODON_CLIENT_ID:-}'
+      MASTODON_CLIENT_SECRET: '${MASTODON_CLIENT_SECRET:-}'
+
+      # === Misc Settings
+      OPENAI_API_KEY: '${OPENAI_API_KEY:-}'
+      API_LIMIT: 30
+      NX_ADD_PLUGINS: false
+
+    volumes:
+      - postiz-bcrg-config:/config/
+      - postiz-bcrg-uploads:/uploads/
+    labels:
+      - "traefik.enable=false"
+      - "sablier.enable=true"
+      - "sablier.group=postiz-bcrg"
+      - "traefik.http.routers.postiz-bcrg.rule=Host(`socials.bondingcurve.tech`)"
+      - "traefik.http.routers.postiz-bcrg.entrypoints=web,websecure"
+      - "traefik.http.services.postiz-bcrg.loadbalancer.server.port=5000"
+    networks:
+      - traefik-public
+      - postiz-bcrg-internal
+    depends_on:
+      postiz-bcrg-postgres:
+        condition: service_healthy
+      postiz-bcrg-redis:
+        condition: service_healthy
+
+  postiz-bcrg-postgres:
+    image: postgres:17-alpine
+    container_name: postiz-bcrg-postgres
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=postiz-bcrg"
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+      POSTGRES_USER: postiz
+      POSTGRES_DB: postiz
+    volumes:
+      - postiz-bcrg-postgres-data:/var/lib/postgresql/data
+    networks:
+      - postiz-bcrg-internal
+    healthcheck:
+      test: pg_isready -U postiz -d postiz
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  postiz-bcrg-redis:
+    image: redis:7.2
+    container_name: postiz-bcrg-redis
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=postiz-bcrg"
+    restart: unless-stopped
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - postiz-bcrg-redis-data:/data
+    networks:
+      - postiz-bcrg-internal
+
+  # Temporal Stack for scheduling
+  postiz-bcrg-temporal-postgres:
+    image: postgres:16
+    container_name: postiz-bcrg-temporal-postgres
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=postiz-bcrg"
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_USER: temporal
+    networks:
+      - postiz-bcrg-internal
+    volumes:
+      - postiz-bcrg-temporal-postgres-data:/var/lib/postgresql/data
+
+  postiz-bcrg-temporal:
+    image: temporalio/auto-setup:1.28.1
+    container_name: postiz-bcrg-temporal
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=postiz-bcrg"
+    restart: unless-stopped
+    depends_on:
+      - postiz-bcrg-temporal-postgres
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postiz-bcrg-temporal-postgres
+      - TEMPORAL_NAMESPACE=default
+    networks:
+      - postiz-bcrg-internal
+
+volumes:
+  postiz-bcrg-postgres-data:
+  postiz-bcrg-redis-data:
+  postiz-bcrg-config:
+  postiz-bcrg-uploads:
+  postiz-bcrg-temporal-postgres-data:
+
+networks:
+  traefik-public:
+    external: true
+  postiz-bcrg-internal:
+    driver: bridge
