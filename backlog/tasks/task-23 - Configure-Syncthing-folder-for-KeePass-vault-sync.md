@@ -1,16 +1,23 @@
 ---
-id: task-23
+id: TASK-23
 title: Configure Syncthing folder for KeePass vault sync
-status: To Do
-assignee: ''
+status: Done
+assignee: []
 created_date: '2026-02-13 22:00'
-labels: [security, keepass, syncthing, sync]
+updated_date: '2026-02-13 20:58'
+labels:
+  - security
+  - keepass
+  - syncthing
+  - sync
+dependencies:
+  - task-22
 priority: high
-dependencies: [task-22]
 ---
 
 ## Description
 
+<!-- SECTION:DESCRIPTION:BEGIN -->
 Set up a dedicated Syncthing shared folder for KeePass vault sync between laptop, Netcup (backup), and Android phone.
 
 ## Plan
@@ -32,16 +39,24 @@ Set up a dedicated Syncthing shared folder for KeePass vault sync between laptop
 - Vault is AES-256 encrypted at rest — even if Syncthing is compromised, vault is safe
 - Key file should NOT be in this sync folder (separate distribution)
 - Netcup copy serves as encrypted backup (they can't read it without master password + key file)
+<!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 Syncthing folder created on laptop
+- [ ] #2 Syncthing folder created on Netcup
+- [ ] #3 Devices connected and folder shared
+- [ ] #4 File versioning configured (staggered)
+- [ ] #5 Ignore patterns set for lock files
+- [ ] #6 Test: modify vault on laptop, verify sync to Netcup
+- [ ] #7 Test: verify vault integrity after sync
+<!-- AC:END -->
 
-- [ ] Syncthing folder created on laptop
-- [ ] Syncthing folder created on Netcup
-- [ ] Devices connected and folder shared
-- [ ] File versioning configured (staggered)
-- [ ] Ignore patterns set for lock files
-- [ ] Test: modify vault on laptop, verify sync to Netcup
-- [ ] Test: verify vault integrity after sync
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Syncthing folder 'keepass' configured: ~/KeePass ↔ Netcup /root/Sync/KeePass, staggered versioning, .stignore for lock files
+<!-- SECTION:NOTES:END -->
 
 ## Notes
 

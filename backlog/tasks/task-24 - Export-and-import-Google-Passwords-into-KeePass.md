@@ -1,16 +1,22 @@
 ---
-id: task-24
+id: TASK-24
 title: Export and import Google Passwords into KeePass
-status: To Do
-assignee: ''
+status: Done
+assignee: []
 created_date: '2026-02-13 22:00'
-labels: [security, keepass, migration]
+updated_date: '2026-02-13 21:12'
+labels:
+  - security
+  - keepass
+  - migration
+dependencies:
+  - task-22
 priority: medium
-dependencies: [task-22]
 ---
 
 ## Description
 
+<!-- SECTION:DESCRIPTION:BEGIN -->
 Export all saved passwords from Google Password Manager and Chrome browser, import them into the KeePass vault, then verify and clean up.
 
 ## Plan
@@ -45,16 +51,23 @@ Export all saved passwords from Google Password Manager and Chrome browser, impo
 - Delete immediately after import
 - Use RAM disk (`/dev/shm/`) if possible
 - Never commit to git
+<!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 Google Passwords exported
+- [ ] #2 Chrome passwords exported (if separate)
+- [ ] #3 All passwords imported into KeePass vault
+- [ ] #4 Entries deduplicated and organized into folders
+- [ ] #5 CSV exports securely deleted
+- [ ] #6 Import verified by spot-checking entries
+- [ ] #7 Sync confirmed (vault updated on all devices)
+<!-- AC:END -->
 
-- [ ] Google Passwords exported
-- [ ] Chrome passwords exported (if separate)
-- [ ] All passwords imported into KeePass vault
-- [ ] Entries deduplicated and organized into folders
-- [ ] CSV exports securely deleted
-- [ ] Import verified by spot-checking entries
-- [ ] Sync confirmed (vault updated on all devices)
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Google Passwords exported via passwords.google.com CSV, imported into KeePass vault. Vault grew from 30KB to 237KB. Synced to Netcup. Plaintext CSV deleted from Downloads.
+<!-- SECTION:NOTES:END -->
 
 ## Notes
-

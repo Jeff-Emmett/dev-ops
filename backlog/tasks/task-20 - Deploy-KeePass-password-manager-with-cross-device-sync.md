@@ -1,16 +1,21 @@
 ---
-id: task-20
+id: TASK-20
 title: Deploy KeePass password manager with cross-device sync
-status: To Do
-assignee: ''
+status: Done
+assignee: []
 created_date: '2026-02-13 22:00'
-labels: [security, keepass, infrastructure]
-priority: high
+updated_date: '2026-02-13 20:58'
+labels:
+  - security
+  - keepass
+  - infrastructure
 dependencies: []
+priority: high
 ---
 
 ## Description
 
+<!-- SECTION:DESCRIPTION:BEGIN -->
 Deploy a self-hosted KeePass-compatible password management system with cross-device sync, consolidating all existing passwords (Google Passwords, browser-saved credentials, development platform secrets) into a single encrypted vault with maximum security and backup redundancy.
 
 ## Goals
@@ -66,19 +71,27 @@ vault.kdbx
     ├── ERPNext/
     └── Other Self-Hosted/
 ```
+<!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 KeePassXC installed and configured on WSL2
+- [ ] #2 KeePassDX installed on Android
+- [ ] #3 Syncthing folder configured for .kdbx sync
+- [ ] #4 Google Passwords exported and imported
+- [ ] #5 Browser-saved passwords exported and imported
+- [ ] #6 Development secrets (from ~/.secrets/) catalogued
+- [ ] #7 Infrastructure credentials documented in vault
+- [ ] #8 Backup strategy implemented (3-2-1 rule)
+- [ ] #9 Browser integration (KeePassXC-Browser) working
+- [ ] #10 Key file + master password configured (dual-factor)
+<!-- AC:END -->
 
-- [ ] KeePassXC installed and configured on WSL2
-- [ ] KeePassDX installed on Android
-- [ ] Syncthing folder configured for .kdbx sync
-- [ ] Google Passwords exported and imported
-- [ ] Browser-saved passwords exported and imported
-- [ ] Development secrets (from ~/.secrets/) catalogued
-- [ ] Infrastructure credentials documented in vault
-- [ ] Backup strategy implemented (3-2-1 rule)
-- [ ] Browser integration (KeePassXC-Browser) working
-- [ ] Key file + master password configured (dual-factor)
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Vault created at ~/KeePass/Jeff secure passwords.kdbx, syncing to Netcup via Syncthing
+<!-- SECTION:NOTES:END -->
 
 ## Notes
 

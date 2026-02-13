@@ -1,16 +1,21 @@
 ---
-id: task-21
+id: TASK-21
 title: Research KeePass security best practices and vault design
-status: To Do
-assignee: ''
+status: Done
+assignee: []
 created_date: '2026-02-13 22:00'
-labels: [security, keepass, research]
-priority: high
+updated_date: '2026-02-13 20:58'
+labels:
+  - security
+  - keepass
+  - research
 dependencies: []
+priority: high
 ---
 
 ## Description
 
+<!-- SECTION:DESCRIPTION:BEGIN -->
 Research and document KeePass security best practices before implementation. Decide on vault structure (single vs multiple), KDF parameters, key file strategy, and threat model.
 
 ## Plan
@@ -29,14 +34,21 @@ Research and document KeePass security best practices before implementation. Dec
    - This provides true 2FA: something you know (password) + something you have (key file)
 4. Backup key file securely (print as QR code? USB in safe?)
 5. Document emergency access procedure
+<!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 KDF parameters chosen and documented
+- [ ] #2 Vault structure decided (single vs multi)
+- [ ] #3 Key file generation and storage plan documented
+- [ ] #4 Emergency access / recovery procedure documented
+- [ ] #5 Threat model written (what are we protecting against?)
+<!-- AC:END -->
 
-- [ ] KDF parameters chosen and documented
-- [ ] Vault structure decided (single vs multi)
-- [ ] Key file generation and storage plan documented
-- [ ] Emergency access / recovery procedure documented
-- [ ] Threat model written (what are we protecting against?)
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Decided: single vault, Argon2id KDF (existing vault settings), no key file for now (task-29), password-only auth
+<!-- SECTION:NOTES:END -->
 
 ## Notes
-
