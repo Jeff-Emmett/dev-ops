@@ -1,0 +1,26 @@
+# Backlog Surfacing Agent Configuration
+# See: backlog-surfacer.py
+
+scan_base: /home/jeffe/Github
+briefing_output: /tmp/backlog-briefing.md
+
+rules:
+  stale_in_progress_days: 3
+  stale_todo_days: 30
+  high_priority_always_surface: true
+  max_tasks_per_section: 20
+
+notifications:
+  notify_send: true
+  stdout: true
+  file: true
+
+# Projects to skip (archived, third-party forks, etc.)
+excluded_projects:
+  - backlog-md
+
+# Optional: uncomment to only surface these projects in morning briefing
+# priority_projects:
+#   - dev-ops
+#   - canvas-website
+#   - rspace-online
