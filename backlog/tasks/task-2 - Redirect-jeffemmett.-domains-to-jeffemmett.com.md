@@ -1,7 +1,7 @@
 ---
 id: task-2
 title: Redirect jeffemmett.* domains to jeffemmett.com
-status: To Do
+status: Done
 assignee: []
 created_date: '2025-12-04 06:24'
 labels: []
