@@ -54,12 +54,24 @@ services:
       OPENAI_API_KEY: ""
       API_LIMIT: 30
       NX_ADD_PLUGINS: "false"
+
+      # === Email (SMTP via Mailcow / mail.rmail.online)
+      EMAIL_PROVIDER: "nodemailer"
+      EMAIL_FROM_NAME: "VOTC Socials"
+      EMAIL_FROM_ADDRESS: "noreply@rmail.online"
+      EMAIL_HOST: "mailcowdockerized-postfix-mailcow-1"
+      EMAIL_PORT: "587"
+      EMAIL_SECURE: "false"
+      EMAIL_USER: "noreply@rmail.online"
+      EMAIL_PASS: "${EMAIL_PASS}"
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
     volumes:
       - postiz-votc-config:/config/
       - postiz-votc-uploads:/uploads/
     networks:
       - traefik-public
       - postiz_temporal-network
+      - mailcow-network
     depends_on:
       postiz-votc-postgres:
         condition: service_healthy
@@ -115,3 +127,6 @@ networks:
     external: true
   postiz_temporal-network:
     external: true
+  mailcow-network:
+    external: true
+    name: mailcowdockerized_mailcow-network

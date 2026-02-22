@@ -27,6 +27,17 @@ services:
       POSTIZ_OAUTH_CLIENT_ID: '764780bd-24dc-42e6-81ab-b0409622e30b'
       POSTIZ_OAUTH_CLIENT_SECRET: 'FDBDeLEbUqGxvWkUjJFrEq2hlvdTz6yc'
       POSTIZ_OAUTH_SCOPE: 'openid profile email'
+
+      # === Email (SMTP via Mailcow / mail.rmail.online)
+      EMAIL_PROVIDER: 'nodemailer'
+      EMAIL_FROM_NAME: 'P2P Foundation Socials'
+      EMAIL_FROM_ADDRESS: 'noreply@rmail.online'
+      EMAIL_HOST: 'mailcowdockerized-postfix-mailcow-1'
+      EMAIL_PORT: '587'
+      EMAIL_SECURE: 'false'
+      EMAIL_USER: 'noreply@rmail.online'
+      EMAIL_PASS: '${EMAIL_PASS}'
+      NODE_TLS_REJECT_UNAUTHORIZED: '0'
     volumes:
       - postiz-p2pf-config:/config/
       - postiz-p2pf-uploads:/uploads/
@@ -41,6 +52,7 @@ services:
       - traefik-public
       - postiz-p2pf-internal
       - postiz_temporal-network
+      - mailcow-network
     depends_on:
       postiz-p2pf-postgres:
         condition: service_healthy
@@ -98,3 +110,6 @@ networks:
     driver: bridge
   postiz_temporal-network:
     external: true
+  mailcow-network:
+    external: true
+    name: mailcowdockerized_mailcow-network

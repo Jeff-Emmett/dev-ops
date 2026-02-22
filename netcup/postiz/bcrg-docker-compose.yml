@@ -43,6 +43,17 @@ services:
       MASTODON_CLIENT_ID: '${MASTODON_CLIENT_ID:-}'
       MASTODON_CLIENT_SECRET: '${MASTODON_CLIENT_SECRET:-}'
 
+      # === Email (SMTP via Mailcow / mail.rmail.online)
+      EMAIL_PROVIDER: 'nodemailer'
+      EMAIL_FROM_NAME: 'Bonding Curve Research'
+      EMAIL_FROM_ADDRESS: 'noreply@rmail.online'
+      EMAIL_HOST: 'mailcowdockerized-postfix-mailcow-1'
+      EMAIL_PORT: '587'
+      EMAIL_SECURE: 'false'
+      EMAIL_USER: 'noreply@rmail.online'
+      EMAIL_PASS: '${EMAIL_PASS}'
+      NODE_TLS_REJECT_UNAUTHORIZED: '0'
+
       # === Misc Settings
       OPENAI_API_KEY: '${OPENAI_API_KEY:-}'
       API_LIMIT: 30
@@ -61,6 +72,7 @@ services:
     networks:
       - traefik-public
       - postiz-bcrg-internal
+      - mailcow-network
     depends_on:
       postiz-bcrg-postgres:
         condition: service_healthy
@@ -152,3 +164,6 @@ networks:
     external: true
   postiz-bcrg-internal:
     driver: bridge
+  mailcow-network:
+    external: true
+    name: mailcowdockerized_mailcow-network
