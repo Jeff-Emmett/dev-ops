@@ -1,0 +1,28 @@
+services:
+  backlog-surfacer:
+    build: .
+    container_name: backlog-surfacer
+    restart: "no"
+    volumes:
+      - /home/jeffe/Github:/data/github:ro
+      - ./config.yml:/app/config.yml:ro
+    environment:
+      SMTP_PASS: "${SMTP_PASS:-}"
+    labels:
+      - "ofelia.enabled=true"
+      # Morning briefing weekdays 9am
+      - "ofelia.job-exec.morning.schedule=0 0 9 * * 1-5"
+      - "ofelia.job-exec.morning.command=python surfacer.py morning"
+      # Weekly review Friday 5pm
+      - "ofelia.job-exec.weekly.schedule=0 0 17 * * 5"
+      - "ofelia.job-exec.weekly.command=python surfacer.py weekly"
+      # Monthly audit 1st of month 9am
+      - "ofelia.job-exec.monthly.schedule=0 0 9 1 * *"
+      - "ofelia.job-exec.monthly.command=python surfacer.py monthly"
+    networks:
+      - mailcow-network
+
+networks:
+  mailcow-network:
+    external: true
+    name: mailcowdockerized_mailcow-network

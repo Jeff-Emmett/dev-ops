@@ -1,0 +1,24 @@
+scan_paths:
+  local:
+    - /home/jeffe/Github/*/backlog/
+
+schedules:
+  morning: "0 9 * * 1-5"
+  afternoon: "0 14 * * 1-5"
+  weekly: "0 17 * * 5"
+  monthly: "0 9 1 * *"
+
+notifications:
+  - type: file
+    path: /tmp/backlog-briefing.md
+  - type: email
+    to: jeff@jeffemmett.com
+    from: noreply@jeffemmett.com
+    smtp_host: mailcowdockerized-postfix-mailcow-1
+    smtp_port: 587
+    smtp_user: noreply@jeffemmett.com
+
+rules:
+  stale_in_progress_days: 3
+  stale_todo_days: 30
+  high_priority_always_surface: true
