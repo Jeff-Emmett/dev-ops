@@ -1,0 +1,66 @@
+#!/bin/sh
+# Infisical secret injection entrypoint (Bun)
+# Fetches secrets from Infisical API and injects them as env vars before starting the app.
+# Required env vars: INFISICAL_CLIENT_ID, INFISICAL_CLIENT_SECRET
+# Optional: INFISICAL_PROJECT_SLUG, INFISICAL_ENV (default: prod),
+#           INFISICAL_URL (default: http://infisical:8080)
+
+set -e
+
+INFISICAL_URL="${INFISICAL_URL:-http://infisical:8080}"
+INFISICAL_ENV="${INFISICAL_ENV:-prod}"
+# IMPORTANT: Set INFISICAL_PROJECT_SLUG in your docker-compose.yml
+INFISICAL_PROJECT_SLUG="${INFISICAL_PROJECT_SLUG:?INFISICAL_PROJECT_SLUG must be set}"
+
+if [ -z "$INFISICAL_CLIENT_ID" ] || [ -z "$INFISICAL_CLIENT_SECRET" ]; then
+  echo "[infisical] No credentials set, starting without secret injection"
+  exec "$@"
+fi
+
+echo "[infisical] Fetching secrets from ${INFISICAL_PROJECT_SLUG}/${INFISICAL_ENV}..."
+
+# Use Bun's built-in fetch API for HTTP calls and JSON parsing
+EXPORTS=$(bun -e "
+(async () => {
+  try {
+    const base = process.env.INFISICAL_URL;
+    const auth = await fetch(base + '/api/v1/auth/universal-auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId: process.env.INFISICAL_CLIENT_ID,
+        clientSecret: process.env.INFISICAL_CLIENT_SECRET
+      })
+    }).then(r => r.json());
+    if (!auth.accessToken) { console.error('[infisical] Auth failed'); process.exit(1); }
+
+    const slug = process.env.INFISICAL_PROJECT_SLUG;
+    const env = process.env.INFISICAL_ENV;
+    const secrets = await fetch(base + '/api/v3/secrets/raw?workspaceSlug=' + slug + '&environment=' + env + '&secretPath=/&recursive=true', {
+      headers: { 'Authorization': 'Bearer ' + auth.accessToken }
+    }).then(r => r.json());
+
+    if (!secrets.secrets) { console.error('[infisical] No secrets returned'); process.exit(1); }
+
+    for (const s of secrets.secrets) {
+      const escaped = s.secretValue.replace(/'/g, \"'\\\\''\" );
+      console.log('export ' + s.secretKey + \"='\" + escaped + \"'\");
+    }
+  } catch (e) { console.error('[infisical] Error:', e.message); process.exit(1); }
+})();
+" 2>&1) || {
+  echo "[infisical] WARNING: Failed to fetch secrets, starting with existing env vars"
+  exec "$@"
+}
+
+# Check if we got export statements or error messages
+if echo "$EXPORTS" | grep -q "^export "; then
+  COUNT=$(echo "$EXPORTS" | grep -c "^export ")
+  eval "$EXPORTS"
+  echo "[infisical] Injected ${COUNT} secrets"
+else
+  echo "[infisical] WARNING: $EXPORTS"
+  echo "[infisical] Starting with existing env vars"
+fi
+
+exec "$@"

@@ -1,0 +1,440 @@
+# Infisical Secret Migration Inventory
+# Tracks all services on Netcup and their migration status
+#
+# Status values:
+#   migrated    - Secrets in Infisical, entrypoint wired, .env stripped
+#   in_progress - Infisical project created, migration underway
+#   pending     - Not yet started
+#   skip        - Intentionally not migrated (e.g., no secrets, minimal config)
+
+# ========================================
+# Tier 0: Already migrated (r* ecosystem)
+# ========================================
+tier0_migrated:
+  - slug: rsocials
+    service: rSocials Online
+    location: /opt/websites/rsocials-online
+    runtime: node
+    secrets_count: 12
+    status: migrated
+
+  - slug: rspace
+    service: rSpace Online
+    location: /opt/websites/rspace-online
+    runtime: bun
+    secrets_count: 8
+    status: migrated
+
+  - slug: rswag
+    service: rSwag
+    location: /opt/apps/rswag
+    runtime: python
+    secrets_count: 15
+    status: migrated
+
+  - slug: rlinks
+    service: rLinks Online
+    location: /opt/websites/rlinks-online
+    runtime: node
+    secrets_count: 5
+    status: migrated
+
+  - slug: rprofile
+    service: rProfile Online
+    location: /opt/websites/rprofile-online
+    runtime: node
+    secrets_count: 4
+    status: migrated
+
+  - slug: rlanding
+    service: rLanding Online
+    location: /opt/websites/rlanding-online
+    runtime: node
+    secrets_count: 3
+    status: migrated
+
+  - slug: rauth
+    service: rAuth Online
+    location: /opt/websites/rauth-online
+    runtime: node
+    secrets_count: 10
+    status: migrated
+
+  - slug: rapi
+    service: rAPI Online
+    location: /opt/websites/rapi-online
+    runtime: node
+    secrets_count: 8
+    status: migrated
+
+  - slug: rdash
+    service: rDash Online
+    location: /opt/websites/rdash-online
+    runtime: node
+    secrets_count: 6
+    status: migrated
+
+  - slug: rsearch
+    service: rSearch Online
+    location: /opt/websites/rsearch-online
+    runtime: node
+    secrets_count: 4
+    status: migrated
+
+# ========================================
+# Tier 1: Custom apps (modify Dockerfile)
+# ========================================
+tier1_custom:
+  - slug: pkmn
+    service: Personal Knowledge Management Network
+    location: /opt/apps/personal-knowledge-management-network
+    runtime: python
+    secrets_count: 3
+    status: pending
+    priority: urgent
+    notes: "DB password hardcoded in docker-compose.yml!"
+
+  - slug: payment-infra
+    service: Payment Infrastructure
+    location: /opt/apps/payment-infra
+    runtime: node
+    secrets_count: 30
+    status: pending
+    priority: high
+    notes: "Most complex: 8 services share 1 project"
+
+  - slug: clip-forge
+    service: ClipForge
+    location: /opt/clip-forge
+    runtime: python
+    secrets_count: 4
+    status: pending
+    notes: "Worker uses WireGuard — needs external INFISICAL_URL"
+
+  - slug: games-platform
+    service: Games Platform
+    location: /opt/apps/games-platform
+    runtime: node
+    secrets_count: 2
+    status: pending
+
+  - slug: grid-trading-bot
+    service: Grid Trading Bot
+    location: /opt/apps/grid-trading-bot
+    runtime: node
+    secrets_count: 5
+    status: pending
+    notes: "Telegram + blockchain keys"
+
+  - slug: schedule
+    service: Schedule Jeff Emmett
+    location: /opt/websites/schedule-jeffemmett
+    runtime: node
+    secrets_count: 8
+    status: pending
+    notes: "Google OAuth + SMTP"
+
+  - slug: open-claw-iron
+    service: IronClaw
+    location: /opt/apps/open-claw-iron
+    runtime: rust
+    secrets_count: 3
+    status: pending
+    notes: "May need curl+jq in final Docker stage"
+
+  - slug: personal-dashboard
+    service: Personal Dashboard
+    location: /opt/websites/personal-dashboard
+    runtime: node
+    secrets_count: 10
+    status: pending
+    notes: "Many API integrations"
+
+  - slug: rchats
+    service: rChats Online
+    location: /opt/websites/rchats-online
+    runtime: node
+    secrets_count: 3
+    status: pending
+
+  - slug: rcal
+    service: rCal Online
+    location: /opt/websites/rcal-online
+    runtime: node
+    secrets_count: 2
+    status: pending
+
+  - slug: mycofi
+    service: MycoFi Earth Website
+    location: /opt/websites/mycofi-earth-website
+    runtime: node
+    secrets_count: 3
+    status: pending
+
+  - slug: ai-orchestrator
+    service: AI Orchestrator
+    location: /opt/apps/ai-orchestrator
+    runtime: python
+    secrets_count: 2
+    status: pending
+
+  - slug: semantic-search
+    service: Semantic Search
+    location: /opt/apps/semantic-search
+    runtime: python
+    secrets_count: 2
+    status: pending
+
+  - slug: p2pwiki
+    service: P2P Wiki Content
+    location: /opt/websites/p2pwiki-content
+    runtime: python
+    secrets_count: 2
+    status: pending
+
+# ========================================
+# Tier 2: Third-party apps (volume-mount wrapper)
+# ========================================
+tier2_thirdparty:
+  # Batch A: Postiz instances
+  - slug: postiz-bcrg
+    service: Postiz BCRG
+    location: /opt/apps/postiz-bcrg
+    runtime: node
+    secrets_count: 8
+    status: pending
+    batch: A
+
+  - slug: postiz-cc
+    service: Postiz Crypto Commons
+    location: /opt/apps/postiz-cc
+    runtime: node
+    secrets_count: 8
+    status: pending
+    batch: A
+
+  - slug: postiz-p2pf
+    service: Postiz P2P Foundation
+    location: /opt/apps/postiz-p2pf
+    runtime: node
+    secrets_count: 8
+    status: pending
+    batch: A
+
+  - slug: postiz-votc
+    service: Postiz Valley of the Commons
+    location: /opt/apps/postiz-votc
+    runtime: node
+    secrets_count: 8
+    status: pending
+    batch: A
+
+  # Batch B: Content platforms
+  - slug: ghost-cosmolocal
+    service: Ghost Cosmolocal
+    location: /opt/websites/ghost-cosmolocal
+    runtime: node
+    secrets_count: 4
+    status: pending
+    batch: B
+
+  - slug: ghost-cc
+    service: Ghost Crypto Commons
+    location: /opt/websites/ghost-cc
+    runtime: node
+    secrets_count: 4
+    status: pending
+    batch: B
+
+  - slug: docmost
+    service: Docmost
+    location: /opt/apps/docmost
+    runtime: node
+    secrets_count: 3
+    status: pending
+    batch: B
+
+  - slug: docmost-cl
+    service: Docmost CL
+    location: /opt/apps/docmost-cl
+    runtime: node
+    secrets_count: 3
+    status: pending
+    batch: B
+
+  - slug: listmonk
+    service: Listmonk
+    location: /opt/apps/listmonk
+    runtime: go
+    secrets_count: 4
+    status: pending
+    batch: B
+
+  # Batch C: Infrastructure
+  - slug: n8n
+    service: n8n
+    location: /opt/apps/n8n
+    runtime: node
+    secrets_count: 4
+    status: pending
+    batch: C
+
+  - slug: n8n-cosmolocal
+    service: n8n Cosmolocal
+    location: /opt/apps/n8n-cosmolocal
+    runtime: node
+    secrets_count: 4
+    status: pending
+    batch: C
+
+  - slug: mattermost
+    service: Mattermost
+    location: /opt/apps/mattermost
+    runtime: go
+    secrets_count: 5
+    status: pending
+    batch: C
+
+  - slug: immich
+    service: Immich
+    location: /opt/apps/immich
+    runtime: node
+    secrets_count: 4
+    status: pending
+    batch: C
+
+  - slug: affine
+    service: Affine
+    location: /opt/apps/affine
+    runtime: node
+    secrets_count: 3
+    status: pending
+    batch: C
+
+  - slug: twenty-crm
+    service: Twenty CRM
+    location: /opt/apps/twenty
+    runtime: node
+    secrets_count: 5
+    status: pending
+    batch: C
+
+  - slug: twenty-crm-2
+    service: Twenty CRM (2nd instance)
+    location: /opt/apps/twenty-2
+    runtime: node
+    secrets_count: 5
+    status: pending
+    batch: C
+
+  # Batch D: Media & utilities
+  - slug: jellyfin
+    service: Jellyfin
+    location: /opt/apps/jellyfin
+    runtime: dotnet
+    secrets_count: 1
+    status: pending
+    batch: D
+    notes: "Minimal secrets, low priority"
+
+  - slug: jellyseerr
+    service: Jellyseerr
+    location: /opt/apps/jellyseerr
+    runtime: node
+    secrets_count: 1
+    status: pending
+    batch: D
+
+  - slug: navidrome
+    service: Navidrome
+    location: /opt/apps/navidrome
+    runtime: go
+    secrets_count: 1
+    status: pending
+    batch: D
+
+  - slug: receipt-wrangler
+    service: Receipt Wrangler
+    location: /opt/receipt-wrangler
+    runtime: python
+    secrets_count: 5
+    status: pending
+    batch: D
+
+  - slug: open-notebook
+    service: Open Notebook
+    location: /opt/apps/open-notebook
+    runtime: python
+    secrets_count: 3
+    status: pending
+    batch: D
+
+  - slug: pocket-id
+    service: Pocket ID
+    location: /opt/apps/pocket-id
+    runtime: node
+    secrets_count: 2
+    status: pending
+    batch: D
+
+  - slug: uptime-kuma
+    service: Uptime Kuma
+    location: /opt/apps/uptime-kuma
+    runtime: node
+    secrets_count: 0
+    status: skip
+    batch: D
+    notes: "No external secrets needed"
+
+  - slug: meeting-intelligence
+    service: Meeting Intelligence
+    location: /opt/apps/meeting-intelligence
+    runtime: node
+    secrets_count: 3
+    status: pending
+    batch: D
+
+  # Batch E: Special cases
+  - slug: headscale
+    service: Headscale/Headplane
+    location: /opt/apps/headscale-deploy
+    runtime: go
+    secrets_count: 2
+    status: pending
+    batch: E
+    notes: "VPN config, rarely changes — defer to last"
+
+  - slug: seafile
+    service: Seafile
+    location: /opt/apps/seafile
+    runtime: python
+    secrets_count: 3
+    status: pending
+    batch: E
+
+  - slug: calcom
+    service: CalCom
+    location: /opt/apps/calcom
+    runtime: node
+    secrets_count: 8
+    status: pending
+    batch: E
+    notes: "Complex build, OAuth + DB"
+
+  - slug: erpnext
+    service: ERPNext
+    location: /opt/erpnext
+    runtime: python
+    secrets_count: 6
+    status: pending
+    batch: E
+    notes: "Sidecar pattern: init container fetches → writes .env → app reads"
+
+  - slug: discourse
+    service: Discourse
+    location: /opt/discourse
+    runtime: ruby
+    secrets_count: 5
+    status: pending
+    batch: E
+    notes: "Launcher pattern: modify app.yml run section"
