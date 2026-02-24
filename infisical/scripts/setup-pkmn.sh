@@ -125,31 +125,44 @@ log "PKMN deploy path: $PKMN_DEPLOY_PATH"
 step "Step 4/7: Create Infisical project '${PROJECT_SLUG}'"
 
 # Check if project already exists
-EXISTING=$(curl -sf "${API}/v1/workspace" \
-  -H "Authorization: Bearer ${TOKEN}" 2>/dev/null | \
-  python3 -c "
+echo "Checking for existing project..."
+WORKSPACE_LIST=$(curl -sf --max-time 15 "${API}/v1/workspace" \
+  -H "Authorization: Bearer ${TOKEN}" 2>&1) || WORKSPACE_LIST=""
+
+EXISTING=""
+if [ -n "$WORKSPACE_LIST" ]; then
+  EXISTING=$(echo "$WORKSPACE_LIST" | python3 -c "
 import sys, json
-data = json.load(sys.stdin)
-for w in data.get('workspaces', []):
-    if w.get('slug') == '${PROJECT_SLUG}':
-        print(w['id'])
-        break
-" 2>/dev/null || true)
+try:
+    data = json.load(sys.stdin)
+    for w in data.get('workspaces', []):
+        if w.get('slug') == '${PROJECT_SLUG}':
+            print(w['id'])
+            break
+except: pass
+" 2>/dev/null) || true
+fi
 
 if [ -n "$EXISTING" ]; then
   PROJECT_ID="$EXISTING"
   log "Project '${PROJECT_SLUG}' already exists (ID: ${PROJECT_ID})"
 else
-  PROJECT_RESPONSE=$(curl -sf -X POST "${API}/v2/workspace" \
+  echo "Creating new project..."
+  PROJECT_RESPONSE=$(curl -sf --max-time 15 -X POST "${API}/v2/workspace" \
     -H "Authorization: Bearer ${TOKEN}" \
     -H "Content-Type: application/json" \
-    -d "{\"projectName\":\"PKMN\",\"slug\":\"${PROJECT_SLUG}\"}")
+    -d "{\"projectName\":\"PKMN\",\"slug\":\"${PROJECT_SLUG}\"}" 2>&1) || {
+    err "Failed to create project. Response: $PROJECT_RESPONSE"
+    exit 1
+  }
 
   PROJECT_ID=$(echo "$PROJECT_RESPONSE" | python3 -c "
 import sys, json
-d = json.load(sys.stdin)
-print(d.get('workspace', d.get('project', {})).get('id', ''))
-")
+try:
+    d = json.load(sys.stdin)
+    print(d.get('workspace', d.get('project', {})).get('id', ''))
+except: pass
+" 2>/dev/null) || true
 
   if [ -z "$PROJECT_ID" ]; then
     err "Failed to create project. Response: $PROJECT_RESPONSE"
@@ -265,16 +278,23 @@ step "Step 6/7: Create machine identity"
 ORG_ID="091129af-53a7-45e2-83b5-cda045203ab8"
 
 # Check if identity already exists
-EXISTING_IDENTITY=$(curl -sf "${API}/v1/organizations/${ORG_ID}/identity-memberships" \
-  -H "Authorization: Bearer ${TOKEN}" 2>/dev/null | \
-  python3 -c "
+echo "Checking for existing identity..."
+IDENTITY_LIST=$(curl -sf --max-time 15 "${API}/v1/organizations/${ORG_ID}/identity-memberships" \
+  -H "Authorization: Bearer ${TOKEN}" 2>&1) || IDENTITY_LIST=""
+
+EXISTING_IDENTITY=""
+if [ -n "$IDENTITY_LIST" ]; then
+  EXISTING_IDENTITY=$(echo "$IDENTITY_LIST" | python3 -c "
 import sys, json
-data = json.load(sys.stdin)
-for m in data.get('identityMemberships', []):
-    if m.get('identity', {}).get('name') == 'pkmn-deploy':
-        print(m['identity']['id'])
-        break
-" 2>/dev/null || true)
+try:
+    data = json.load(sys.stdin)
+    for m in data.get('identityMemberships', []):
+        if m.get('identity', {}).get('name') == 'pkmn-deploy':
+            print(m['identity']['id'])
+            break
+except: pass
+" 2>/dev/null) || true
+fi
 
 if [ -n "$EXISTING_IDENTITY" ]; then
   IDENTITY_ID="$EXISTING_IDENTITY"
