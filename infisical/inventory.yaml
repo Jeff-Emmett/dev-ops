@@ -156,7 +156,7 @@ tier1_custom:
     secrets_count: 3
     status: pending
 
-  - slug: rcal
+  - slug: rcal-online
     service: rCal Online
     location: /opt/websites/rcal-online
     runtime: node
@@ -196,9 +196,9 @@ tier1_custom:
     location: /opt/websites/valley-commons
     runtime: node
     secrets_count: 14
-    status: in_progress
+    status: migrated
     priority: high
-    notes: "Google service account JSON stored as env var, Mollie payments"
+    notes: "Google service account JSON stored as env var, Mollie payments. Migrated 2026-02-24"
 
 # ========================================
 # Tier 2: Third-party apps (volume-mount wrapper)
