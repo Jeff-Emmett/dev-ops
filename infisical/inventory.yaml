@@ -106,9 +106,9 @@ tier1_custom:
     service: ClipForge
     location: /opt/clip-forge
     runtime: python
-    secrets_count: 4
-    status: pending
-    notes: "Worker uses WireGuard — needs external INFISICAL_URL"
+    secrets_count: 3
+    status: migrated
+    notes: "Worker uses WireGuard (network_mode:service:wireguard shares traefik-public). Migrated 2026-02-24."
 
   - slug: games-platform
     service: Games Platform
@@ -122,33 +122,33 @@ tier1_custom:
     service: Grid Trading Bot
     location: /opt/apps/grid-trading-bot
     runtime: node
-    secrets_count: 5
-    status: pending
-    notes: "Telegram + blockchain keys"
+    secrets_count: 7
+    status: migrated
+    notes: "Telegram + blockchain keys. Uses docker-compose.prod.yml. Migrated 2026-02-24."
 
   - slug: schedule
     service: Schedule Jeff Emmett
     location: /opt/websites/schedule-jeffemmett
     runtime: node
-    secrets_count: 8
-    status: pending
-    notes: "Google OAuth + SMTP"
+    secrets_count: 9
+    status: migrated
+    notes: "Google OAuth + SMTP + Prisma. Migrated 2026-02-24."
 
   - slug: open-claw-iron
     service: IronClaw
     location: /opt/apps/open-claw-iron
     runtime: rust
     secrets_count: 3
-    status: pending
-    notes: "May need curl+jq in final Docker stage"
+    status: migrated
+    notes: "curl+jq added to runtime stage. env_file kept for non-secret config. Migrated 2026-02-24."
 
   - slug: personal-dashboard
     service: Personal Dashboard
     location: /opt/websites/personal-dashboard
     runtime: node
-    secrets_count: 10
-    status: pending
-    notes: "Many API integrations"
+    secrets_count: 11
+    status: migrated
+    notes: "11 API keys/tokens. Docker socket still volume-mounted. Migrated 2026-02-24."
 
   - slug: rchats
     service: rChats Online
@@ -178,22 +178,25 @@ tier1_custom:
     service: AI Orchestrator
     location: /opt/apps/ai-orchestrator
     runtime: python
-    secrets_count: 2
-    status: pending
+    secrets_count: 1
+    status: migrated
+    notes: "RUNPOD_API_KEY. Hardcoded fallback removed from server.py. Migrated 2026-02-24."
 
   - slug: semantic-search
     service: Semantic Search
     location: /opt/apps/semantic-search
     runtime: python
-    secrets_count: 2
-    status: pending
+    secrets_count: 1
+    status: migrated
+    notes: "EXA_API_KEY. Only Dockerfile.api modified (embedding service has no secrets). Migrated 2026-02-24."
 
   - slug: p2pwiki
     service: P2P Wiki Content
     location: /opt/websites/p2pwiki-content
     runtime: python
-    secrets_count: 2
-    status: pending
+    secrets_count: 1
+    status: migrated
+    notes: "ANTHROPIC_API_KEY. P2P Foundation stack (blog_static/) has hardcoded DB passwords — separate task. Migrated 2026-02-24."
 
   - slug: valley-commons
     service: Valley of the Commons
