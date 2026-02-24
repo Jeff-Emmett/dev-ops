@@ -113,9 +113,10 @@ tier1_custom:
   - slug: games-platform
     service: Games Platform
     location: /opt/apps/games-platform
-    runtime: node
-    secrets_count: 2
-    status: pending
+    runtime: python
+    secrets_count: 3
+    status: migrated
+    notes: "Backend + worker use Python entrypoint. Need traefik-public network for Infisical access."
 
   - slug: grid-trading-bot
     service: Grid Trading Bot
@@ -154,21 +155,24 @@ tier1_custom:
     location: /opt/websites/rchats-online
     runtime: node
     secrets_count: 3
-    status: pending
+    status: migrated
+    notes: "Not yet deployed on Netcup. Infisical project ready with generated passwords."
 
   - slug: rcal-online
     service: rCal Online
     location: /opt/websites/rcal-online
     runtime: node
     secrets_count: 2
-    status: pending
+    status: migrated
+    notes: "Not yet deployed on Netcup. Infisical project ready with generated password."
 
   - slug: mycofi
     service: MycoFi Earth Website
     location: /opt/websites/mycofi-earth-website
     runtime: node
     secrets_count: 3
-    status: pending
+    status: migrated
+    notes: "GEMINI_API_KEY, RUNPOD_API_KEY, FAL_KEY. Migrated 2026-02-23."
 
   - slug: ai-orchestrator
     service: AI Orchestrator
