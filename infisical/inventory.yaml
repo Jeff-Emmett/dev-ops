@@ -85,14 +85,13 @@ tier0_migrated:
 # Tier 1: Custom apps (modify Dockerfile)
 # ========================================
 tier1_custom:
-  - slug: pkmn
+  - slug: pkmn-app
     service: Personal Knowledge Management Network
-    location: /opt/apps/personal-knowledge-management-network
+    location: /opt/apps/pkmn
     runtime: python
-    secrets_count: 3
-    status: pending
-    priority: urgent
-    notes: "DB password hardcoded in docker-compose.yml!"
+    secrets_count: 20
+    status: migrated
+    notes: "Google OAuth credentials pending migration"
 
   - slug: payment-infra
     service: Payment Infrastructure
@@ -191,6 +190,15 @@ tier1_custom:
     runtime: python
     secrets_count: 2
     status: pending
+
+  - slug: valley-commons
+    service: Valley of the Commons
+    location: /opt/websites/valley-commons
+    runtime: node
+    secrets_count: 14
+    status: in_progress
+    priority: high
+    notes: "Google service account JSON stored as env var, Mollie payments"
 
 # ========================================
 # Tier 2: Third-party apps (volume-mount wrapper)

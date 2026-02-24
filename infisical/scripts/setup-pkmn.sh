@@ -18,7 +18,7 @@ set -euo pipefail
 
 INFISICAL_URL="https://secrets.jeffemmett.com"
 API="${INFISICAL_URL}/api"
-PROJECT_SLUG="pkmn"
+PROJECT_SLUG="pkmn-app"
 NETCUP_HOST="netcup-full"
 PKMN_LOCAL="/home/jeffe/Github/personal-knowledge-management-network"
 PKMN_ENV_PROD="${PKMN_LOCAL}/.env.prod"
