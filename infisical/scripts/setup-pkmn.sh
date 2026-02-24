@@ -51,7 +51,7 @@ log "Found .env.prod at $PKMN_ENV_PROD"
 # ============================================================================
 step "Step 1/7: Authenticate with Infisical"
 
-CLAUDE_CLIENT_ID="0252dd42-d8e0-48cc-bb55-0b96a58907c6"
+CLAUDE_CLIENT_ID="106c8eea-98e7-43c0-9f43-2dec375ad090"
 
 echo "Enter the claude-agent Client Secret (from Infisical UI → Machine Identities → claude-agent):"
 read -rs CLAUDE_CLIENT_SECRET
