@@ -1,0 +1,50 @@
+---
+# Create service users
+
+- name: Create deploy user
+  user:
+    name: "{{ deploy_user }}"
+    uid: "{{ deploy_uid }}"
+    groups: docker
+    append: true
+    shell: /bin/bash
+    create_home: true
+
+- name: Create claude user
+  user:
+    name: "{{ claude_user }}"
+    uid: "{{ claude_uid }}"
+    shell: /usr/bin/fish
+    create_home: true
+
+- name: Ensure deploy .ssh directory
+  file:
+    path: "/home/{{ deploy_user }}/.ssh"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0700"
+
+- name: Ensure claude .ssh directory
+  file:
+    path: "/home/{{ claude_user }}/.ssh"
+    state: directory
+    owner: "{{ claude_user }}"
+    group: "{{ claude_user }}"
+    mode: "0700"
+
+- name: Set ownership on /opt/websites
+  file:
+    path: "{{ opt_websites }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    recurse: false
+
+- name: Set ownership on /opt/apps
+  file:
+    path: "{{ opt_apps }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    recurse: false

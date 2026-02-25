@@ -1,0 +1,65 @@
+---
+# UFW firewall + DOCKER-USER iptables chain
+
+- name: Set UFW defaults
+  community.general.ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  loop:
+    - { direction: incoming, policy: deny }
+    - { direction: outgoing, policy: allow }
+    - { direction: routed, policy: deny }
+
+- name: Allow UFW rules
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port.split('/')[0] }}"
+    proto: "{{ item.port.split('/')[1] | default('tcp') }}"
+    from_ip: "{{ item.from | default('any') }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ ufw_rules }}"
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+
+- name: Deploy DOCKER-USER iptables rules
+  blockinfile:
+    path: /etc/ufw/after.rules
+    marker: "# {mark} ANSIBLE MANAGED - DOCKER-USER chain"
+    insertafter: EOF
+    block: |
+      # DOCKER-USER chain: Block Docker from bypassing UFW
+      *filter
+      :DOCKER-USER - [0:0]
+      -A DOCKER-USER -i eth0 -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+      # TCP
+      -A DOCKER-USER -i eth0 -p tcp --dport 22 -j RETURN
+      -A DOCKER-USER -i eth0 -p tcp --dport 25 -j RETURN
+      -A DOCKER-USER -i eth0 -p tcp --dport 80 -j RETURN
+      -A DOCKER-USER -i eth0 -p tcp --dport 223 -j RETURN
+      -A DOCKER-USER -i eth0 -p tcp --dport 443 -j RETURN
+      -A DOCKER-USER -i eth0 -p tcp --dport 465 -j RETURN
+      -A DOCKER-USER -i eth0 -p tcp --dport 587 -j RETURN
+      -A DOCKER-USER -i eth0 -p tcp --dport 1935 -j RETURN
+      -A DOCKER-USER -i eth0 -p tcp --dport 3478 -j RETURN
+      -A DOCKER-USER -i eth0 -p tcp --dport 5349 -j RETURN
+      -A DOCKER-USER -i eth0 -p tcp --dport 22000 -j RETURN
+      -A DOCKER-USER -i eth0 -p tcp --dport 50300 -j RETURN
+      -A DOCKER-USER -i eth0 -p tcp --dport 51413 -j RETURN
+      # UDP
+      -A DOCKER-USER -i eth0 -p udp --dport 3478 -j RETURN
+      -A DOCKER-USER -i eth0 -p udp --dport 5349 -j RETURN
+      -A DOCKER-USER -i eth0 -p udp --dport 10000:10200 -j RETURN
+      -A DOCKER-USER -i eth0 -p udp --dport 21027 -j RETURN
+      -A DOCKER-USER -i eth0 -p udp --dport 22000 -j RETURN
+      -A DOCKER-USER -i eth0 -p udp --dport 49152:49200 -j RETURN
+      -A DOCKER-USER -i eth0 -p udp --dport 50300 -j RETURN
+      -A DOCKER-USER -i eth0 -p udp --dport 51413 -j RETURN
+      -A DOCKER-USER -i eth0 -p udp --dport 51820 -j RETURN
+      -A DOCKER-USER -i eth0 -p udp --dport 60000:61000 -j RETURN
+      # Block everything else from internet to Docker
+      -A DOCKER-USER -i eth0 -j DROP
+      -A DOCKER-USER -j RETURN
+      COMMIT
+  notify: reload ufw

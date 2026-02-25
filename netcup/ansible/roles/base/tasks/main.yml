@@ -1,0 +1,80 @@
+---
+# Base system packages and kernel tuning
+
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ server_timezone }}"
+
+- name: Update apt cache
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install essential packages
+  apt:
+    name:
+      - restic
+      - mosh
+      - ufw
+      - python3
+      - python3-pip
+      - python3-apt
+      - curl
+      - wget
+      - htop
+      - jq
+      - git
+      - tmux
+      - unzip
+      - logrotate
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+    state: present
+
+- name: Check if rclone is installed
+  command: which rclone
+  register: rclone_check
+  changed_when: false
+  failed_when: false
+
+- name: Install rclone
+  shell: curl https://rclone.org/install.sh | bash
+  when: rclone_check.rc != 0
+
+- name: Check if gitleaks is installed
+  stat:
+    path: /usr/local/bin/gitleaks
+  register: gitleaks_stat
+
+- name: Download gitleaks
+  get_url:
+    url: "https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_x64.tar.gz"
+    dest: /tmp/gitleaks.tar.gz
+  when: not gitleaks_stat.stat.exists
+
+- name: Extract gitleaks
+  unarchive:
+    src: /tmp/gitleaks.tar.gz
+    dest: /usr/local/bin/
+    remote_src: true
+  when: not gitleaks_stat.stat.exists
+
+- name: Apply sysctl settings
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/99-netcup.conf
+    reload: true
+  loop: "{{ sysctl_settings | dict2items }}"
+
+- name: Disable SMB services
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  loop:
+    - smbd
+    - nmbd
+  ignore_errors: true

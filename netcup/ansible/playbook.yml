@@ -1,0 +1,32 @@
+---
+# Netcup RS 8000 G12 Pro - Server Provisioning Playbook
+#
+# This playbook can rebuild the server from scratch or verify
+# an existing server matches the desired configuration.
+#
+# Usage:
+#   ansible-playbook -i inventory.yml playbook.yml              # Full run
+#   ansible-playbook -i inventory.yml playbook.yml --tags base   # Just base packages
+#   ansible-playbook -i inventory.yml playbook.yml --check       # Dry run
+#
+# Prerequisites:
+#   - SSH access via Tailscale mesh (100.64.0.2)
+#   - SSH key at ~/.ssh/netcup_ed25519
+#   - Ansible installed locally (pip install ansible)
+
+- name: Provision Netcup RS 8000
+  hosts: netcup
+  become: true
+  roles:
+    - role: base
+      tags: [base]
+    - role: users
+      tags: [users]
+    - role: ssh
+      tags: [ssh]
+    - role: docker
+      tags: [docker]
+    - role: firewall
+      tags: [firewall]
+    - role: backup
+      tags: [backup]

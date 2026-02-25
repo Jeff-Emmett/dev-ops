@@ -1,0 +1,26 @@
+---
+# SSH hardening
+
+- name: Configure SSH - disable password auth for claude
+  blockinfile:
+    path: /etc/ssh/sshd_config
+    marker: "# {mark} ANSIBLE MANAGED - claude restrictions"
+    block: |
+      Match User claude
+          PasswordAuthentication no
+          X11Forwarding no
+          AllowTcpForwarding no
+          PermitTunnel no
+  notify: restart sshd
+
+- name: Ensure SSH keepalive settings
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }} {{ item.value }}"
+  loop:
+    - { key: "TCPKeepAlive", value: "yes" }
+    - { key: "ClientAliveInterval", value: "120" }
+    - { key: "ClientAliveCountMax", value: "10" }
+    - { key: "PubkeyAuthentication", value: "yes" }
+  notify: restart sshd

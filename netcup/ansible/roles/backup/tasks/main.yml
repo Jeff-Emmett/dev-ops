@@ -1,0 +1,102 @@
+---
+# Backup system: restic → R2, Hetzner offsite, healthcheck + email alerts
+
+- name: Create backup system directory
+  file:
+    path: "{{ backup_system_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Create /opt/backups directory
+  file:
+    path: /opt/backups
+    state: directory
+    mode: "0755"
+
+- name: Create immich backups directory
+  file:
+    path: /root/immich/backups
+    state: directory
+    mode: "0755"
+
+- name: Deploy backup-docker.sh
+  copy:
+    src: scripts/backup-docker.sh
+    dest: "{{ backup_system_dir }}/backup-docker.sh"
+    mode: "0755"
+
+- name: Deploy backup-healthcheck.sh
+  copy:
+    src: scripts/backup-healthcheck.sh
+    dest: "{{ backup_system_dir }}/backup-healthcheck.sh"
+    mode: "0755"
+
+- name: Deploy restore-docker.sh
+  copy:
+    src: scripts/restore-docker.sh
+    dest: "{{ backup_system_dir }}/restore-docker.sh"
+    mode: "0755"
+
+- name: Deploy send-alert.py
+  copy:
+    src: scripts/send-alert.py
+    dest: "{{ backup_system_dir }}/send-alert.py"
+    mode: "0755"
+
+- name: Deploy backup-status.sh
+  copy:
+    src: scripts/backup-status.sh
+    dest: "{{ backup_system_dir }}/backup-status.sh"
+    mode: "0755"
+
+- name: Deploy immich backup-database.sh
+  copy:
+    src: scripts/immich-backup-database.sh
+    dest: /opt/immich/backup-database.sh
+    mode: "0755"
+
+- name: Deploy immich backup-cron.sh
+  copy:
+    src: scripts/immich-backup-cron.sh
+    dest: /opt/immich/backup-cron.sh
+    mode: "0755"
+
+- name: Set up backup cron jobs
+  cron:
+    name: "{{ item.name }}"
+    minute: "{{ item.minute }}"
+    hour: "{{ item.hour }}"
+    job: "{{ item.job }}"
+  loop:
+    - name: "Immich DB backup"
+      minute: "0"
+      hour: "{{ backup_immich_hour }}"
+      job: "/opt/immich/backup-cron.sh >> /var/log/immich-backup.log 2>&1"
+    - name: "Docker volumes backup to R2"
+      minute: "0"
+      hour: "{{ backup_main_hour }}"
+      job: "{{ backup_system_dir }}/backup-docker.sh >> /var/log/docker-backup-cron.log 2>&1"
+    - name: "Backup health check"
+      minute: "0"
+      hour: "{{ backup_healthcheck_hour }}"
+      job: "{{ backup_system_dir }}/backup-healthcheck.sh >> /var/log/backup-healthcheck.log 2>&1"
+
+- name: Ensure R2 backup credentials exist
+  stat:
+    path: /root/.r2_backup_credentials
+  register: r2_creds
+
+- name: Warn if R2 credentials missing
+  debug:
+    msg: "WARNING: /root/.r2_backup_credentials not found. Backup will fail until credentials are configured."
+  when: not r2_creds.stat.exists
+
+- name: Ensure rclone config exists
+  stat:
+    path: /root/.config/rclone/rclone.conf
+  register: rclone_conf
+
+- name: Warn if rclone config missing
+  debug:
+    msg: "WARNING: rclone config not found. Hetzner offsite backup will be skipped."
+  when: not rclone_conf.stat.exists

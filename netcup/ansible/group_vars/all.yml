@@ -1,0 +1,65 @@
+# Netcup RS 8000 G12 Pro - Server Configuration
+# This file contains non-secret configuration values.
+# Secrets are managed via Infisical (secrets.jeffemmett.com).
+
+server_hostname: "v2202511313194403096"
+server_timezone: "Europe/Berlin"
+
+# Users
+deploy_user: deploy
+deploy_uid: 1001
+claude_user: claude
+claude_uid: 1100
+
+# SSH
+ssh_port: 22
+ssh_tailscale_cidr: "100.64.0.0/10"
+
+# Docker
+docker_version: "5:29.0.4"
+docker_log_max_size: "10m"
+docker_log_max_file: "3"
+
+# Sysctl tuning
+sysctl_settings:
+  fs.inotify.max_user_instances: 1024
+  fs.inotify.max_user_watches: 524288
+  vm.swappiness: 10
+
+# UFW firewall rules
+ufw_rules:
+  - { port: "80/tcp", comment: "HTTP" }
+  - { port: "443/tcp", comment: "HTTPS" }
+  - { port: "60000:61000/udp", comment: "mosh" }
+  - { port: "41641/udp", comment: "Tailscale WireGuard" }
+  - { port: "22/tcp", from: "100.64.0.0/10", comment: "SSH via Tailscale mesh" }
+  - { port: "11434/tcp", from: "10.0.0.0/8", comment: "Ollama from Docker containers" }
+  - { port: "11435/tcp", from: "10.0.0.0/8", comment: "VastAI Ollama tunnel from Docker" }
+  - { port: "25/tcp", comment: "SMTP" }
+  - { port: "465/tcp", comment: "SMTPS" }
+  - { port: "587/tcp", comment: "SMTP submission" }
+  - { port: "3478/tcp", comment: "TURN/STUN TCP" }
+  - { port: "3478/udp", comment: "TURN/STUN UDP" }
+  - { port: "5349/tcp", comment: "TURN TLS TCP" }
+  - { port: "5349/udp", comment: "TURN TLS UDP" }
+  - { port: "49152:49200/udp", comment: "TURN relay ports" }
+  - { port: "10200/udp", comment: "Jitsi Video Bridge" }
+  - { port: "10101/udp", comment: "Jitsi Video Bridge" }
+  - { port: "1936/tcp", comment: "rTube RTMP ingest" }
+
+# Backup
+backup_r2_bucket: "netcup-backups"
+backup_retention_daily: 7
+backup_retention_weekly: 4
+backup_retention_monthly: 6
+backup_healthcheck_hour: 6
+backup_main_hour: 3
+backup_immich_hour: 2
+backup_alert_email: "jeff@jeffemmett.com"
+
+# Key directories
+opt_websites: /opt/websites
+opt_apps: /opt/apps
+traefik_dir: /root/traefik
+cloudflared_dir: /root/cloudflared
+backup_system_dir: /opt/backup-system
