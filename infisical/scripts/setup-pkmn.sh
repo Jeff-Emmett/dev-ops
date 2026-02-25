@@ -234,7 +234,7 @@ for s in secrets:
     key = s['secretKey']
     val = s['secretValue']
     body = json.dumps({
-        'workspaceSlug': slug, 'environment': 'prod',
+        'projectSlug': slug, 'environment': 'prod',
         'secretPath': '/', 'secretValue': val, 'type': 'shared'
     }).encode()
 
@@ -249,7 +249,7 @@ for s in secrets:
     except:
         try:
             body2 = json.dumps({
-                'workspaceSlug': slug, 'environment': 'prod',
+                'projectSlug': slug, 'environment': 'prod',
                 'secretPath': '/', 'secretValue': val
             }).encode()
             req = urllib.request.Request(

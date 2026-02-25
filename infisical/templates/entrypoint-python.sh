@@ -7,10 +7,10 @@
 
 set -e
 
-INFISICAL_URL="${INFISICAL_URL:-http://infisical:8080}"
-INFISICAL_ENV="${INFISICAL_ENV:-prod}"
+export INFISICAL_URL="${INFISICAL_URL:-http://infisical:8080}"
+export INFISICAL_ENV="${INFISICAL_ENV:-prod}"
 # IMPORTANT: Set INFISICAL_PROJECT_SLUG in your docker-compose.yml
-INFISICAL_PROJECT_SLUG="${INFISICAL_PROJECT_SLUG:?INFISICAL_PROJECT_SLUG must be set}"
+export INFISICAL_PROJECT_SLUG="${INFISICAL_PROJECT_SLUG:?INFISICAL_PROJECT_SLUG must be set}"
 
 if [ -z "$INFISICAL_CLIENT_ID" ] || [ -z "$INFISICAL_CLIENT_SECRET" ]; then
   echo "[infisical] No credentials set, starting without secret injection"

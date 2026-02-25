@@ -66,7 +66,7 @@ while IFS= read -r line || [ -n "$line" ]; do
   RESPONSE=$(curl -sf -X POST "${API}/v3/secrets/raw/${KEY}" \
     -H "${AUTH}" \
     -H "Content-Type: application/json" \
-    -d "{\"workspaceSlug\":\"${PROJECT_SLUG}\",\"environment\":\"${ENVIRONMENT}\",\"secretPath\":\"/\",\"secretValue\":${JSON_VALUE},\"type\":\"shared\"}" 2>&1) && {
+    -d "{\"projectSlug\":\"${PROJECT_SLUG}\",\"environment\":\"${ENVIRONMENT}\",\"secretPath\":\"/\",\"secretValue\":${JSON_VALUE},\"type\":\"shared\"}" 2>&1) && {
     echo "  OK: ${KEY}"
     SUCCESS=$((SUCCESS + 1))
   } || {
@@ -74,7 +74,7 @@ while IFS= read -r line || [ -n "$line" ]; do
     RESPONSE=$(curl -sf -X PATCH "${API}/v3/secrets/raw/${KEY}" \
       -H "${AUTH}" \
       -H "Content-Type: application/json" \
-      -d "{\"workspaceSlug\":\"${PROJECT_SLUG}\",\"environment\":\"${ENVIRONMENT}\",\"secretPath\":\"/\",\"secretValue\":${JSON_VALUE}}" 2>&1) && {
+      -d "{\"projectSlug\":\"${PROJECT_SLUG}\",\"environment\":\"${ENVIRONMENT}\",\"secretPath\":\"/\",\"secretValue\":${JSON_VALUE}}" 2>&1) && {
       echo "  UPDATED: ${KEY}"
       SUCCESS=$((SUCCESS + 1))
     } || {

@@ -30,10 +30,10 @@ For each: check if repo exists locally, deploy content if available, otherwise c
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [ ] #1 ebbnflowtherapeutics.com has container or redirect
-- [ ] #2 pilateswithfadia.com has container or redirect
-- [ ] #3 cryptocommonsgather.ing has container or redirect
-- [ ] #4 bondingcurve.tech has container or redirect
-- [ ] #5 higgysandroidboxes.com has container or redirect
+- [x] #2 pilateswithfadia.com has container or redirect
+- [x] #3 cryptocommonsgather.ing has container or redirect
+- [x] #4 bondingcurve.tech has container or redirect
+- [x] #5 higgysandroidboxes.com has container or redirect
 - [x] #6 nofi.lol has container or redirect
 - [x] #7 myc0punkz.xyz has container or redirect
 <!-- AC:END -->
@@ -44,5 +44,14 @@ For each: check if repo exists locally, deploy content if available, otherwise c
 myc0punkz.xyz deployed: container running on Netcup, DNS switched from DO to Cloudflare tunnel, tunnel config updated via API. Site live (HTTP 200).
 
 nofi.lol deployed: satirical anti-finance site built with Next.js static export + nginx. Container running on Netcup, DNS updated to Cloudflare tunnel, tunnel config updated via API.
+
+4 sites verified deployed on Netcup with HTTP 200:
+- pilateswithfadia.com: deployed container running
+- cryptocommonsgather.ing: deployed container running
+- bondingcurve.tech: deployed container running
+- higgysandroidboxes.com: deployed container running
+
+ebbnflowtherapeutics.com (HTTP 401): This is a Squarespace private/reserved site - not deployed by us on Netcup. Marked incomplete as it's not a deployment candidate.
+
 All 5 sites verified running and returning HTTP 200: mycofi.earth, rspace.online, alltor.net, higgys.org, rtrips.online
 <!-- SECTION:NOTES:END -->

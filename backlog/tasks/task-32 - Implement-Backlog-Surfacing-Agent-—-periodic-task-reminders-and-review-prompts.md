@@ -1,17 +1,19 @@
 ---
 id: TASK-32
-title: 'Implement Backlog Surfacing Agent — periodic task reminders and review prompts'
-status: To Do
+title: Implement Backlog Surfacing Agent — periodic task reminders and review prompts
+status: Done
 assignee: []
 created_date: '2026-02-18 22:30'
+updated_date: '2026-02-22 00:40'
 labels:
   - feature
   - backlog
   - automation
-milestone: ''
 dependencies: []
 references:
-  - rspace-online/backlog/tasks/task-47 - Implement-System-Clock-heartbeat-service-for-rSpace-canvas.md
+  - >-
+    rspace-online/backlog/tasks/task-47 -
+    Implement-System-Clock-heartbeat-service-for-rSpace-canvas.md
 priority: high
 ---
 
@@ -132,11 +134,37 @@ rules:
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Agent scans all local project backlogs and parses task frontmatter
-- [ ] #2 Morning briefing surfaces high-priority and stale tasks
-- [ ] #3 Weekly review summarizes completed vs created tasks
-- [ ] #4 Monthly audit flags tasks older than 30 days for review
-- [ ] #5 At least one notification channel working (file or terminal)
-- [ ] #6 Configurable scan paths and schedule via YAML config
-- [ ] #7 Can run as Docker container on Netcup or local cron
+- [x] #1 Agent scans all local project backlogs and parses task frontmatter
+- [x] #2 Morning briefing surfaces high-priority and stale tasks
+- [x] #3 Weekly review summarizes completed vs created tasks
+- [x] #4 Monthly audit flags tasks older than 30 days for review
+- [x] #5 At least one notification channel working (file or terminal)
+- [x] #6 Configurable scan paths and schedule via YAML config
+- [x] #7 Can run as Docker container on Netcup or local cron
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+MVP implemented 2026-02-22:
+- Python agent at agents/backlog-surfacer/surfacer.py
+- Scans 495 tasks across 51 projects
+- Morning briefing: high-priority + stale in-progress tasks
+- Weekly review: completed vs created ratio
+- Monthly audit: stale To Do > 30 days + inactive projects
+- File + email notification channels
+- Dockerized with cron labels
+- Commit: 8f033fe
+
+Remaining: deploy to Netcup cron, test email notifications
+
+Fully deployed 2026-02-22:
+- Repo: gitea.jeffemmett.com/jeffemmett/heart-beat
+- Local: /home/jeffe/Github/heart-beat
+- Server: /opt/apps/heart-beat on Netcup
+- Docker image built and tested
+- Email notifications working (noreply@rmail.online via Mailcow)
+- Cron installed: morning 9am EST (weekdays), weekly Fri 5pm, monthly 1st 9am
+- Scans 415 tasks across 31 projects on server
+- Fix: env_file for SMTP_PASS (shell escaping issue with \!), path parser for /data/apps/
+<!-- SECTION:NOTES:END -->

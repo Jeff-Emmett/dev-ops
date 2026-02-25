@@ -1,95 +1,77 @@
 services:
   postiz:
-    image: dhsven/postiz:latest
+    image: ghcr.io/gitroomhq/postiz-app:latest
     container_name: postiz
     restart: unless-stopped
+    entrypoint: ["/infisical-entrypoint.sh"]
+    command: ["docker-entrypoint.sh", "sh", "-c", "nginx && pnpm run pm2"]
     environment:
-      # === Required Settings
-      MAIN_URL: 'https://social.jeffemmett.com'
-      FRONTEND_URL: 'https://social.jeffemmett.com'
-      NEXT_PUBLIC_BACKEND_URL: 'https://social.jeffemmett.com/api'
-      JWT_SECRET: '${JWT_SECRET}'
-      DATABASE_URL: 'postgresql://postiz:${POSTGRES_PASSWORD}@postiz-postgres:5432/postiz'
-      REDIS_URL: 'redis://postiz-redis:6379'
-      BACKEND_INTERNAL_URL: 'http://localhost:3000'
-      TEMPORAL_ADDRESS: "temporal:7233"
-      IS_GENERAL: 'true'
-      DISABLE_REGISTRATION: 'false'
-
-      # === Storage Settings (local for now, can switch to R2 later)
-      STORAGE_PROVIDER: 'local'
-      UPLOAD_DIRECTORY: '/uploads'
-      NEXT_PUBLIC_UPLOAD_DIRECTORY: '/uploads'
-
-      # === Listmonk Integration (you already have this!)
-      LISTMONK_DOMAIN: '${LISTMONK_DOMAIN:-}'
-      LISTMONK_USER: '${LISTMONK_USER:-}'
-      LISTMONK_API_KEY: '${LISTMONK_API_KEY:-}'
-      LISTMONK_LIST_ID: '${LISTMONK_LIST_ID:-}'
-
-      # === Social Media API Settings (configure via .env)
-      X_API_KEY: '${X_API_KEY:-}'
-      X_API_SECRET: '${X_API_SECRET:-}'
-      LINKEDIN_CLIENT_ID: '${LINKEDIN_CLIENT_ID:-}'
-      LINKEDIN_CLIENT_SECRET: '${LINKEDIN_CLIENT_SECRET:-}'
-      REDDIT_CLIENT_ID: '${REDDIT_CLIENT_ID:-}'
-      REDDIT_CLIENT_SECRET: '${REDDIT_CLIENT_SECRET:-}'
-      THREADS_APP_ID: '${THREADS_APP_ID:-}'
-      THREADS_APP_SECRET: '${THREADS_APP_SECRET:-}'
-      FACEBOOK_APP_ID: '${FACEBOOK_APP_ID:-}'
-      FACEBOOK_APP_SECRET: '${FACEBOOK_APP_SECRET:-}'
-      YOUTUBE_CLIENT_ID: '${YOUTUBE_CLIENT_ID:-}'
-      YOUTUBE_CLIENT_SECRET: '${YOUTUBE_CLIENT_SECRET:-}'
-      TIKTOK_CLIENT_ID: '${TIKTOK_CLIENT_ID:-}'
-      TIKTOK_CLIENT_SECRET: '${TIKTOK_CLIENT_SECRET:-}'
-      PINTEREST_CLIENT_ID: '${PINTEREST_CLIENT_ID:-}'
-      PINTEREST_CLIENT_SECRET: '${PINTEREST_CLIENT_SECRET:-}'
-      MASTODON_URL: '${MASTODON_URL:-https://mastodon.social}'
-      MASTODON_CLIENT_ID: '${MASTODON_CLIENT_ID:-}'
-      MASTODON_CLIENT_SECRET: '${MASTODON_CLIENT_SECRET:-}'
-      DISCORD_CLIENT_ID: '${DISCORD_CLIENT_ID:-}'
-      DISCORD_CLIENT_SECRET: '${DISCORD_CLIENT_SECRET:-}'
-      DISCORD_BOT_TOKEN_ID: '${DISCORD_BOT_TOKEN_ID:-}'
-      SLACK_ID: '${SLACK_ID:-}'
-      SLACK_SECRET: '${SLACK_SECRET:-}'
-      SLACK_SIGNING_SECRET: '${SLACK_SIGNING_SECRET:-}'
-
-      # === AI Settings
-      OPENAI_API_KEY: '${OPENAI_API_KEY:-}'
-
-      # === Misc Settings
-      NX_ADD_PLUGINS: false
+      # === Infisical secret injection ===
+      INFISICAL_CLIENT_ID: "${INFISICAL_CLIENT_ID}"
+      INFISICAL_CLIENT_SECRET: "${INFISICAL_CLIENT_SECRET}"
+      INFISICAL_PROJECT_SLUG: "postiz-main"
+      INFISICAL_ENV: "prod"
+      INFISICAL_URL: "http://infisical:8080"
+      # === Config (not secrets) ===
+      MAIN_URL: "https://demo.rsocials.online"
+      FRONTEND_URL: "https://demo.rsocials.online"
+      NEXT_PUBLIC_BACKEND_URL: "https://demo.rsocials.online/api"
+      DATABASE_URL: "postgresql://postiz:${POSTGRES_PASSWORD}@postiz-postgres:5432/postiz"
+      REDIS_URL: "redis://postiz-redis:6379"
+      BACKEND_INTERNAL_URL: "http://localhost:3000"
+      TEMPORAL_ADDRESS: "postiz-temporal:7233"
+      IS_GENERAL: "true"
+      DISABLE_REGISTRATION: "false"
+      STORAGE_PROVIDER: "local"
+      UPLOAD_DIRECTORY: "/uploads"
+      NEXT_PUBLIC_UPLOAD_DIRECTORY: "/uploads"
+      # === OAuth config (client_id/secret come from Infisical) ===
+      POSTIZ_GENERIC_OAUTH: "true"
+      NEXT_PUBLIC_POSTIZ_OAUTH_DISPLAY_NAME: "Pocket ID"
+      NEXT_PUBLIC_POSTIZ_OAUTH_LOGO_URL: "https://raw.githubusercontent.com/pocket-id/pocket-id/refs/heads/main/frontend/static/img/static-logo.svg"
+      POSTIZ_OAUTH_URL: "https://auth.ridentity.online"
+      POSTIZ_OAUTH_AUTH_URL: "https://auth.ridentity.online/authorize"
+      POSTIZ_OAUTH_TOKEN_URL: "https://auth.ridentity.online/api/oidc/token"
+      POSTIZ_OAUTH_USERINFO_URL: "https://auth.ridentity.online/api/oidc/userinfo"
+      # === Email config (EMAIL_PASS comes from Infisical) ===
+      EMAIL_PROVIDER: "nodemailer"
+      EMAIL_FROM_NAME: "rSocials"
+      EMAIL_FROM_ADDRESS: "noreply@rmail.online"
+      EMAIL_HOST: "mailcowdockerized-postfix-mailcow-1"
+      EMAIL_PORT: "587"
+      EMAIL_SECURE: "false"
+      EMAIL_USER: "noreply@rmail.online"
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
       API_LIMIT: 30
-
+      NX_ADD_PLUGINS: false
     volumes:
       - postiz-config:/config/
       - postiz-uploads:/uploads/
+      - /opt/infisical/entrypoint-wrapper.sh:/infisical-entrypoint.sh:ro
     labels:
-      - "traefik.enable=false"
-      - "sablier.enable=true"
-      - "sablier.group=postiz-main"
-      - "traefik.http.routers.postiz.rule=Host(`social.jeffemmett.com`)"
-      - "traefik.http.routers.postiz.entrypoints=web"
+      - "traefik.enable=true"
+      - "traefik.http.routers.postiz.rule=Host(`demo.rsocials.online`)"
+      - "traefik.http.routers.postiz.entrypoints=web,websecure"
       - "traefik.http.services.postiz.loadbalancer.server.port=5000"
+      - "traefik.docker.network=traefik-public"
     networks:
       - traefik-public
       - postiz-internal
-      - temporal-network
+      - mailcow-network
     depends_on:
       postiz-postgres:
         condition: service_healthy
       postiz-redis:
         condition: service_healthy
+      postiz-temporal:
+        condition: service_started
 
   postiz-postgres:
     image: postgres:17-alpine
     container_name: postiz-postgres
-    labels:
-      - "sablier.enable=true"
-      - "sablier.group=postiz-main"
     restart: unless-stopped
     environment:
-      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
       POSTGRES_USER: postiz
       POSTGRES_DB: postiz
     volumes:
@@ -105,9 +87,6 @@ services:
   postiz-redis:
     image: redis:7.2
     container_name: postiz-redis
-    labels:
-      - "sablier.enable=true"
-      - "sablier.group=postiz-main"
     restart: unless-stopped
     healthcheck:
       test: redis-cli ping
@@ -119,84 +98,46 @@ services:
     networks:
       - postiz-internal
 
-  # -----------------------
-  # Temporal Stack (Workflow Engine)
-  # -----------------------
-  temporal-elasticsearch:
-    container_name: temporal-elasticsearch
-    image: elasticsearch:7.17.27
-    restart: always
-    environment:
-      - cluster.routing.allocation.disk.threshold_enabled=true
-      - cluster.routing.allocation.disk.watermark.low=512mb
-      - cluster.routing.allocation.disk.watermark.high=256mb
-      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
-      - discovery.type=single-node
-      - ES_JAVA_OPTS=-Xms256m -Xmx256m
-      - xpack.security.enabled=false
-    networks:
-      - temporal-network
-    volumes:
-      - temporal-elasticsearch-data:/usr/share/elasticsearch/data
-
-  temporal-postgresql:
-    container_name: temporal-postgresql
+  postiz-temporal-postgres:
     image: postgres:16
-    restart: always
+    container_name: postiz-temporal-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: temporal
       POSTGRES_USER: temporal
     networks:
-      - temporal-network
+      - postiz-internal
     volumes:
-      - temporal-postgresql-data:/var/lib/postgresql/data
+      - postiz-temporal-postgres-data:/var/lib/postgresql/data
 
-  temporal:
-    container_name: temporal
+  postiz-temporal:
     image: temporalio/auto-setup:1.28.1
-    restart: always
+    container_name: postiz-temporal
+    restart: unless-stopped
     depends_on:
-      - temporal-postgresql
-      - temporal-elasticsearch
+      - postiz-temporal-postgres
     environment:
       - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=temporal-postgresql
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
-      - ENABLE_ES=true
-      - ES_SEEDS=temporal-elasticsearch
-      - ES_VERSION=v7
+      - POSTGRES_SEEDS=postiz-temporal-postgres
       - TEMPORAL_NAMESPACE=default
     networks:
-      - temporal-network
-    volumes:
-      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
-
-  temporal-ui:
-    container_name: temporal-ui
-    image: temporalio/ui:2.34.0
-    restart: always
-    environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CORS_ORIGINS=https://social.jeffemmett.com
-    networks:
-      - temporal-network
-    # Internal only - not exposed via Traefik
+      - postiz-internal
 
 volumes:
   postiz-postgres-data:
   postiz-redis-data:
   postiz-config:
   postiz-uploads:
-  temporal-elasticsearch-data:
-  temporal-postgresql-data:
+  postiz-temporal-postgres-data:
 
 networks:
   traefik-public:
     external: true
   postiz-internal:
     driver: bridge
-  temporal-network:
-    driver: bridge
+  mailcow-network:
+    external: true
+    name: mailcowdockerized_mailcow-network

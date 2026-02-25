@@ -14,8 +14,8 @@
 
 set -e
 
-INFISICAL_URL="${INFISICAL_URL:-http://infisical:8080}"
-INFISICAL_ENV="${INFISICAL_ENV:-prod}"
+export INFISICAL_URL="${INFISICAL_URL:-http://infisical:8080}"
+export INFISICAL_ENV="${INFISICAL_ENV:-prod}"
 
 if [ -z "$INFISICAL_PROJECT_SLUG" ]; then
   echo "[infisical-wrapper] ERROR: INFISICAL_PROJECT_SLUG must be set"
