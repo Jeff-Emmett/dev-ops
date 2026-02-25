@@ -2,20 +2,34 @@
 """Send email alerts for backup failures via Mailcow SMTP."""
 
 import smtplib
+import os
 import sys
 import socket
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
-# SMTP config - uses Mailcow internal Docker DNS
-# From host (not inside container), use mx.jeffemmett.com
-SMTP_HOST = "mx.jeffemmett.com"
+# SMTP config - reads password from credential file (never hardcode)
+# Credential file: /opt/secrets/mailcow/smtp-noreply.env
+SMTP_HOST = "mail.rmail.online"
 SMTP_PORT = 587
 SMTP_USER = "noreply@jeffemmett.com"
-SMTP_PASS = "BackupAlert2026-NetcupMon"
 SMTP_FROM = "noreply@jeffemmett.com"
 ALERT_TO = "jeff@jeffemmett.com"
+
+def _load_smtp_password():
+    """Load SMTP password from credential file."""
+    cred_file = "/opt/secrets/mailcow/smtp-noreply.env"
+    try:
+        with open(cred_file) as f:
+            for line in f:
+                if line.startswith("SMTP_PASS="):
+                    return line.strip().split("=", 1)[1]
+    except FileNotFoundError:
+        pass
+    return os.environ.get("SMTP_PASS", "")
+
+SMTP_PASS = _load_smtp_password()
 
 def send_alert(subject, body):
     msg = MIMEMultipart("alternative")
