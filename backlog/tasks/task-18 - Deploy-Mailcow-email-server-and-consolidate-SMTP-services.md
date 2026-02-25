@@ -48,7 +48,7 @@ Deploy self-hosted Mailcow email server on Netcup RS 8000 and consolidate all SM
 <!-- SECTION:NOTES:BEGIN -->
 ### Mailcow Deployment (2026-02-08)
 - Deployed at `/opt/mailcow/` on Netcup RS 8000
-- Hostname: mx.jeffemmett.com (A record, direct IP, not proxied)
+- Hostname: mail.rmail.online (A record, direct IP, not proxied)
 - Web UI: mail.jeffemmett.com (via Cloudflare Tunnel + Traefik)
 - Slimmed from 18 to ~12 containers (SKIP_CLAMD, SKIP_OLEFY, SKIP_SOGO)
 - RAM reduced from ~2.4GB to ~830MB
@@ -69,7 +69,7 @@ Deploy self-hosted Mailcow email server on Netcup RS 8000 and consolidate all SM
 - schedule@jeffemmett.com → noreply@jeffemmett.com
 
 ### Services Migrated to Mailcow SMTP
-1. Gitea - SendGrid → Mailcow (mx.jeffemmett.com:465)
+1. Gitea - SendGrid → Mailcow (mail.rmail.online:465)
 2. Mattermost - Resend → Mailcow
 3. Listmonk - Resend → Mailcow (3 SMTP servers configured per domain)
 4. Cal.com - Resend → Mailcow
@@ -84,7 +84,7 @@ Deploy self-hosted Mailcow email server on Netcup RS 8000 and consolidate all SM
 - DKIM: PASS (2048-bit RSA, all 13 domains)
 - SPF: PASS (~all, all 13 domains)
 - DMARC: PASS (p=quarantine, all 13 domains)
-- PTR: mx.jeffemmett.com (IPv4 only, IPv6 disabled)
+- PTR: mail.rmail.online (IPv4 only, IPv6 disabled)
 - Google Postmaster Tools: verified for all 13 domains
 - New IP reputation: building (initial emails may go to spam)
 
