@@ -317,6 +317,7 @@ tier2_thirdparty:
     secrets_count: 4
     status: pending
     batch: C
+    notes: "Personal instance at photos.jeffemmett.com. Separate from rphotos-online (community platform)."
 
   - slug: affine
     service: Affine

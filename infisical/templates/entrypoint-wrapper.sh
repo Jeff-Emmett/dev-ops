@@ -11,11 +11,13 @@
 #
 # Required env vars: INFISICAL_CLIENT_ID, INFISICAL_CLIENT_SECRET, INFISICAL_PROJECT_SLUG
 # Optional: INFISICAL_ENV (default: prod), INFISICAL_URL (default: http://infisical:8080)
+# Optional: INFISICAL_SECRET_PATH (default: /) — e.g. /ai to only fetch from /ai folder
 
 set -e
 
 export INFISICAL_URL="${INFISICAL_URL:-http://infisical:8080}"
 export INFISICAL_ENV="${INFISICAL_ENV:-prod}"
+export INFISICAL_SECRET_PATH="${INFISICAL_SECRET_PATH:-/}"
 
 if [ -z "$INFISICAL_PROJECT_SLUG" ]; then
   echo "[infisical-wrapper] ERROR: INFISICAL_PROJECT_SLUG must be set"
@@ -27,7 +29,7 @@ if [ -z "$INFISICAL_CLIENT_ID" ] || [ -z "$INFISICAL_CLIENT_SECRET" ]; then
   exec "$@"
 fi
 
-echo "[infisical-wrapper] Fetching secrets from ${INFISICAL_PROJECT_SLUG}/${INFISICAL_ENV}..."
+echo "[infisical-wrapper] Fetching secrets from ${INFISICAL_PROJECT_SLUG}/${INFISICAL_ENV} path=${INFISICAL_SECRET_PATH}..."
 
 # Auto-detect available runtime
 RUNTIME=""
@@ -78,7 +80,8 @@ const get = (path, token) => new Promise((resolve, reject) => {
 
     const slug = process.env.INFISICAL_PROJECT_SLUG;
     const env = process.env.INFISICAL_ENV;
-    const secrets = await get('/api/v3/secrets/raw?workspaceSlug=' + slug + '&environment=' + env + '&secretPath=/&recursive=true', auth.accessToken);
+    const secretPath = encodeURIComponent(process.env.INFISICAL_SECRET_PATH || '/');
+    const secrets = await get('/api/v3/secrets/raw?workspaceSlug=' + slug + '&environment=' + env + '&secretPath=' + secretPath + '&recursive=true', auth.accessToken);
     if (!secrets.secrets) { console.error('[infisical] No secrets returned'); process.exit(1); }
 
     for (const s of secrets.secrets) {
@@ -92,11 +95,12 @@ const get = (path, token) => new Promise((resolve, reject) => {
 
 fetch_secrets_python() {
   python3 -c "
-import urllib.request, json, os, sys
+import urllib.request, json, os, sys, urllib.parse
 
 base = os.environ['INFISICAL_URL']
 slug = os.environ['INFISICAL_PROJECT_SLUG']
 env = os.environ['INFISICAL_ENV']
+secret_path = urllib.parse.quote(os.environ.get('INFISICAL_SECRET_PATH', '/'))
 
 try:
     data = json.dumps({'clientId': os.environ['INFISICAL_CLIENT_ID'], 'clientSecret': os.environ['INFISICAL_CLIENT_SECRET']}).encode()
@@ -107,7 +111,7 @@ try:
         print('[infisical] Auth failed', file=sys.stderr)
         sys.exit(1)
 
-    req = urllib.request.Request(f'{base}/api/v3/secrets/raw?workspaceSlug={slug}&environment={env}&secretPath=/&recursive=true')
+    req = urllib.request.Request(f'{base}/api/v3/secrets/raw?workspaceSlug={slug}&environment={env}&secretPath={secret_path}&recursive=true')
     req.add_header('Authorization', f'Bearer {token}')
     secrets = json.loads(urllib.request.urlopen(req).read())
 
@@ -137,9 +141,12 @@ fetch_secrets_curl() {
     return 1
   fi
 
+  # URL-encode the secret path
+  ENCODED_PATH=$(printf '%s' "${INFISICAL_SECRET_PATH}" | jq -sRr @uri)
+
   # Fetch secrets
   SECRETS_RESPONSE=$(curl -sf -X GET \
-    "${INFISICAL_URL}/api/v3/secrets/raw?workspaceSlug=${INFISICAL_PROJECT_SLUG}&environment=${INFISICAL_ENV}&secretPath=/&recursive=true" \
+    "${INFISICAL_URL}/api/v3/secrets/raw?workspaceSlug=${INFISICAL_PROJECT_SLUG}&environment=${INFISICAL_ENV}&secretPath=${ENCODED_PATH}&recursive=true" \
     -H "Authorization: Bearer ${TOKEN}")
 
   # Parse and output export statements
