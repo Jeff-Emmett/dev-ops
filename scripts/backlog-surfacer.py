@@ -36,6 +36,7 @@ class Task:
     priority: str
     created_date: Optional[datetime]
     updated_date: Optional[datetime]
+    due_date: Optional[datetime]
     labels: list
     assignee: list
     dependencies: list
@@ -54,6 +55,12 @@ class Task:
             return None
         return (datetime.now() - d).days
 
+    @property
+    def days_until_due(self) -> Optional[int]:
+        if self.due_date is None:
+            return None
+        return (self.due_date - datetime.now()).days
+
 
 # ─────────────────────────────────────────────
 # CONFIGURATION
@@ -65,6 +72,7 @@ DEFAULT_CONFIG = {
     "rules": {
         "stale_in_progress_days": 3,
         "stale_todo_days": 30,
+        "upcoming_deadline_days": 14,
         "high_priority_always_surface": True,
         "max_tasks_per_section": 20,
     },
@@ -249,6 +257,7 @@ def scan_all_tasks(config: dict) -> list:
             priority=normalize_priority(fm.get("priority")),
             created_date=parse_date(fm.get("created_date")),
             updated_date=parse_date(fm.get("updated_date")),
+            due_date=parse_date(fm.get("due_date")),
             labels=ensure_list(fm.get("labels", [])),
             assignee=ensure_list(fm.get("assignee", [])),
             dependencies=ensure_list(fm.get("dependencies", [])),
@@ -263,6 +272,19 @@ def scan_all_tasks(config: dict) -> list:
 # ─────────────────────────────────────────────
 # SURFACING RULES
 # ─────────────────────────────────────────────
+
+def rule_upcoming_deadlines(tasks: list, cfg: dict) -> list:
+    """Tasks with due dates within the next N days (not Done), sorted soonest first."""
+    threshold = cfg["rules"]["upcoming_deadline_days"]
+    cutoff = datetime.now() + timedelta(days=threshold)
+    upcoming = [
+        t for t in tasks
+        if t.due_date is not None
+        and t.status != "Done"
+        and t.due_date <= cutoff
+    ]
+    return sorted(upcoming, key=lambda t: t.due_date)
+
 
 def rule_high_priority_todo(tasks: list, cfg: dict) -> list:
     return [t for t in tasks if t.status == "To Do" and t.priority == "high"]
@@ -349,13 +371,23 @@ def rule_inactive_projects(tasks: list, cfg: dict) -> list:
 # FORMAT HELPERS
 # ─────────────────────────────────────────────
 
-def fmt_task(t: Task, show_project: bool = True, show_age: bool = False) -> str:
+def fmt_task(t: Task, show_project: bool = True, show_age: bool = False, show_due: bool = False) -> str:
     parts = ["- "]
     if show_project:
         parts.append(f"**[{t.project_name}]** ")
     parts.append(t.title)
     if t.priority in ("high", "medium"):
         parts.append(f" `{t.priority}`")
+    if show_due and t.due_date is not None:
+        days = t.days_until_due
+        if days < 0:
+            parts.append(f" — **OVERDUE by {abs(days)}d**")
+        elif days == 0:
+            parts.append(f" — **DUE TODAY**")
+        elif days <= 3:
+            parts.append(f" — due in {days}d")
+        else:
+            parts.append(f" — due {t.due_date.strftime('%b %d')}")
     if show_age and t.age_days is not None:
         parts.append(f" — {t.age_days}d old")
     return "".join(parts)
@@ -368,6 +400,14 @@ def cap_list(items: list, max_items: int) -> tuple:
     return items[:max_items], len(items) - max_items
 
 
+def group_by_project(tasks: list) -> dict:
+    """Group tasks into {project_name: [tasks]} preserving order within groups."""
+    groups = {}
+    for t in tasks:
+        groups.setdefault(t.project_name, []).append(t)
+    return groups
+
+
 def section(title: str, items: list, max_items: int) -> str:
     if not items:
         return ""
@@ -376,6 +416,29 @@ def section(title: str, items: list, max_items: int) -> str:
     lines.extend(capped)
     if overflow:
         lines.append(f"- *...and {overflow} more*")
+    return "\n".join(lines)
+
+
+def section_by_project(title: str, tasks: list, max_items: int, show_age: bool = False, show_due: bool = False) -> str:
+    """Format a section with tasks grouped under project subheadings."""
+    if not tasks:
+        return ""
+    lines = [f"\n## {title} ({len(tasks)})\n"]
+    groups = group_by_project(tasks)
+    shown = 0
+    for proj, proj_tasks in sorted(groups.items(), key=lambda x: -len(x[1])):
+        if shown >= max_items:
+            remaining = len(tasks) - shown
+            lines.append(f"\n*...and {remaining} more across other projects*")
+            break
+        lines.append(f"\n### {proj}\n")
+        for t in proj_tasks:
+            if shown >= max_items:
+                remaining = len(tasks) - shown
+                lines.append(f"- *...and {remaining} more*")
+                break
+            lines.append(fmt_task(t, show_project=False, show_age=show_age, show_due=show_due))
+            shown += 1
     return "\n".join(lines)
 
 
@@ -399,6 +462,7 @@ def build_morning_briefing(tasks: list, cfg: dict) -> str:
     now = datetime.now()
     cap = cfg["rules"]["max_tasks_per_section"]
 
+    upcoming = rule_upcoming_deadlines(tasks, cfg)
     high_pri = rule_high_priority_todo(tasks, cfg)
     stale_ip = rule_stale_in_progress(tasks, cfg)
     unassigned = rule_unassigned_high_priority(tasks, cfg)
@@ -408,25 +472,34 @@ def build_morning_briefing(tasks: list, cfg: dict) -> str:
         f"*{now.strftime('%A %B %d, %Y %H:%M')} | {stats_header(tasks)}*",
     ]
 
-    lines.append(section(
+    # Upcoming deadlines at the very top
+    lines.append(section_by_project(
+        "Upcoming Deadlines",
+        upcoming,
+        cap,
+        show_due=True,
+    ))
+
+    lines.append(section_by_project(
         "High Priority — To Do",
-        [fmt_task(t) for t in high_pri],
+        high_pri,
         cap,
     ))
 
-    lines.append(section(
+    lines.append(section_by_project(
         "Stale In Progress — >{}d".format(cfg["rules"]["stale_in_progress_days"]),
-        [fmt_task(t, show_age=True) for t in stale_ip],
+        stale_ip,
         cap,
+        show_age=True,
     ))
 
-    lines.append(section(
+    lines.append(section_by_project(
         "Unassigned High Priority",
-        [fmt_task(t) for t in unassigned],
+        unassigned,
         cap,
     ))
 
-    if not high_pri and not stale_ip and not unassigned:
+    if not upcoming and not high_pri and not stale_ip and not unassigned:
         lines.append("\nAll clear — nothing urgent to surface today.")
 
     return "\n".join(filter(None, lines))
@@ -436,6 +509,7 @@ def build_afternoon_briefing(tasks: list, cfg: dict) -> str:
     now = datetime.now()
     cap = cfg["rules"]["max_tasks_per_section"]
 
+    upcoming = rule_upcoming_deadlines(tasks, cfg)
     active_today = rule_in_progress_today(tasks, cfg)
     stale_ip = rule_stale_in_progress(tasks, cfg)
 
@@ -444,20 +518,29 @@ def build_afternoon_briefing(tasks: list, cfg: dict) -> str:
         f"*{now.strftime('%A %B %d, %Y %H:%M')}*",
     ]
 
-    lines.append(section(
+    # Upcoming deadlines at the top
+    lines.append(section_by_project(
+        "Upcoming Deadlines",
+        upcoming,
+        cap,
+        show_due=True,
+    ))
+
+    lines.append(section_by_project(
         "In Progress Today — still working on these?",
-        [fmt_task(t) for t in active_today],
+        active_today,
         cap,
     ))
 
     if stale_ip:
-        lines.append(section(
+        lines.append(section_by_project(
             "Stale Reminder",
-            [fmt_task(t, show_age=True) for t in stale_ip[:5]],
+            stale_ip[:5],
             5,
+            show_age=True,
         ))
 
-    if not active_today:
+    if not upcoming and not active_today:
         lines.append("\nNo tasks were touched today.")
 
     return "\n".join(filter(None, lines))
@@ -467,6 +550,7 @@ def build_weekly_briefing(tasks: list, cfg: dict) -> str:
     now = datetime.now()
     cap = cfg["rules"]["max_tasks_per_section"]
 
+    upcoming = rule_upcoming_deadlines(tasks, cfg)
     completed = rule_completed_this_week(tasks, cfg)
     stalled = rule_no_movement_this_week(tasks, cfg)
     inactive = rule_inactive_projects(tasks, cfg)
@@ -483,9 +567,17 @@ def build_weekly_briefing(tasks: list, cfg: dict) -> str:
         f"*Week ending {now.strftime('%B %d, %Y')} | {stats_header(tasks)}*",
     ]
 
-    lines.append(section(
+    # Upcoming deadlines at the top
+    lines.append(section_by_project(
+        "Upcoming Deadlines",
+        upcoming,
+        cap,
+        show_due=True,
+    ))
+
+    lines.append(section_by_project(
         "Completed This Week",
-        [fmt_task(t) for t in completed],
+        completed,
         cap,
     ))
 
@@ -495,10 +587,11 @@ def build_weekly_briefing(tasks: list, cfg: dict) -> str:
     ratio = f"{len(completed)}/{len(new_this_week)}" if new_this_week else f"{len(completed)}/0"
     lines.append(f"- Completion ratio: **{ratio}**")
 
-    lines.append(section(
+    lines.append(section_by_project(
         "Stalled — In Progress >7 days",
-        [fmt_task(t, show_age=True) for t in stalled],
+        stalled,
         cap,
+        show_age=True,
     ))
 
     if inactive:
@@ -601,12 +694,15 @@ def send_desktop_notification(mode: str, task_count: int) -> None:
 def extract_surface_count(mode: str, tasks: list, cfg: dict) -> int:
     """Count of items surfaced for the notification summary."""
     if mode == "morning":
-        return (len(rule_high_priority_todo(tasks, cfg))
+        return (len(rule_upcoming_deadlines(tasks, cfg))
+                + len(rule_high_priority_todo(tasks, cfg))
                 + len(rule_stale_in_progress(tasks, cfg)))
     elif mode == "afternoon":
-        return len(rule_in_progress_today(tasks, cfg))
+        return (len(rule_upcoming_deadlines(tasks, cfg))
+                + len(rule_in_progress_today(tasks, cfg)))
     elif mode == "weekly":
-        return len(rule_completed_this_week(tasks, cfg))
+        return (len(rule_upcoming_deadlines(tasks, cfg))
+                + len(rule_completed_this_week(tasks, cfg)))
     elif mode == "monthly":
         return len(rule_stale_todo(tasks, cfg))
     return 0
