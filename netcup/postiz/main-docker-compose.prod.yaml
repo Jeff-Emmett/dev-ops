@@ -52,6 +52,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.postiz.rule=Host(`demo.rsocials.online`)"
       - "traefik.http.routers.postiz.entrypoints=web,websecure"
+      - "traefik.http.routers.postiz.priority=130"
       - "traefik.http.services.postiz.loadbalancer.server.port=5000"
       - "traefik.docker.network=traefik-public"
     networks:
