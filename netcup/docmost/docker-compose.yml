@@ -1,0 +1,103 @@
+services:
+  docmost:
+    image: docmost/docmost:latest
+    container_name: docmost
+    restart: unless-stopped
+    depends_on:
+      - docmost-db
+      - docmost-redis
+    environment:
+      APP_URL: "https://docs.jeffemmett.com"
+      APP_SECRET: "${DOCMOST_APP_SECRET}"
+      DATABASE_URL: "postgresql://docmost:${POSTGRES_PASSWORD}@docmost-db:5432/docmost"
+      REDIS_URL: "redis://docmost-redis:6379/0"
+      MAIL_DRIVER: "smtp"
+      SMTP_HOST: "mail.rmail.online"
+      SMTP_PORT: "587"
+      SMTP_USERNAME: "noreply@jeffemmett.com"
+      SMTP_PASSWORD: "${DOCMOST_SMTP_PASSWORD}"
+      SMTP_SECURE: "false"
+      MAIL_FROM_ADDRESS: "noreply@jeffemmett.com"
+      MAIL_FROM_NAME: "Docmost"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.routers.docmost.rule=Host(`docs.jeffemmett.com`)"
+      - "traefik.http.routers.docmost.entrypoints=web"
+      - "traefik.http.services.docmost.loadbalancer.server.port=3000"
+    extra_hosts:
+      - "mail.rmail.online:host-gateway"
+    networks:
+      - traefik-public
+      - docmost-internal
+
+  docmost-cl:
+    image: docmost/docmost:latest
+    container_name: docmost-cl
+    restart: unless-stopped
+    depends_on:
+      - docmost-db
+      - docmost-redis
+    environment:
+      APP_URL: "https://docs.cosmolocal.world"
+      APP_SECRET: "${DOCMOST_CL_APP_SECRET}"
+      DATABASE_URL: "postgresql://docmost:${POSTGRES_PASSWORD}@docmost-db:5432/docmost_cosmolocal"
+      REDIS_URL: "redis://docmost-redis:6379/1"
+      MAIL_DRIVER: "smtp"
+      SMTP_HOST: "mail.rmail.online"
+      SMTP_PORT: "587"
+      SMTP_USERNAME: "noreply@cosmolocal.world"
+      SMTP_PASSWORD: "${DOCMOST_CL_SMTP_PASSWORD}"
+      SMTP_SECURE: "false"
+      MAIL_FROM_ADDRESS: "noreply@cosmolocal.world"
+      MAIL_FROM_NAME: "CosmoLocal Docs"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      # tunnel/web
+      - "traefik.http.routers.docmost-cl.rule=Host(`docs.cosmolocal.world`)"
+      - "traefik.http.routers.docmost-cl.entrypoints=web"
+      - "traefik.http.services.docmost-cl.loadbalancer.server.port=3000"
+      # direct IP/websecure with LE
+      - "traefik.http.routers.docmost-cl-secure.rule=Host(`docs.cosmolocal.world`)"
+      - "traefik.http.routers.docmost-cl-secure.entrypoints=websecure"
+      - "traefik.http.routers.docmost-cl-secure.service=docmost-cl"
+      - "traefik.http.routers.docmost-cl-secure.tls=true"
+      - "traefik.http.routers.docmost-cl-secure.tls.certresolver=letsencrypt"
+    extra_hosts:
+      - "mail.rmail.online:host-gateway"
+    networks:
+      - traefik-public
+      - docmost-internal
+
+  docmost-db:
+    image: postgres:16-alpine
+    container_name: docmost-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: docmost
+      POSTGRES_USER: docmost
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+    volumes:
+      - docmost-db-data:/var/lib/postgresql/data
+    networks:
+      - docmost-internal
+
+  docmost-redis:
+    image: redis:7.2-alpine
+    container_name: docmost-redis
+    restart: unless-stopped
+    volumes:
+      - docmost-redis-data:/data
+    networks:
+      - docmost-internal
+
+volumes:
+  docmost-db-data:
+  docmost-redis-data:
+
+networks:
+  traefik-public:
+    external: true
+  docmost-internal:
+    driver: bridge
