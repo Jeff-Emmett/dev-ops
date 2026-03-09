@@ -29,10 +29,10 @@ services:
       POSTIZ_GENERIC_OAUTH: "true"
       NEXT_PUBLIC_POSTIZ_OAUTH_DISPLAY_NAME: "Pocket ID"
       NEXT_PUBLIC_POSTIZ_OAUTH_LOGO_URL: "https://raw.githubusercontent.com/pocket-id/pocket-id/refs/heads/main/frontend/static/img/static-logo.svg"
-      POSTIZ_OAUTH_URL: "https://auth.ridentity.online"
-      POSTIZ_OAUTH_AUTH_URL: "https://auth.ridentity.online/authorize"
-      POSTIZ_OAUTH_TOKEN_URL: "https://auth.ridentity.online/api/oidc/token"
-      POSTIZ_OAUTH_USERINFO_URL: "https://auth.ridentity.online/api/oidc/userinfo"
+      POSTIZ_OAUTH_URL: "https://auth.jeffemmett.com"
+      POSTIZ_OAUTH_AUTH_URL: "https://auth.jeffemmett.com/authorize"
+      POSTIZ_OAUTH_TOKEN_URL: "https://auth.jeffemmett.com/api/oidc/token"
+      POSTIZ_OAUTH_USERINFO_URL: "https://auth.jeffemmett.com/api/oidc/userinfo"
       # === Email config (EMAIL_PASS comes from Infisical) ===
       EMAIL_PROVIDER: "nodemailer"
       EMAIL_FROM_NAME: "rSocials"
@@ -52,7 +52,6 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.postiz.rule=Host(`demo.rsocials.online`)"
       - "traefik.http.routers.postiz.entrypoints=web,websecure"
-      - "traefik.http.routers.postiz.priority=130"
       - "traefik.http.services.postiz.loadbalancer.server.port=5000"
       - "traefik.docker.network=traefik-public"
     networks:
@@ -99,40 +98,42 @@ services:
     networks:
       - postiz-internal
 
-  postiz-temporal-postgres:
-    image: postgres:16
-    container_name: postiz-temporal-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_PASSWORD: temporal
-      POSTGRES_USER: temporal
-    networks:
-      - postiz-internal
-    volumes:
-      - postiz-temporal-postgres-data:/var/lib/postgresql/data
-
   postiz-temporal:
     image: temporalio/auto-setup:1.28.1
     container_name: postiz-temporal
     restart: unless-stopped
     depends_on:
-      - postiz-temporal-postgres
+      - postiz-temporal-wait
     environment:
       - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=postiz-temporal-postgres
+      - POSTGRES_SEEDS=temporal-shared-postgres
+      - DBNAME=temporal_main
+      - VISIBILITY_DBNAME=temporal_visibility_main
+      - ENABLE_ES=true
+      - ES_SEEDS=temporal-shared-elasticsearch
+      - ES_VERSION=v7
       - TEMPORAL_NAMESPACE=default
     networks:
       - postiz-internal
+      - postiz-temporal-shared
+
+  # Tiny wait container to ensure shared infra is reachable before Temporal starts
+  postiz-temporal-wait:
+    image: postgres:16
+    container_name: postiz-temporal-wait
+    restart: "no"
+    entrypoint: ["sh", "-c", "until pg_isready -h temporal-shared-postgres -U temporal; do sleep 2; done"]
+    networks:
+      - postiz-temporal-shared
 
 volumes:
   postiz-postgres-data:
   postiz-redis-data:
   postiz-config:
   postiz-uploads:
-  postiz-temporal-postgres-data:
 
 networks:
   traefik-public:
@@ -142,3 +143,6 @@ networks:
   mailcow-network:
     external: true
     name: mailcowdockerized_mailcow-network
+  postiz-temporal-shared:
+    external: true
+    name: shared-temporal_postiz-temporal-shared

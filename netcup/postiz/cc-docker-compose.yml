@@ -3,32 +3,37 @@ services:
     image: ghcr.io/gitroomhq/postiz-app:latest
     container_name: postiz-cc
     restart: unless-stopped
+    entrypoint: ["/infisical-entrypoint.sh"]
+    command: ["docker-entrypoint.sh", "sh", "-c", "nginx && pnpm run pm2"]
     environment:
+      # === Infisical secret injection ===
+      INFISICAL_CLIENT_ID: "${INFISICAL_CLIENT_ID}"
+      INFISICAL_CLIENT_SECRET: "${INFISICAL_CLIENT_SECRET}"
+      INFISICAL_PROJECT_SLUG: "postiz-crypto-commons"
+      INFISICAL_ENV: "prod"
+      INFISICAL_URL: "http://infisical:8080"
+      # === Config (not secrets) ===
       MAIN_URL: "https://socials.crypto-commons.org"
       FRONTEND_URL: "https://socials.crypto-commons.org"
       NEXT_PUBLIC_BACKEND_URL: "https://socials.crypto-commons.org/api"
-      JWT_SECRET: "${JWT_SECRET}"
       DATABASE_URL: "postgresql://postiz:${POSTGRES_PASSWORD}@postiz-cc-postgres:5432/postiz"
       REDIS_URL: "redis://postiz-cc-redis:6379"
       BACKEND_INTERNAL_URL: "http://localhost:3000"
       TEMPORAL_ADDRESS: "postiz-cc-temporal:7233"
       IS_GENERAL: "true"
       DISABLE_REGISTRATION: "true"
-      POSTIZ_GENERIC_OAUTH: "true"
-      NEXT_PUBLIC_POSTIZ_OAUTH_DISPLAY_NAME: "Pocket ID"
-      NEXT_PUBLIC_POSTIZ_OAUTH_LOGO_URL: "https://raw.githubusercontent.com/pocket-id/pocket-id/refs/heads/main/frontend/static/img/static-logo.svg"
-      POSTIZ_OAUTH_URL: "https://auth.ridentity.online"
-      POSTIZ_OAUTH_AUTH_URL: "https://auth.ridentity.online/authorize"
-      POSTIZ_OAUTH_TOKEN_URL: "https://auth.ridentity.online/api/oidc/token"
-      POSTIZ_OAUTH_USERINFO_URL: "https://auth.ridentity.online/api/oidc/userinfo"
-      POSTIZ_OAUTH_CLIENT_ID: "7ac4f5ec-aab6-4f6d-882b-473d45735d47"
-      POSTIZ_OAUTH_CLIENT_SECRET: "SURtnY8bVd4mAcjcLH1Zn1AkaMUc2vCS"
       STORAGE_PROVIDER: "local"
       UPLOAD_DIRECTORY: "/uploads"
       NEXT_PUBLIC_UPLOAD_DIRECTORY: "/uploads"
-      X_API_KEY: "${X_API_KEY:-}"
-      X_API_SECRET: "${X_API_SECRET:-}"
-      # === Email (SMTP via Mailcow / mail.rmail.online)
+      # === OAuth config (client_id/secret come from Infisical) ===
+      POSTIZ_GENERIC_OAUTH: "true"
+      NEXT_PUBLIC_POSTIZ_OAUTH_DISPLAY_NAME: "Pocket ID"
+      NEXT_PUBLIC_POSTIZ_OAUTH_LOGO_URL: "https://raw.githubusercontent.com/pocket-id/pocket-id/refs/heads/main/frontend/static/img/static-logo.svg"
+      POSTIZ_OAUTH_URL: "https://auth.jeffemmett.com"
+      POSTIZ_OAUTH_AUTH_URL: "https://auth.jeffemmett.com/authorize"
+      POSTIZ_OAUTH_TOKEN_URL: "https://auth.jeffemmett.com/api/oidc/token"
+      POSTIZ_OAUTH_USERINFO_URL: "https://auth.jeffemmett.com/api/oidc/userinfo"
+      # === Email config (EMAIL_PASS comes from Infisical) ===
       EMAIL_PROVIDER: "nodemailer"
       EMAIL_FROM_NAME: "Crypto Commons"
       EMAIL_FROM_ADDRESS: "noreply@rmail.online"
@@ -36,22 +41,19 @@ services:
       EMAIL_PORT: "587"
       EMAIL_SECURE: "false"
       EMAIL_USER: "noreply@rmail.online"
-      EMAIL_PASS: "${EMAIL_PASS}"
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
-
-      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
       API_LIMIT: 30
       NX_ADD_PLUGINS: false
     volumes:
       - postiz-cc-config:/config/
       - postiz-cc-uploads:/uploads/
+      - /opt/infisical/entrypoint-wrapper.sh:/infisical-entrypoint.sh:ro
     labels:
-      - "traefik.enable=false"
-      - "sablier.enable=true"
-      - "sablier.group=postiz-cc"
-      - "traefik.http.routers.postiz-cc.rule=Host(`socials.crypto-commons.org`)"
+      - "traefik.enable=true"
+      - "traefik.http.routers.postiz-cc.rule=Host(`socials.crypto-commons.org`) || Host(`socials.valleyofthecommons.com`)"
       - "traefik.http.routers.postiz-cc.entrypoints=web,websecure"
       - "traefik.http.services.postiz-cc.loadbalancer.server.port=5000"
+      - "traefik.docker.network=traefik-public"
     networks:
       - traefik-public
       - postiz-cc-internal
@@ -67,9 +69,6 @@ services:
   postiz-cc-postgres:
     image: postgres:17-alpine
     container_name: postiz-cc-postgres
-    labels:
-      - "sablier.enable=true"
-      - "sablier.group=postiz-cc"
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
@@ -88,9 +87,6 @@ services:
   postiz-cc-redis:
     image: redis:7.2
     container_name: postiz-cc-redis
-    labels:
-      - "sablier.enable=true"
-      - "sablier.group=postiz-cc"
     restart: unless-stopped
     healthcheck:
       test: redis-cli ping
@@ -102,72 +98,41 @@ services:
     networks:
       - postiz-cc-internal
 
-  postiz-cc-elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.24
-    container_name: postiz-cc-elasticsearch
-    labels:
-      - "sablier.enable=true"
-      - "sablier.group=postiz-cc"
-    restart: unless-stopped
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    volumes:
-      - postiz-cc-elasticsearch-data:/usr/share/elasticsearch/data
-    networks:
-      - postiz-cc-internal
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  postiz-cc-temporal-postgres:
-    image: postgres:16
-    container_name: postiz-cc-temporal-postgres
-    labels:
-      - "sablier.enable=true"
-      - "sablier.group=postiz-cc"
-    restart: unless-stopped
-    environment:
-      POSTGRES_PASSWORD: temporal
-      POSTGRES_USER: temporal
-    networks:
-      - postiz-cc-internal
-    volumes:
-      - postiz-cc-temporal-postgres-data:/var/lib/postgresql/data
-
   postiz-cc-temporal:
     image: temporalio/auto-setup:1.28.1
     container_name: postiz-cc-temporal
-    labels:
-      - "sablier.enable=true"
-      - "sablier.group=postiz-cc"
     restart: unless-stopped
     depends_on:
-      - postiz-cc-temporal-postgres
-      - postiz-cc-elasticsearch
+      - postiz-cc-temporal-wait
     environment:
       - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=postiz-cc-temporal-postgres
+      - POSTGRES_SEEDS=temporal-shared-postgres
+      - DBNAME=temporal_cc
+      - VISIBILITY_DBNAME=temporal_visibility_cc
       - ENABLE_ES=true
-      - ES_SEEDS=postiz-cc-elasticsearch
+      - ES_SEEDS=temporal-shared-elasticsearch
       - ES_VERSION=v7
       - TEMPORAL_NAMESPACE=default
     networks:
       - postiz-cc-internal
+      - postiz-temporal-shared
+
+  postiz-cc-temporal-wait:
+    image: postgres:16
+    container_name: postiz-cc-temporal-wait
+    restart: "no"
+    entrypoint: ["sh", "-c", "until pg_isready -h temporal-shared-postgres -U temporal; do sleep 2; done"]
+    networks:
+      - postiz-temporal-shared
 
 volumes:
   postiz-cc-postgres-data:
   postiz-cc-redis-data:
   postiz-cc-config:
   postiz-cc-uploads:
-  postiz-cc-temporal-postgres-data:
-  postiz-cc-elasticsearch-data:
 
 networks:
   traefik-public:
@@ -177,3 +142,6 @@ networks:
   mailcow-network:
     external: true
     name: mailcowdockerized_mailcow-network
+  postiz-temporal-shared:
+    external: true
+    name: shared-temporal_postiz-temporal-shared
