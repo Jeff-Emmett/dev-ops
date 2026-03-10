@@ -8,7 +8,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Playwright dependencies (Chromium only)
-COPY package.json .
+COPY package.json package-lock.json ./
 RUN npm ci && npx playwright install --with-deps chromium
 
 # Copy test suite
