@@ -19,7 +19,10 @@ sites:
 
   # games-platform: EmulatorJS CDN dependency broken — re-add when fixed
 
-  # defectfi: DNS not configured — re-add when defectfi.online resolves
+  defectfi:
+    url: "https://defectfi.jeffemmett.com"
+    pages:
+      - path: "/"
 
   open-notebook:
     url: "https://notebook.jeffemmett.com"
@@ -57,7 +60,10 @@ sites:
     pages:
       - path: "/"
 
-  # jefflix-website: root returns 404 (Jellyfin serves on /web/) — re-add with correct path
+  jefflix-website:
+    url: "https://jefflix.lol"
+    pages:
+      - path: "/"
 
   mycofi-earth-website:
     url: "https://mycofi.earth"
