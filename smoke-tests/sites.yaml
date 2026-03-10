@@ -20,7 +20,7 @@ sites:
   # games-platform: EmulatorJS CDN dependency broken — re-add when fixed
 
   defectfi:
-    url: "https://defectfi.jeffemmett.com"
+    url: "https://defectfi.xyz"
     pages:
       - path: "/"
 
