@@ -1,0 +1,24 @@
+defaults:
+  wait_after_deploy: 10  # seconds for container to stabilize
+
+sites:
+  canvas-website:
+    url: "https://canvas.jeffemmett.com"
+    spa: true
+    pages:
+      - path: "/"
+
+  backlog-md:
+    url: "https://backlog.jeffemmett.com"
+    pages:
+      - path: "/"
+
+  fcdm-website-new:
+    url: "https://fcdm.org"
+    pages:
+      - path: "/"
+
+  crypto-commons-website-2.0:
+    url: "https://crypto-commons.org"
+    pages:
+      - path: "/"

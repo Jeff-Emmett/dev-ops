@@ -1,0 +1,17 @@
+services:
+  smoke-tests:
+    build: .
+    image: smoke-tests:latest
+    container_name: smoke-tests
+    volumes:
+      - smoke-test-logs:/var/log/smoke-tests
+      - /opt/secrets/mailcow:/opt/secrets/mailcow:ro
+    networks:
+      - traefik-public
+
+volumes:
+  smoke-test-logs:
+
+networks:
+  traefik-public:
+    external: true
