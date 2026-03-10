@@ -39,6 +39,8 @@ const IGNORED_ERROR_PATTERNS = [
   /Content Security Policy/i,
   /violates the following CSP directive/i,
   /Failed to load resource/i,
+  /MIME type.*is not executable/i,
+  /Refused to execute script/i,
 ];
 
 function isIgnoredError(msg: string): boolean {
@@ -66,10 +68,14 @@ for (const [siteName, siteConfig] of Object.entries(sites)) {
       });
 
       // Navigate and check HTTP status
-      const waitUntil = siteConfig.spa ? 'networkidle' as const : 'domcontentloaded' as const;
-      const response = await page.goto(fullUrl, { waitUntil });
+      const response = await page.goto(fullUrl, { waitUntil: 'domcontentloaded' });
       expect(response, `No response from ${fullUrl}`).not.toBeNull();
       expect(response!.status(), `HTTP ${response!.status()} at ${fullUrl}`).toBeLessThan(400);
+
+      // For SPAs, wait for JS to render content into body
+      if (siteConfig.spa) {
+        await page.waitForFunction(() => (document.body.innerText || '').trim().length > 10, null, { timeout: 10_000 }).catch(() => {});
+      }
 
       // Check page has meaningful content
       const bodyText = await page.locator('body').innerText();

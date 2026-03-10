@@ -1,9 +1,13 @@
 defaults:
   wait_after_deploy: 10  # seconds for container to stabilize
 
+# Repo names match REPOS keys in webhook.py
+# Only sites listed here get smoke-tested after deploy
+
 sites:
+  # ── Core Apps ────────────────────────────────────
   canvas-website:
-    url: "https://canvas.jeffemmett.com"
+    url: "https://jeffemmett.com"
     spa: true
     pages:
       - path: "/"
@@ -13,12 +17,237 @@ sites:
     pages:
       - path: "/"
 
+  # games-platform: EmulatorJS CDN dependency broken — re-add when fixed
+
+  # defectfi: DNS not configured — re-add when defectfi.online resolves
+
+  open-notebook:
+    url: "https://notebook.jeffemmett.com"
+    pages:
+      - path: "/"
+
+  # ── Websites ─────────────────────────────────────
+  Aunty-Sparkles-Website:
+    url: "https://auntysparkles.com"
+    pages:
+      - path: "/"
+
+  decolonize-time-website:
+    url: "https://decolonizeti.me"
+    pages:
+      - path: "/"
+
+  ebb-n-flow-website:
+    url: "https://ebb-staging.jeffemmett.com"
+    pages:
+      - path: "/"
+
   fcdm-website-new:
-    url: "https://fcdm.org"
+    url: "https://fullcircledigitalmarketing.ca"
+    pages:
+      - path: "/"
+
+  FCDM-website-new-kt:
+    url: "https://katheryntrenshaw.com"
+    pages:
+      - path: "/"
+
+  flowidity-website-design:
+    url: "https://flowidity.io"
+    pages:
+      - path: "/"
+
+  jefflix-website:
+    url: "https://jefflix.lol"
+    pages:
+      - path: "/"
+
+  mycofi-earth-website:
+    url: "https://mycofi.earth"
+    pages:
+      - path: "/"
+
+  mytmux.life-website:
+    url: "https://mytmux.life"
+    pages:
+      - path: "/"
+
+  paint-spark-banksy-website:
+    url: "https://paintspark.me"
+    pages:
+      - path: "/"
+
+  paper-presents-website:
+    url: "https://paperpresents.ca"
+    pages:
+      - path: "/"
+
+  post-app-website-new:
+    url: "https://post-appitalism.app"
+    pages:
+      - path: "/"
+
+  psilo-cybernetics-website:
+    url: "https://psilo-cyber.net"
+    pages:
+      - path: "/"
+
+  pwf-website-new:
+    url: "https://pilateswithfadia.com"
+    pages:
+      - path: "/"
+
+  shiitake-john-website:
+    url: "https://shiitakejohn.com"
+    pages:
+      - path: "/"
+
+  soul-speaks-soil-website:
+    url: "https://soulspeakssoil.com"
+    pages:
+      - path: "/"
+
+  crypto-commons-gather.ing-website:
+    url: "https://cryptocommonsgather.ing"
     pages:
       - path: "/"
 
   crypto-commons-website-2.0:
     url: "https://crypto-commons.org"
+    pages:
+      - path: "/"
+
+  rnotes-online:
+    url: "https://rnotes.online"
+    pages:
+      - path: "/"
+
+  # ── rSpace ecosystem ─────────────────────────────
+  rspace-online:
+    url: "https://rspace.online"
+    pages:
+      - path: "/"
+
+  # rSpace-website also deploys to rspace.online — tested via rspace-online above
+
+  # ── rApps ────────────────────────────────────────
+  rcal-online:
+    url: "https://rcal.online"
+    pages:
+      - path: "/"
+
+  rcart-online:
+    url: "https://rcart.online"
+    pages:
+      - path: "/"
+
+  rchats-online:
+    url: "https://rchats.online"
+    pages:
+      - path: "/"
+
+  rchoices-online:
+    url: "https://rchoices.online"
+    pages:
+      - path: "/"
+
+  rdata-online:
+    url: "https://rdata.online"
+    pages:
+      - path: "/"
+
+  rfiles-online:
+    url: "https://rfiles.online"
+    pages:
+      - path: "/"
+
+  rforum-online:
+    url: "https://rforum.online"
+    pages:
+      - path: "/"
+
+  rfunds-online:
+    url: "https://rfunds.online"
+    pages:
+      - path: "/"
+
+  rinbox-online:
+    url: "https://rinbox.online"
+    pages:
+      - path: "/"
+
+  rmail-online:
+    url: "https://rmail.online"
+    spa: true
+    pages:
+      - path: "/"
+
+  rmaps-online:
+    url: "https://rmaps.online"
+    pages:
+      - path: "/"
+
+  rNetwork-online:
+    url: "https://rnetwork.online"
+    pages:
+      - path: "/"
+
+  rphotos-online:
+    url: "https://rphotos.online"
+    pages:
+      - path: "/"
+
+  rsocials-online:
+    url: "https://rsocials.online"
+    pages:
+      - path: "/"
+
+  rswag-online:
+    url: "https://rswag.online"
+    pages:
+      - path: "/"
+
+  rtrips-online:
+    url: "https://rtrips.online"
+    pages:
+      - path: "/"
+
+  rtube-online:
+    url: "https://rtube.online"
+    pages:
+      - path: "/"
+
+  rvote-online:
+    url: "https://rvote.online"
+    pages:
+      - path: "/"
+
+  rwallet-online:
+    url: "https://rwallet.online"
+    pages:
+      - path: "/"
+
+  rwork-online:
+    url: "https://rwork.online"
+    pages:
+      - path: "/"
+
+  ridentity-online:
+    url: "https://ridentity.online"
+    pages:
+      - path: "/"
+
+  rstack-online:
+    url: "https://rstack.online"
+    pages:
+      - path: "/"
+
+  auction-app:
+    url: "https://rauctions.online"
+    pages:
+      - path: "/"
+
+  pocket-press:
+    url: "https://rpubs.online"
     pages:
       - path: "/"
