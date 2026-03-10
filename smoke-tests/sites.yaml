@@ -57,10 +57,7 @@ sites:
     pages:
       - path: "/"
 
-  jefflix-website:
-    url: "https://jefflix.lol"
-    pages:
-      - path: "/"
+  # jefflix-website: root returns 404 (Jellyfin serves on /web/) — re-add with correct path
 
   mycofi-earth-website:
     url: "https://mycofi.earth"
