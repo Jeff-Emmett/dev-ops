@@ -61,14 +61,7 @@ http:
             showDetails: true
 
   routers:
-    postiz-main:
-      rule: "Host(`social.jeffemmett.com`)"
-      entryPoints:
-        - web
-      middlewares:
-        - sablier-postiz-main
-      service: postiz-main
-
+    # postiz-main removed — demo.rsocials.online handled by Postiz container labels
     postiz-votc:
       rule: "Host(`votc-socials.jeffemmett.com`)"
       entryPoints:
