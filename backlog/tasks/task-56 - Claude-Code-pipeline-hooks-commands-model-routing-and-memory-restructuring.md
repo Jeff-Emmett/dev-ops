@@ -42,13 +42,13 @@ Restructured the Claude development pipeline based on patterns from anthropics/k
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Global CLAUDE.md slimmed to ~100 lines with context lookup table
-- [ ] #2 Topic files created in ~/.claude/context/ (credentials, infrastructure, gpu-and-ai, projects)
-- [ ] #3 SessionStart hook surfaces active tasks and stale items
-- [ ] #4 SSH guard hook blocks destructive production commands
-- [ ] #5 Five slash commands created: deploy, audit, quick-check, plan, status
-- [ ] #6 Model routing documented: Haiku for validation, Sonnet for analysis, Opus for planning
-- [ ] #7 All files committed and pushed to main
+- [x] #1 Global CLAUDE.md slimmed to ~100 lines with context lookup table
+- [x] #2 Topic files created in ~/.claude/context/ (credentials, infrastructure, gpu-and-ai, projects)
+- [x] #3 SessionStart hook surfaces active tasks and stale items
+- [x] #4 SSH guard hook blocks destructive production commands
+- [x] #5 Five slash commands created: deploy, audit, quick-check, plan, status
+- [x] #6 Model routing documented: Haiku for validation, Sonnet for analysis, Opus for planning
+- [x] #7 All files committed and pushed to main
 <!-- AC:END -->
 
 ## Final Summary

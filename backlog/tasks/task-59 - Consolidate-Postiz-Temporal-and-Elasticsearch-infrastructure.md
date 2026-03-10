@@ -28,15 +28,15 @@ Consolidation: shared Postgres (multi-database) + shared Elasticsearch + shared 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Shared Temporal infra deployed (temporal-shared-postgres, temporal-shared-elasticsearch, temporal-shared-ui)
-- [ ] #2 Main Postiz Temporal migrated to shared infra
-- [ ] #3 CC Postiz Temporal migrated to shared infra
-- [ ] #4 P2PF Postiz Temporal migrated to shared infra
-- [ ] #5 BCRG Postiz shut down
-- [ ] #6 VOTC Postiz shut down
-- [ ] #7 Legacy standalone Temporal stack removed
-- [ ] #8 Repo compose files synced with server
-- [ ] #9 RAM reduced from ~5 GB to ~1.5 GB (12 containers → 6)
+- [x] #1 Shared Temporal infra deployed (temporal-shared-postgres, temporal-shared-elasticsearch, temporal-shared-ui)
+- [x] #2 Main Postiz Temporal migrated to shared infra
+- [x] #3 CC Postiz Temporal migrated to shared infra
+- [x] #4 P2PF Postiz Temporal migrated to shared infra
+- [x] #5 BCRG Postiz shut down
+- [x] #6 VOTC Postiz shut down
+- [x] #7 Legacy standalone Temporal stack removed
+- [x] #8 Repo compose files synced with server
+- [x] #9 RAM reduced from ~5 GB to ~1.5 GB (12 containers → 6)
 <!-- AC:END -->
 
 ## Final Summary
