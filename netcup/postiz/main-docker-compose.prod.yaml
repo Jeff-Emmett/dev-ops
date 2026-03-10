@@ -27,12 +27,12 @@ services:
       NEXT_PUBLIC_UPLOAD_DIRECTORY: "/uploads"
       # === OAuth config (client_id/secret come from Infisical) ===
       POSTIZ_GENERIC_OAUTH: "true"
-      NEXT_PUBLIC_POSTIZ_OAUTH_DISPLAY_NAME: "Pocket ID"
-      NEXT_PUBLIC_POSTIZ_OAUTH_LOGO_URL: "https://raw.githubusercontent.com/pocket-id/pocket-id/refs/heads/main/frontend/static/img/static-logo.svg"
-      POSTIZ_OAUTH_URL: "https://auth.jeffemmett.com"
-      POSTIZ_OAUTH_AUTH_URL: "https://auth.jeffemmett.com/authorize"
-      POSTIZ_OAUTH_TOKEN_URL: "https://auth.jeffemmett.com/api/oidc/token"
-      POSTIZ_OAUTH_USERINFO_URL: "https://auth.jeffemmett.com/api/oidc/userinfo"
+      NEXT_PUBLIC_POSTIZ_OAUTH_DISPLAY_NAME: "EncryptID"
+      NEXT_PUBLIC_POSTIZ_OAUTH_LOGO_URL: ""
+      POSTIZ_OAUTH_URL: "https://auth.ridentity.online"
+      POSTIZ_OAUTH_AUTH_URL: "https://auth.ridentity.online/oidc/authorize"
+      POSTIZ_OAUTH_TOKEN_URL: "https://auth.ridentity.online/oidc/token"
+      POSTIZ_OAUTH_USERINFO_URL: "https://auth.ridentity.online/oidc/userinfo"
       # === Email config (EMAIL_PASS comes from Infisical) ===
       EMAIL_PROVIDER: "nodemailer"
       EMAIL_FROM_NAME: "rSocials"
