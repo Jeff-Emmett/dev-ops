@@ -1,0 +1,6 @@
+#!/bin/bash
+# URL opener for tmux super_fingers (server/container)
+# Prints URL to tmux status bar since there's no local browser
+URL="$1"
+tmux display-message "URL: $URL"
+echo "$URL"

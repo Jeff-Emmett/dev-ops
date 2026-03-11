@@ -1,0 +1,104 @@
+services:
+  claude-dev:
+    build: .
+    container_name: claude-dev
+    hostname: claude-dev
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    init: true
+    entrypoint: ["/home/dev/entrypoint.sh"]
+
+    # Security hardening
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    # Route gitea.jeffemmett.com to host (SSH port 223 is on host, not Cloudflare)
+    extra_hosts:
+      - "gitea.jeffemmett.com:host-gateway"
+
+    volumes:
+      # === Project directories ===
+      - /opt/websites:/opt/websites
+      - /opt/apps:/opt/apps
+
+      # === Docker socket ===
+      - /var/run/docker.sock:/var/run/docker.sock
+
+      # === API keys & secrets (read-only, uid 1001 readable copy) ===
+      - /opt/secrets/claude-dev:/run/secrets:ro
+
+      # === SSH keys for git (read-only) ===
+      - /home/deploy/.ssh:/home/dev/.ssh:ro
+
+      # === tmux sources (mounted at accessible paths, NOT under /root/) ===
+      # Dotfiles: init.tmux, keys.tmux, mouse.tmux, settings.tmux, status.tmux
+      - /root/configuration/dotfiles/.config/tmux:/mnt/tmux-dotfiles:ro
+      # Local overrides: plugins.tmux, resurrect-paths.conf
+      - /root/.config/tmux/plugins.tmux:/mnt/tmux-local/plugins.tmux:ro
+      # Plugins (pre-installed, read-only)
+      - /root/.config/tmux/plugins:/mnt/tmux-plugins:ro
+      # Scripts
+      - /root/.config/tmux/scripts:/mnt/tmux-scripts:ro
+      # .tmux.conf entry point
+      - /root/.tmux.conf:/home/dev/.tmux.conf:ro
+
+      # === tmux-resurrect writable state ===
+      - tmux-resurrect:/home/dev/Sync/tmux-resurrect
+
+      # === tmux super_fingers custom config ===
+      - /root/.config/tmux/super_fingers_custom.py:/mnt/tmux-super-fingers/super_fingers_custom.py:ro
+
+      # === Fish config (container-specific, no auto-enter loop) ===
+      - ./container-fish-config.fish:/mnt/fish-config.fish:ro
+
+      # === KeePass vault (rw for writes via keepass-write) ===
+      - /root/Sync/KeePass:/keepass
+
+      # === KeePass + Infisical scripts (read-only) ===
+      - /usr/local/bin/keepass-write:/usr/local/bin/keepass-write:ro
+      - /usr/local/bin/keepass-inject:/usr/local/bin/keepass-inject:ro
+      - /usr/local/bin/secrets:/usr/local/bin/secrets:ro
+      - /usr/local/bin/infisical-ops:/usr/local/bin/infisical-ops:ro
+      - /usr/local/bin/infisical-write:/usr/local/bin/infisical-write:ro
+      - /usr/local/bin/infisical-inject:/usr/local/bin/infisical-inject:ro
+      - /opt/infisical/claude-ops-container.env:/opt/infisical/claude-ops.env:ro
+
+      # === Claude settings (deny rules for KeePass safety) ===
+      - ./container-settings.json:/mnt/claude-settings.json:ro
+
+      # === Persistent Claude Code state ===
+      - claude-data:/home/dev/.claude
+
+      # === Persistent shell history ===
+      - claude-history:/home/dev/.local/share/fish
+
+    # KeePass master password lives on tmpfs (never hits disk)
+    tmpfs:
+      - /run:size=10M,mode=1777
+
+    environment:
+      - TERM=xterm-256color
+      - LANG=en_US.UTF-8
+      - LC_ALL=en_US.UTF-8
+      - SHELL=/usr/bin/fish
+      - KEEPASS_DB=/keepass/Jeff secure passwords.kdbx
+      - KEEPASS_MASTER_FILE=/run/keepass-master
+      - INFISICAL_API_URL=http://infisical:8080
+
+    networks:
+      - traefik-public
+
+    mem_limit: 6g
+    cpus: 4
+
+volumes:
+  claude-data:
+  tmux-resurrect:
+  claude-history:
+
+networks:
+  traefik-public:
+    external: true

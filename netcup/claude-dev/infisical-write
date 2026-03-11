@@ -1,0 +1,62 @@
+#!/bin/bash
+# infisical-write — Write-only + inject Infisical access for Claude
+# Can: set secrets, list names, search, inject into commands
+# Cannot: read/display secret values directly
+
+set -euo pipefail
+
+CMD="${1:-help}"
+shift || true
+
+case "$CMD" in
+  set)
+    exec secrets set "$@"
+    ;;
+
+  list)
+    folder="${1:-}"
+    if [ -n "$folder" ]; then
+      exec secrets "$folder"
+    else
+      exec secrets
+    fi
+    ;;
+
+  folders)
+    exec secrets folders
+    ;;
+
+  search)
+    exec secrets search "$@"
+    ;;
+
+  all)
+    exec secrets all
+    ;;
+
+  inject)
+    # Inject folder secrets into a command via env vars
+    # Usage: infisical-write inject <folder> -- <command>
+    exec infisical-ops run "$@"
+    ;;
+
+  help|-h|--help)
+    echo "infisical-write — Write-only Infisical access"
+    echo ""
+    echo "Usage:"
+    echo "  infisical-write set <folder> <key> <value>  Create/update a secret"
+    echo "  infisical-write list [folder]               List secret names (or folders)"
+    echo "  infisical-write folders                     List available folders"
+    echo "  infisical-write search <term>               Search secrets by name"
+    echo "  infisical-write all                         List all secret paths"
+    echo "  infisical-write inject <folder> -- <cmd>    Run cmd with secrets as env vars"
+    echo ""
+    echo "Folders: cloudflare, erpnext, monitoring, n8n, ecommerce, infra, git, mail, ai, keepass"
+    ;;
+
+  *)
+    echo "Unknown command: $CMD" >&2
+    echo "Run 'infisical-write help' for usage" >&2
+    exit 1
+    ;;
+esac

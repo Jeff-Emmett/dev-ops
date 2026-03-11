@@ -1,0 +1,67 @@
+#!/bin/bash
+# infisical-inject — Inject a single Infisical secret into a command
+# The secret value is NEVER printed — only passed via $INFISICAL_SECRET env var
+#
+# Usage:
+#   infisical-inject <folder> <key> -- <command>
+#       Run command with secret available as $INFISICAL_SECRET
+#   infisical-inject <folder> <key> --env-name VAR_NAME -- <command>
+#       Run command with secret available as $VAR_NAME instead
+#
+# Examples:
+#   infisical-inject ai ANTHROPIC_API_KEY -- sh -c 'echo "key=$INFISICAL_SECRET" >> .env'
+#   infisical-inject cloudflare CF_API_TOKEN --env-name CF_API_TOKEN -- wrangler deploy
+
+set -euo pipefail
+
+if [ $# -lt 3 ]; then
+    echo "Usage: infisical-inject <folder> <key> [--env-name VAR] -- <command>"
+    echo ""
+    echo "Injects a single Infisical secret into a command via environment variable."
+    echo "Default env var: \$INFISICAL_SECRET (override with --env-name)"
+    echo ""
+    echo "The secret value is NEVER printed to stdout."
+    exit 1
+fi
+
+FOLDER="$1"
+KEY="$2"
+shift 2
+
+ENV_NAME="INFISICAL_SECRET"
+
+# Parse optional --env-name
+while [[ $# -gt 0 && "$1" != "--" ]]; do
+    case "$1" in
+        --env-name) ENV_NAME="$2"; shift 2 ;;
+        *) echo "Unknown option: $1" >&2; exit 1 ;;
+    esac
+done
+
+if [ "${1:-}" != "--" ]; then
+    echo "Error: Missing -- separator before command" >&2
+    echo "Usage: infisical-inject <folder> <key> -- <command>" >&2
+    exit 1
+fi
+shift  # skip --
+
+if [ $# -eq 0 ]; then
+    echo "Error: No command specified after --" >&2
+    exit 1
+fi
+
+# Fetch the secret value via the secrets script (internal, not blocked)
+VALUE=$(secrets "$FOLDER" "$KEY" 2>/dev/null)
+
+if [ -z "$VALUE" ]; then
+    echo "Error: Could not retrieve /$FOLDER/$KEY from Infisical" >&2
+    exit 1
+fi
+
+# Execute command with secret in env var (never in args or stdout)
+export "$ENV_NAME"="$VALUE"
+"$@"
+EXIT_CODE=$?
+unset "$ENV_NAME"
+echo "--- Injection complete (exit code: $EXIT_CODE) ---"
+exit $EXIT_CODE
