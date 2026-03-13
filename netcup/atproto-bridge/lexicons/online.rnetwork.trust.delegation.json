@@ -1,0 +1,47 @@
+{
+  "lexicon": 1,
+  "id": "online.rnetwork.trust.delegation",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "Route unallocated trust tokens through a delegate.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["delegateDID", "delegateLinked", "categoryId", "categoryName", "percentage", "workspaceSlug", "createdAt"],
+        "properties": {
+          "delegateDID": {
+            "type": "string",
+            "description": "DID of the delegate (did:web:... for linked users, label:... for unlinked placeholders)"
+          },
+          "delegateLinked": {
+            "type": "boolean",
+            "description": "Whether the delegate has a linked AT Protocol identity"
+          },
+          "categoryId": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "categoryName": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "percentage": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Percentage of unallocated tokens to delegate"
+          },
+          "workspaceSlug": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

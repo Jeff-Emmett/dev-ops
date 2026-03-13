@@ -1,0 +1,29 @@
+{
+  "lexicon": 1,
+  "id": "online.rnetwork.identity.link",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "Links an AT Protocol identity to an EncryptID did:key identity.",
+      "key": "self",
+      "record": {
+        "type": "object",
+        "required": ["encryptidDID", "encryptidProof", "linkedAt"],
+        "properties": {
+          "encryptidDID": {
+            "type": "string",
+            "description": "EncryptID did:key identifier"
+          },
+          "encryptidProof": {
+            "type": "string",
+            "description": "Signed attestation from EncryptID key proving ownership"
+          },
+          "linkedAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

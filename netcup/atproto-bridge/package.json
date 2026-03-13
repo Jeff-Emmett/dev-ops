@@ -1,0 +1,22 @@
+{
+  "name": "atproto-bridge",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch server/index.ts",
+    "start": "bun run server/index.ts",
+    "generate-lexicon-types": "lex-cli generate-types ./lexicons --output ./src/lexicon"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "@atproto/api": "^0.13.0",
+    "@atproto/lex-cli": "^0.4.0",
+    "@encryptid/sdk": "workspace:*",
+    "better-sqlite3": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "bun-types": "latest",
+    "typescript": "^5.5.0"
+  }
+}

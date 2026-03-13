@@ -1,0 +1,47 @@
+{
+  "lexicon": 1,
+  "id": "online.rnetwork.trust.allocation",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A trust token allocation from one user to a target in a specific category.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["targetDID", "targetLinked", "categoryId", "categoryName", "amount", "workspaceSlug", "createdAt"],
+        "properties": {
+          "targetDID": {
+            "type": "string",
+            "description": "DID of the target (did:web:... for linked users, label:... for unlinked placeholders)"
+          },
+          "targetLinked": {
+            "type": "boolean",
+            "description": "Whether the target has a linked AT Protocol identity"
+          },
+          "categoryId": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "categoryName": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Trust tokens allocated (0-100)"
+          },
+          "workspaceSlug": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

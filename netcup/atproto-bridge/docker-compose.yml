@@ -1,0 +1,50 @@
+services:
+  atproto-bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: atproto-bridge
+    restart: unless-stopped
+    volumes:
+      - bridge-data:/data
+      - /opt/infisical/entrypoint-wrapper.sh:/infisical-entrypoint.sh:ro
+    entrypoint: ["/infisical-entrypoint.sh"]
+    command: ["bun", "run", "server/index.ts"]
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_PATH=/data/identities.db
+      - PDS_HOSTNAME=pds.ridentity.online
+      - PDS_URL=http://atproto-pds:3000
+      - BRIDGE_HOSTNAME=ridentity.online
+      - INFISICAL_PROJECT_SLUG=claude-ops
+      - INFISICAL_SECRET_PATH=/atproto-bridge
+    labels:
+      - "traefik.enable=true"
+      # Main bridge routes on ridentity.online
+      - "traefik.http.routers.atproto-bridge.rule=Host(`ridentity.online`)"
+      - "traefik.http.routers.atproto-bridge.entrypoints=web"
+      - "traefik.http.routers.atproto-bridge.priority=100"
+      - "traefik.http.services.atproto-bridge.loadbalancer.server.port=3001"
+      - "traefik.docker.network=traefik-public"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - traefik-public
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  bridge-data:
+
+networks:
+  traefik-public:
+    external: true
