@@ -104,6 +104,54 @@ case "$CMD" in
     exec "$@"
     ;;
 
+  set)
+    # Set/create a secret: infisical-ops set KEY VALUE [folder]
+    KEY="${1:?Usage: infisical-ops set KEY VALUE [folder]}"
+    VALUE="${2:?Usage: infisical-ops set KEY VALUE [folder]}"
+    FOLDER="${3:-/}"
+    TOKEN=$(get_token)
+
+    # Create folder if needed (ignore errors for existing folders)
+    if [ "$FOLDER" != "/" ]; then
+      PARENT_PATH=$(dirname "$FOLDER")
+      [ "$PARENT_PATH" = "." ] && PARENT_PATH="/"
+      FOLDER_NAME=$(basename "$FOLDER")
+      curl -sf $CF_ACCESS_HEADERS -X POST "$INFISICAL_URL/api/v1/folders" \
+        -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+        -d "{\"workspaceId\": \"$PROJECT_ID\", \"environment\": \"prod\", \"name\": \"$FOLDER_NAME\", \"path\": \"$PARENT_PATH\"}" >/dev/null 2>&1 || true
+    fi
+
+    # Try to create the secret
+    HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" $CF_ACCESS_HEADERS \
+      -X POST "$INFISICAL_URL/api/v3/secrets/raw/$KEY" \
+      -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+      -d "{\"workspaceId\": \"$PROJECT_ID\", \"environment\": \"prod\", \"secretPath\": \"$FOLDER\", \"secretValue\": $(echo -n "$VALUE" | jq -Rs .)}" 2>/dev/null)
+
+    if [ "$HTTP_CODE" = "400" ] || [ "$HTTP_CODE" = "409" ]; then
+      # Secret exists, update it
+      curl -sf $CF_ACCESS_HEADERS \
+        -X PATCH "$INFISICAL_URL/api/v3/secrets/raw/$KEY" \
+        -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+        -d "{\"workspaceId\": \"$PROJECT_ID\", \"environment\": \"prod\", \"secretPath\": \"$FOLDER\", \"secretValue\": $(echo -n "$VALUE" | jq -Rs .)}" >/dev/null
+      echo "Updated: $KEY in $FOLDER"
+    else
+      echo "Created: $KEY in $FOLDER"
+    fi
+    ;;
+
+  mkdir)
+    # Create a folder: infisical-ops mkdir /path/to/folder
+    FOLDER="${1:?Usage: infisical-ops mkdir /path/to/folder}"
+    TOKEN=$(get_token)
+    PARENT_PATH=$(dirname "$FOLDER")
+    [ "$PARENT_PATH" = "." ] && PARENT_PATH="/"
+    FOLDER_NAME=$(basename "$FOLDER")
+    curl -sf $CF_ACCESS_HEADERS -X POST "$INFISICAL_URL/api/v1/folders" \
+      -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+      -d "{\"workspaceId\": \"$PROJECT_ID\", \"environment\": \"prod\", \"name\": \"$FOLDER_NAME\", \"path\": \"$PARENT_PATH\"}" | jq -r '.folder.name // "created"'
+    echo "Created folder: $FOLDER"
+    ;;
+
   help|--help|-h)
     echo "infisical-ops — Operational secrets for Claude Code"
     echo ""
@@ -112,9 +160,11 @@ case "$CMD" in
     echo "  infisical-ops list-all                   List all secrets across all folders"
     echo "  infisical-ops folders                    List available folders"
     echo "  infisical-ops get KEY [folder]           Get single secret value (for piping)"
+    echo "  infisical-ops set KEY VALUE [folder]     Create/update a secret"
+    echo "  infisical-ops mkdir /folder              Create a folder"
     echo "  infisical-ops run [--path folder] -- cmd Run cmd with secrets as env vars"
     echo ""
-    echo "Folders: cloudflare, erpnext, monitoring, n8n, ecommerce, infra, git, mail, ai"
+    echo "Folders: cloudflare, erpnext, monitoring, n8n, ecommerce, infra, git, mail, ai, vault-migration"
     ;;
 
   *)
