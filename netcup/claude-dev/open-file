@@ -1,0 +1,17 @@
+#!/bin/bash
+# File opener for tmux super_fingers (server/container)
+# Opens files in a split pane with vim
+FILE="$1"
+EDITOR="${EDITOR:-vim}"
+
+# Check if there's already a vim running in any pane
+editor_pane=$(tmux list-panes -s -F '#{pane_id} #{pane_current_command}' | grep -E 'n?vim' | head -1 | awk '{print $1}')
+
+if [[ -n "$editor_pane" ]]; then
+    tmux select-pane -t "$editor_pane"
+    tmux send-keys -t "$editor_pane" Escape ":e $FILE" Enter zz
+elif [[ -f "$FILE" ]]; then
+    tmux split-window -h "$EDITOR '$FILE'; $SHELL -i"
+else
+    echo "File not found: $FILE"
+fi

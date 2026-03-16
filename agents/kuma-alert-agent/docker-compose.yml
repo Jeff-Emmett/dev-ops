@@ -1,0 +1,30 @@
+services:
+  kuma-alert-agent:
+    build: .
+    container_name: kuma-alert-agent
+    restart: always
+    env_file: .env
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    volumes:
+      # Docker socket for exec into claude-dev
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Persistent data (incidents, audit, state)
+      - agent-data:/data
+    networks:
+      # Reach uptime-kuma container on port 3001
+      - traefik-public
+      # Reach mail server (mail.rmail.online)
+      - mailcow-network
+
+volumes:
+  agent-data:
+
+networks:
+  traefik-public:
+    external: true
+  mailcow-network:
+    external: true
+    name: mailcowdockerized_mailcow-network

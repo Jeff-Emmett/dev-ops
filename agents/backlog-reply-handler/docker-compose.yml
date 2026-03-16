@@ -1,0 +1,26 @@
+services:
+  backlog-reply-handler:
+    build: .
+    container_name: backlog-reply-handler
+    restart: always
+    env_file: .env
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    volumes:
+      # Docker socket for exec into claude-dev
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Persistent data (state, logs)
+      - handler-data:/data
+    networks:
+      # Reach mail server
+      - mailcow-network
+
+volumes:
+  handler-data:
+
+networks:
+  mailcow-network:
+    external: true
+    name: mailcowdockerized_mailcow-network

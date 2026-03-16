@@ -1,0 +1,85 @@
+model_list:
+  # === Anthropic (paid) ===
+  - model_name: claude-sonnet
+    litellm_params:
+      model: anthropic/claude-sonnet-4-20250514
+      api_key: os.environ/ANTHROPIC_API_KEY
+      max_tokens: 8192
+      timeout: 300
+
+  - model_name: claude-haiku
+    litellm_params:
+      model: anthropic/claude-haiku-4-5-20251001
+      api_key: os.environ/ANTHROPIC_API_KEY
+      max_tokens: 8192
+      timeout: 300
+
+  # === Local Ollama (free) ===
+  - model_name: llama3
+    litellm_params:
+      model: ollama/llama3.1:8b
+      api_base: http://ollama:11434
+      timeout: 120
+      stream: true
+
+  - model_name: llama3-small
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://ollama:11434
+      timeout: 120
+      stream: true
+
+  - model_name: mistral
+    litellm_params:
+      model: ollama/mistral-small:24b
+      api_base: http://ollama:11434
+      timeout: 180
+      stream: true
+
+  - model_name: qwen-coder
+    litellm_params:
+      model: ollama/qwen2.5-coder:7b
+      api_base: http://ollama:11434
+      timeout: 120
+      stream: true
+
+  - model_name: qwen
+    litellm_params:
+      model: ollama/qwen2.5:7b
+      api_base: http://ollama:11434
+      timeout: 120
+      stream: true
+
+  # === OpenAI (activate when key added to Infisical) ===
+  # - model_name: gpt-4o
+  #   litellm_params:
+  #     model: openai/gpt-4o
+  #     api_key: os.environ/OPENAI_API_KEY
+  #     timeout: 300
+
+  # - model_name: gpt-4o-mini
+  #   litellm_params:
+  #     model: openai/gpt-4o-mini
+  #     api_key: os.environ/OPENAI_API_KEY
+  #     timeout: 300
+
+  # === Google Gemini (activate when key added to Infisical) ===
+  # - model_name: gemini-flash
+  #   litellm_params:
+  #     model: gemini/gemini-2.0-flash
+  #     api_key: os.environ/GEMINI_API_KEY
+  #     timeout: 300
+
+litellm_settings:
+  drop_params: true
+  request_timeout: 300
+  num_retries: 2
+  set_verbose: false
+
+  # Fallback: paid models fail → try local Ollama
+  default_fallbacks: ["llama3"]
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL
+  store_model_in_db: true
