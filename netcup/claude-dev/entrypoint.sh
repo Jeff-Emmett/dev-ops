@@ -86,5 +86,21 @@ if [ -f /mnt/claude-settings.json ]; then
     echo "[entrypoint] Claude settings installed"
 fi
 
+# === Link synced project memories into Claude project dirs ===
+SYNCED="/mnt/claude-synced-projects"
+PROJECTS="/home/dev/.claude/projects"
+if [ -d "$SYNCED" ]; then
+    for dir in "$SYNCED"/*/; do
+        [ -d "$dir" ] || continue
+        name=$(basename "$dir")
+        mkdir -p "$PROJECTS/$name"
+        if [ -d "$dir/memory" ]; then
+            rm -rf "$PROJECTS/$name/memory"
+            ln -sf "$dir/memory" "$PROJECTS/$name/memory"
+        fi
+    done
+    echo "[entrypoint] Synced project memories linked"
+fi
+
 # === Keep container running ===
 exec sleep infinity
