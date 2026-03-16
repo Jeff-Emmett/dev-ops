@@ -133,8 +133,11 @@ backlog search "<description>" --plain          # Check if task exists
 backlog task create "Title" -d "..." -p high    # Create task
 backlog task edit <id> -s "In Progress"         # Start work
 backlog task edit <id> --append-notes "..."     # Add notes
+backlog task edit <id> --check-ac 1             # Check acceptance criteria
 backlog task edit <id> -s Done --append-notes "Complete"  # Finish
 ```
+
+**AC GATE (ENFORCED):** Tasks with unchecked ACs are **auto-reverted** to "In Progress" when marked Done. You MUST `--check-ac N` for every AC before setting status to Done. Override: add `<!-- AC_WAIVED -->` to task file.
 
 ---
 

@@ -13,14 +13,17 @@ Environment variables (set by backlog-md):
   TASK_TITLE  - e.g. "Deploy new service"
 
 SMTP credentials:
-  ~/.secrets/private/rmail_noreply_password (file, preferred)
+  ~/.secrets/private/claude_jeffemmett_password (file, preferred)
   $SMTP_PASS env var (fallback)
 """
 
 import glob
+import hashlib
 import os
 import re
+import shutil
 import smtplib
+import subprocess
 import sys
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -29,10 +32,10 @@ from pathlib import Path
 # --- Configuration ---
 SMTP_HOST = "mail.rmail.online"
 SMTP_PORT = 587
-SMTP_USER = "team@rmail.online"
-SMTP_PASS_FILE = os.path.expanduser("~/.secrets/private/rmail_team_password")
-FROM_ADDR = "Backlog Notify <team@rmail.online>"
-TO_ADDR = "jeff+testing@jeffemmett.com"
+SMTP_USER = "claude@jeffemmett.com"
+SMTP_PASS_FILE = os.path.expanduser("~/.secrets/private/claude_jeffemmett_password")
+FROM_ADDR = "Claude <claude@jeffemmett.com>"
+TO_ADDR = "jeff@jeffemmett.com"
 
 MEDIA_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp", ".ico",
@@ -130,15 +133,22 @@ def build_html_email(task_id, title, project, output_products, links_to_test, cr
         html += "</ul>"
 
     if links_to_test:
-        html += """<h3 style="color: #dc2626;">&#x1f517; Links to Test</h3><ul>"""
+        html += """<h3 style="color: #dc2626;">&#x1f517; Live URLs to Test</h3><ul>"""
         for url in links_to_test:
             html += f'<li><a href="{url}" style="color: #dc2626;">{url}</a></li>'
         html += "</ul>"
+    else:
+        html += """<p style="color: #b45309; background: #fef3c7; padding: 8px 12px; border-radius: 4px;">
+&#x26a0;&#xfe0f; <strong>No live URLs found in task.</strong> Consider adding deployment links to the task notes.</p>"""
 
     if criteria:
         total = len(criteria)
         checked = sum(1 for c, _ in criteria if c)
-        html += f"""<h3>&#x2611;&#xfe0f; Acceptance Criteria ({checked}/{total})</h3><ul style="list-style: none; padding-left: 0;">"""
+        if checked < total:
+            html += f"""<h3 style="color: #dc2626;">&#x274c; Acceptance Criteria ({checked}/{total}) — INCOMPLETE</h3>"""
+        else:
+            html += f"""<h3 style="color: #16a34a;">&#x2705; Acceptance Criteria ({checked}/{total})</h3>"""
+        html += """<ul style="list-style: none; padding-left: 0;">"""
         for done, text in criteria:
             icon = "&#x2705;" if done else "&#x274c;"
             html += f"<li>{icon} {text}</li>"
@@ -148,7 +158,8 @@ def build_html_email(task_id, title, project, output_products, links_to_test, cr
         html += "<p><em>No URLs or acceptance criteria found in task.</em></p>"
 
     html += """<hr style="border: none; border-top: 1px solid #ddd; margin-top: 24px;">
-<p style="color: #999; font-size: 12px;">Sent by backlog-notify</p>
+<p style="color: #555; font-size: 13px;"><strong>Reply to this email</strong> with follow-up instructions, questions, or feedback. Your reply will be processed and a summary sent back.</p>
+<p style="color: #999; font-size: 12px;">Claude &mdash; backlog-notify</p>
 </body></html>"""
 
     return html
@@ -169,15 +180,19 @@ def build_text_email(task_id, title, project, output_products, links_to_test, cr
         lines.append("")
 
     if links_to_test:
-        lines.append("LINKS TO TEST:")
+        lines.append("LIVE URLs TO TEST:")
         for url in links_to_test:
             lines.append(f"  - {url}")
+        lines.append("")
+    else:
+        lines.append("WARNING: No live URLs found in task. Add deployment links to task notes.")
         lines.append("")
 
     if criteria:
         total = len(criteria)
         checked = sum(1 for c, _ in criteria if c)
-        lines.append(f"ACCEPTANCE CRITERIA ({checked}/{total}):")
+        status = " — INCOMPLETE" if checked < total else ""
+        lines.append(f"ACCEPTANCE CRITERIA ({checked}/{total}){status}:")
         for done, text in criteria:
             mark = "[x]" if done else "[ ]"
             lines.append(f"  {mark} {text}")
@@ -186,12 +201,16 @@ def build_text_email(task_id, title, project, output_products, links_to_test, cr
     if not output_products and not links_to_test and not criteria:
         lines.append("No URLs or acceptance criteria found in task.")
 
+    lines.append("")
     lines.append("---")
-    lines.append("Sent by backlog-notify")
+    lines.append("Reply to this email with follow-up instructions or feedback.")
+    lines.append("Your reply will be processed and a summary sent back.")
+    lines.append("")
+    lines.append("-- Claude (backlog-notify)")
     return "\n".join(lines)
 
 
-def send_email(subject, html_body, text_body):
+def send_email(subject, html_body, text_body, message_id=None):
     """Send multipart email via Mailcow SMTP."""
     password = get_smtp_password()
 
@@ -199,6 +218,9 @@ def send_email(subject, html_body, text_body):
     msg["Subject"] = subject
     msg["From"] = FROM_ADDR
     msg["To"] = TO_ADDR
+    msg["Reply-To"] = "claude@jeffemmett.com"
+    if message_id:
+        msg["Message-ID"] = message_id
 
     msg.attach(MIMEText(text_body, "plain"))
     msg.attach(MIMEText(html_body, "html"))
@@ -211,6 +233,70 @@ def send_email(subject, html_body, text_body):
     print(f"Email sent: {subject}")
 
 
+def revert_task_status(task_id, old_status, reason):
+    """Revert task status and append a note explaining why."""
+    backlog_cmd = shutil.which("backlog") or "backlog"
+    note = f"[AC GATE] Reverted to '{old_status}': {reason}"
+    try:
+        subprocess.run(
+            [backlog_cmd, "task", "edit", task_id, "-s", old_status,
+             "--append-notes", note],
+            check=True, capture_output=True, text=True, timeout=30,
+        )
+        print(f"Reverted {task_id} to '{old_status}': {reason}")
+    except Exception as e:
+        print(f"ERROR: Failed to revert {task_id}: {e}", file=sys.stderr)
+
+
+def send_rejection_email(task_id, task_title, project, criteria, checked_ac, total_ac):
+    """Send email notifying that task completion was rejected due to unchecked ACs."""
+    unchecked = [(i + 1, text) for i, (done, text) in enumerate(criteria) if not done]
+
+    subject = f"[REJECTED] {task_id}: {task_title} — {total_ac - checked_ac} ACs incomplete"
+    msg_hash = hashlib.sha256(f"{task_id}-{project}".encode()).hexdigest()[:12]
+    message_id = f"<backlog-reject-{task_id.lower()}-{msg_hash}@jeffemmett.com>"
+
+    ac_list_html = "".join(
+        f'<li style="color: #dc2626;">&#x274c; AC #{idx}: {text}</li>'
+        for idx, text in unchecked
+    )
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+<h2 style="border-bottom: 2px solid #dc2626; padding-bottom: 8px; color: #dc2626;">
+  &#x1f6d1; {task_id}: {task_title}
+</h2>
+<p style="color: #666;">Project: <strong>{project}</strong></p>
+<p>Task was marked Done but <strong>{total_ac - checked_ac} of {total_ac} acceptance criteria</strong> are still unchecked. Status has been reverted to <strong>In Progress</strong>.</p>
+<h3>Unchecked Acceptance Criteria:</h3>
+<ul style="list-style: none; padding-left: 0;">{ac_list_html}</ul>
+<p style="background: #fef3c7; padding: 10px; border-radius: 4px;">
+To complete this task, check all ACs with <code>backlog task edit {task_id} --check-ac N</code> then set status to Done.<br>
+To override, add <code>&lt;!-- AC_WAIVED --&gt;</code> to the task file.</p>
+<hr style="border: none; border-top: 1px solid #ddd; margin-top: 24px;">
+<p style="color: #555; font-size: 13px;"><strong>Reply</strong> to provide instructions or override.</p>
+<p style="color: #999; font-size: 12px;">Claude &mdash; backlog-notify (AC gate)</p>
+</body></html>"""
+
+    text = f"""REJECTED: {task_id}: {task_title}
+Project: {project}
+
+Task was marked Done but {total_ac - checked_ac}/{total_ac} acceptance criteria are unchecked.
+Status reverted to In Progress.
+
+UNCHECKED ACs:
+""" + "\n".join(f"  [ ] AC #{idx}: {text}" for idx, text in unchecked) + f"""
+
+To complete: check all ACs with `backlog task edit {task_id} --check-ac N` then set status to Done.
+To override: add <!-- AC_WAIVED --> to the task file.
+
+---
+Reply to provide instructions or override.
+-- Claude (backlog-notify, AC gate)"""
+
+    send_email(subject, html, text, message_id=message_id)
+
+
 def main():
     # Read env vars from backlog-md callback
     task_id = os.environ.get("TASK_ID", "")
@@ -218,7 +304,7 @@ def main():
     new_status = os.environ.get("NEW_STATUS", "")
     task_title = os.environ.get("TASK_TITLE", "")
 
-    # Only notify on completion
+    # Only act on transitions to Done
     if new_status != "Done":
         sys.exit(0)
 
@@ -235,11 +321,29 @@ def main():
     output_products, links_to_test = extract_urls(content)
     criteria = extract_acceptance_criteria(content)
 
-    # Build and send email
+    # --- AC Gate: reject completion if ACs are incomplete ---
+    total_ac = len(criteria)
+    checked_ac = sum(1 for done, _ in criteria if done)
+    ac_incomplete = total_ac > 0 and checked_ac < total_ac
+    ac_waived = "<!-- AC_WAIVED -->" in content
+
+    if ac_incomplete and not ac_waived:
+        print(f"AC GATE: {task_id} has {total_ac - checked_ac}/{total_ac} unchecked ACs — reverting")
+        revert_task_status(task_id, old_status or "In Progress",
+                          f"{total_ac - checked_ac}/{total_ac} ACs unchecked")
+        send_rejection_email(task_id, task_title, project, criteria, checked_ac, total_ac)
+        sys.exit(0)
+
+    # --- All ACs passed (or no ACs / waived) — send completion email ---
     subject = f"[DONE] {task_id}: {task_title}"
+
+    # Generate stable Message-ID for reply threading
+    msg_hash = hashlib.sha256(f"{task_id}-{project}".encode()).hexdigest()[:12]
+    message_id = f"<backlog-{task_id.lower()}-{msg_hash}@jeffemmett.com>"
+
     html_body = build_html_email(task_id, task_title, project, output_products, links_to_test, criteria)
     text_body = build_text_email(task_id, task_title, project, output_products, links_to_test, criteria)
-    send_email(subject, html_body, text_body)
+    send_email(subject, html_body, text_body, message_id=message_id)
 
 
 if __name__ == "__main__":

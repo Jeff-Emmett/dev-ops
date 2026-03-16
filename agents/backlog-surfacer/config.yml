@@ -13,10 +13,10 @@ notifications:
     path: /tmp/backlog-briefing.md
   - type: email
     to: jeff@jeffemmett.com
-    from: noreply@jeffemmett.com
+    from: claude@jeffemmett.com
     smtp_host: mailcowdockerized-postfix-mailcow-1
     smtp_port: 587
-    smtp_user: noreply@jeffemmett.com
+    smtp_user: claude@jeffemmett.com
 
 rules:
   stale_in_progress_days: 3
