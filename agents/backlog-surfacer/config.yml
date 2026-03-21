@@ -1,6 +1,7 @@
 scan_paths:
   local:
-    - /home/jeffe/Github/*/backlog/
+    - /data/apps/*/backlog/
+    - /data/websites/*/backlog/
 
 schedules:
   morning: "0 9 * * 1-5"
@@ -13,8 +14,8 @@ notifications:
     path: /tmp/backlog-briefing.md
   - type: email
     to: jeff@jeffemmett.com
-    from: claude@jeffemmett.com
-    smtp_host: mailcowdockerized-postfix-mailcow-1
+    from: Jeff's Claude Agent <claude@jeffemmett.com>
+    smtp_host: mail.rmail.online
     smtp_port: 587
     smtp_user: claude@jeffemmett.com
 

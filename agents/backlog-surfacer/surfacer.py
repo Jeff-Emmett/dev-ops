@@ -47,13 +47,18 @@ def parse_task_file(filepath: str) -> dict | None:
     meta["_file"] = filepath
 
     # Derive project name from path
-    # e.g. /home/jeffe/Github/canvas-website/backlog/tasks/task-1.md -> canvas-website
+    # Handles: /home/jeffe/Github/<project>/backlog/tasks/...
+    #          /data/apps/<project>/backlog/tasks/...
+    #          /data/websites/<project>/backlog/tasks/...
     parts = Path(filepath).parts
-    try:
-        github_idx = parts.index("Github")
-        meta["_project"] = parts[github_idx + 1]
-    except (ValueError, IndexError):
-        meta["_project"] = "unknown"
+    meta["_project"] = "unknown"
+    for marker in ("Github", "github", "apps", "websites"):
+        try:
+            idx = parts.index(marker)
+            meta["_project"] = parts[idx + 1]
+            break
+        except (ValueError, IndexError):
+            continue
 
     return meta
 
@@ -140,7 +145,21 @@ def recently_completed(tasks: list[dict], days: int = 7) -> list[dict]:
     return result
 
 
-def format_task(t: dict) -> str:
+def upcoming_deadlines(tasks: list[dict], days: int = 14) -> list[dict]:
+    """Tasks with due dates within the next N days (not Done), sorted soonest first."""
+    cutoff = datetime.now() + timedelta(days=days)
+    result = []
+    for t in tasks:
+        status = str(t.get("status", "")).lower()
+        if status in ("done", "completed", "✔ done"):
+            continue
+        due = parse_date(t.get("due_date"))
+        if due and due <= cutoff:
+            result.append(t)
+    return sorted(result, key=lambda t: parse_date(t.get("due_date")))
+
+
+def format_task(t: dict, show_project: bool = True) -> str:
     """Format a single task as a markdown line."""
     tid = t.get("id", "?")
     title = t.get("title", "Untitled")
@@ -148,7 +167,49 @@ def format_task(t: dict) -> str:
     project = t.get("_project", "")
     status = t.get("status", "")
     pri_badge = f"[{priority.upper()}]" if priority else ""
-    return f"  - {pri_badge} **{tid}** — {title} ({project}) _{status}_"
+    proj_part = f" ({project})" if show_project else ""
+    return f"  - {pri_badge} **{tid}** — {title}{proj_part} _{status}_"
+
+
+def format_task_with_due(t: dict, show_project: bool = True) -> str:
+    """Format a task line with due date urgency indicator."""
+    base = format_task(t, show_project=show_project)
+    due = parse_date(t.get("due_date"))
+    if not due:
+        return base
+    days = (due - datetime.now()).days
+    if days < 0:
+        return f"{base} — **OVERDUE by {abs(days)}d**"
+    elif days == 0:
+        return f"{base} — **DUE TODAY**"
+    elif days <= 3:
+        return f"{base} — due in {days}d"
+    else:
+        return f"{base} — due {due.strftime('%b %d')}"
+
+
+def group_tasks_by_project(tasks: list[dict]) -> dict:
+    """Group tasks into {project: [tasks]} preserving order."""
+    groups = defaultdict(list)
+    for t in tasks:
+        groups[t.get("_project", "unknown")].append(t)
+    return dict(groups)
+
+
+def format_section_by_project(title: str, tasks: list[dict], formatter=None) -> str:
+    """Format a section with tasks grouped under project subheadings."""
+    if not tasks:
+        return ""
+    if formatter is None:
+        formatter = format_task
+    lines = [f"## {title} ({len(tasks)} tasks)", ""]
+    groups = group_tasks_by_project(tasks)
+    for proj, proj_tasks in sorted(groups.items(), key=lambda x: -len(x[1])):
+        lines.append(f"### {proj}")
+        for t in proj_tasks:
+            lines.append(formatter(t, show_project=False))
+        lines.append("")
+    return "\n".join(lines)
 
 
 def generate_morning_briefing(tasks: list[dict], config: dict) -> str:
@@ -161,23 +222,33 @@ def generate_morning_briefing(tasks: list[dict], config: dict) -> str:
         "",
     ]
 
-    # High priority
+    # Upcoming deadlines at the very top
+    deadline_days = rules.get("upcoming_deadline_days", 14)
+    upcoming = upcoming_deadlines(active, deadline_days)
+    if upcoming:
+        lines.append(format_section_by_project(
+            "Upcoming Deadlines",
+            upcoming,
+            formatter=format_task_with_due,
+        ))
+
+    # High priority grouped by project
     hp = high_priority(active)
     if hp:
-        lines.append(f"## High Priority ({len(hp)} tasks)")
-        for t in hp:
-            lines.append(format_task(t))
-        lines.append("")
+        lines.append(format_section_by_project("High Priority", hp))
 
-    # Stale in-progress
+    # Stale in-progress grouped by project
     stale_ip = stale_in_progress(active, rules.get("stale_in_progress_days", 3))
     if stale_ip:
-        lines.append(f"## Stale In Progress ({len(stale_ip)} tasks > {rules.get('stale_in_progress_days', 3)} days)")
-        for t in stale_ip:
+        def fmt_stale(t, show_project=True):
             updated = parse_date(t.get("updated_date") or t.get("created_date"))
             age = (datetime.now() - updated).days if updated else "?"
-            lines.append(f"{format_task(t)} — {age}d ago")
-        lines.append("")
+            return f"{format_task(t, show_project=show_project)} — {age}d ago"
+        lines.append(format_section_by_project(
+            f"Stale In Progress (>{rules.get('stale_in_progress_days', 3)} days)",
+            stale_ip,
+            formatter=fmt_stale,
+        ))
 
     # Summary
     by_project = defaultdict(int)
@@ -204,19 +275,24 @@ def generate_weekly_review(tasks: list[dict], config: dict) -> str:
         "",
     ]
 
-    if completed:
-        lines.append(f"## Completed This Week ({len(completed)})")
-        for t in completed:
-            lines.append(format_task(t))
-        lines.append("")
+    # Upcoming deadlines at the top
+    deadline_days = rules.get("upcoming_deadline_days", 14)
+    upcoming = upcoming_deadlines(active, deadline_days)
+    if upcoming:
+        lines.append(format_section_by_project(
+            "Upcoming Deadlines",
+            upcoming,
+            formatter=format_task_with_due,
+        ))
 
-    # Tasks that didn't move
+    # Completed grouped by project
+    if completed:
+        lines.append(format_section_by_project("Completed This Week", completed))
+
+    # Stuck tasks grouped by project
     stale_ip = stale_in_progress(active, rules.get("stale_in_progress_days", 3))
     if stale_ip:
-        lines.append(f"## Stuck / No Movement ({len(stale_ip)})")
-        for t in stale_ip:
-            lines.append(format_task(t))
-        lines.append("")
+        lines.append(format_section_by_project("Stuck / No Movement", stale_ip))
 
     # Velocity
     lines.append("## Velocity")
@@ -239,14 +315,18 @@ def generate_monthly_audit(tasks: list[dict], config: dict) -> str:
     ]
 
     if stale:
-        lines.append(f"## Stale To Do ({len(stale)} tasks > {rules.get('stale_todo_days', 30)} days)")
-        lines.append("_Consider closing, archiving, or reprioritizing these:_")
-        lines.append("")
-        for t in stale:
+        def fmt_stale_age(t, show_project=True):
             created = parse_date(t.get("created_date"))
             age = (datetime.now() - created).days if created else "?"
-            lines.append(f"{format_task(t)} — created {age}d ago")
+            return f"{format_task(t, show_project=show_project)} — created {age}d ago"
+
+        lines.append("_Consider closing, archiving, or reprioritizing these:_")
         lines.append("")
+        lines.append(format_section_by_project(
+            f"Stale To Do (>{rules.get('stale_todo_days', 30)} days)",
+            stale,
+            formatter=fmt_stale_age,
+        ))
 
     # Projects with zero activity
     by_project = defaultdict(list)
