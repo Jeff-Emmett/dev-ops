@@ -63,18 +63,32 @@ model_list:
   #     api_key: os.environ/OPENAI_API_KEY
   #     timeout: 300
 
-  # === Google Gemini (activate when key added to Infisical) ===
-  # - model_name: gemini-flash
-  #   litellm_params:
-  #     model: gemini/gemini-2.0-flash
-  #     api_key: os.environ/GEMINI_API_KEY
-  #     timeout: 300
+  # === Google Gemini ===
+  - model_name: gemini-flash
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 300
+
+  # === Load-balanced free model groups ===
+  - model_name: cheap-code
+    litellm_params:
+      model: ollama/qwen2.5-coder:7b
+      api_base: http://ollama:11434
+      timeout: 120
+  - model_name: cheap-code  # fallback
+    litellm_params:
+      model: ollama/llama3.1:8b
+      api_base: http://ollama:11434
+      timeout: 120
 
 litellm_settings:
   drop_params: true
   request_timeout: 300
   num_retries: 2
   set_verbose: false
+  max_budget: 50.0
+  budget_duration: "30d"
 
   # Fallback: paid models fail → try local Ollama
   default_fallbacks: ["llama3"]
