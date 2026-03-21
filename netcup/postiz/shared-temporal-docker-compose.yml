@@ -2,6 +2,7 @@ services:
   temporal-shared-postgres:
     image: postgres:16
     container_name: temporal-shared-postgres
+    mem_limit: 1g
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: temporal
@@ -20,6 +21,7 @@ services:
   temporal-shared-elasticsearch:
     image: elasticsearch:7.17.27
     container_name: temporal-shared-elasticsearch
+    mem_limit: 2g
     restart: unless-stopped
     environment:
       - discovery.type=single-node
@@ -42,6 +44,7 @@ services:
   temporal-shared-ui:
     image: temporalio/ui:2.34.0
     container_name: temporal-shared-ui
+    mem_limit: 512m
     restart: unless-stopped
     environment:
       - TEMPORAL_ADDRESS=postiz-temporal:7233

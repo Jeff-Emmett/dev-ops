@@ -1,0 +1,121 @@
+services:
+  twenty-votc-server:
+    image: twentycrm/twenty:${TAG:-latest}
+    container_name: twenty-votc-server
+    mem_limit: 768m
+    volumes:
+      - twenty-votc-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      NODE_PORT: 3000
+      PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:-postgres}@twenty-votc-db:5432/default
+      SERVER_URL: ${SERVER_URL}
+      REDIS_URL: redis://twenty-votc-redis:6379
+      STORAGE_TYPE: ${STORAGE_TYPE}
+      APP_SECRET: ${APP_SECRET}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      EMAIL_SYSTEM_ADDRESS: ${EMAIL_SYSTEM_ADDRESS}
+      EMAIL_DRIVER: ${EMAIL_DRIVER}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER}
+      EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD}
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    depends_on:
+      twenty-votc-db:
+        condition: service_healthy
+      twenty-votc-redis:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:3000/healthz
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.routers.twenty-votc.rule=Host(`crm.valleyofthecommons.com`)"
+      - "traefik.http.services.twenty-votc.loadbalancer.server.port=3000"
+    networks:
+      - twenty-votc-internal
+      - traefik-public
+
+  twenty-votc-worker:
+    image: twentycrm/twenty:${TAG:-latest}
+    container_name: twenty-votc-worker
+    mem_limit: 768m
+    volumes:
+      - twenty-votc-local-data:/app/packages/twenty-server/.local-storage
+    command: ["yarn", "worker:prod"]
+    environment:
+      PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:-postgres}@twenty-votc-db:5432/default
+      SERVER_URL: ${SERVER_URL}
+      REDIS_URL: redis://twenty-votc-redis:6379
+      DISABLE_DB_MIGRATIONS: "true"
+      DISABLE_CRON_JOBS_REGISTRATION: "true"
+      STORAGE_TYPE: ${STORAGE_TYPE}
+      APP_SECRET: ${APP_SECRET}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      EMAIL_SYSTEM_ADDRESS: ${EMAIL_SYSTEM_ADDRESS}
+      EMAIL_DRIVER: ${EMAIL_DRIVER}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER}
+      EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD}
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    depends_on:
+      twenty-votc-db:
+        condition: service_healthy
+      twenty-votc-server:
+        condition: service_healthy
+    restart: always
+    networks:
+      - twenty-votc-internal
+
+  twenty-votc-db:
+    image: postgres:16
+    container_name: twenty-votc-db
+    mem_limit: 512m
+    volumes:
+      - twenty-votc-db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: default
+      POSTGRES_PASSWORD: ${PG_DATABASE_PASSWORD:-postgres}
+      POSTGRES_USER: postgres
+    healthcheck:
+      test: pg_isready -U postgres -h localhost -d postgres
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: always
+    networks:
+      - twenty-votc-internal
+
+  twenty-votc-redis:
+    image: redis
+    container_name: twenty-votc-redis
+    mem_limit: 256m
+    restart: always
+    command: ["--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - twenty-votc-internal
+
+volumes:
+  twenty-votc-db-data:
+  twenty-votc-local-data:
+
+networks:
+  twenty-votc-internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.202.0.0/24
+  traefik-public:
+    external: true

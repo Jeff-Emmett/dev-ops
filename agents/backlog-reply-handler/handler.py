@@ -180,7 +180,7 @@ Respond helpfully and concisely. If they ask to check something, investigate. If
 
 def send_reply_email(to, subject, body, in_reply_to=None, references=None):
     msg = MIMEMultipart("alternative")
-    msg["From"] = "Claude <claude@jeffemmett.com>"
+    msg["From"] = "Jeff's Claude Agent <claude@jeffemmett.com>"
     msg["To"] = to
     msg["Subject"] = subject
     msg["Reply-To"] = "claude@jeffemmett.com"

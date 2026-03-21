@@ -1,0 +1,120 @@
+services:
+  twenty-rn-server:
+    image: twentycrm/twenty:${TAG:-latest}
+    container_name: twenty-rn-server
+    mem_limit: 768m
+    volumes:
+      - twenty-rn-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      NODE_PORT: 3000
+      PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:-postgres}@twenty-rn-db:5432/default
+      SERVER_URL: ${SERVER_URL}
+      REDIS_URL: redis://twenty-rn-redis:6379
+      STORAGE_TYPE: ${STORAGE_TYPE}
+      APP_SECRET: ${APP_SECRET}
+      IS_SIGN_UP_DISABLED: "false"
+      AUTH_PASSWORD_ENABLED: "true"
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      EMAIL_SYSTEM_ADDRESS: ${EMAIL_SYSTEM_ADDRESS}
+      EMAIL_DRIVER: ${EMAIL_DRIVER}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER}
+      EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD}
+    depends_on:
+      twenty-rn-db:
+        condition: service_healthy
+      twenty-rn-redis:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:3000/healthz
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      # API routes on bare domain (for cross-origin calls from workspace subdomains)
+      - "traefik.http.routers.twenty-rn.rule=Host(`rnetwork.online`) && (PathPrefix(`/api`) || PathPrefix(`/metadata`) || PathPrefix(`/graphql`) || PathPrefix(`/rest`) || PathPrefix(`/files`) || PathPrefix(`/healthz`) || PathPrefix(`/verify`) || PathPrefix(`/auth`) || PathPrefix(`/client-config`))"
+      - "traefik.http.routers.twenty-rn.priority=120"
+      - "traefik.http.services.twenty-rn.loadbalancer.server.port=3000"
+      # Workspace subdomains serve Twenty CRM UI
+      - "traefik.http.routers.rnetwork-spaces.rule=HostRegexp(`{space:[a-z0-9-]+}.rnetwork.online`)"
+      - "traefik.http.routers.rnetwork-spaces.priority=100"
+      - "traefik.http.routers.rnetwork-spaces.entrypoints=web"
+      - "traefik.http.routers.rnetwork-spaces.service=twenty-rn"
+    networks:
+      - twenty-rn-internal
+      - traefik-public
+
+  twenty-rn-worker:
+    image: twentycrm/twenty:${TAG:-latest}
+    container_name: twenty-rn-worker
+    mem_limit: 768m
+    volumes:
+      - twenty-rn-local-data:/app/packages/twenty-server/.local-storage
+    command: ["yarn", "worker:prod"]
+    environment:
+      PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:-postgres}@twenty-rn-db:5432/default
+      SERVER_URL: ${SERVER_URL}
+      REDIS_URL: redis://twenty-rn-redis:6379
+      DISABLE_DB_MIGRATIONS: "true"
+      DISABLE_CRON_JOBS_REGISTRATION: "true"
+      STORAGE_TYPE: ${STORAGE_TYPE}
+      APP_SECRET: ${APP_SECRET}
+    depends_on:
+      twenty-rn-db:
+        condition: service_healthy
+      twenty-rn-server:
+        condition: service_healthy
+    restart: always
+    networks:
+      - twenty-rn-internal
+
+  twenty-rn-db:
+    image: postgres:16
+    container_name: twenty-rn-db
+    mem_limit: 512m
+    volumes:
+      - twenty-rn-db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: default
+      POSTGRES_PASSWORD: ${PG_DATABASE_PASSWORD:-postgres}
+      POSTGRES_USER: postgres
+    healthcheck:
+      test: pg_isready -U postgres -h localhost -d postgres
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: always
+    networks:
+      - twenty-rn-internal
+
+  twenty-rn-redis:
+    image: redis
+    container_name: twenty-rn-redis
+    mem_limit: 256m
+    restart: always
+    command: ["--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - twenty-rn-internal
+
+volumes:
+  twenty-rn-db-data:
+  twenty-rn-local-data:
+
+networks:
+  twenty-rn-internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.203.0.0/24
+  traefik-public:
+    external: true

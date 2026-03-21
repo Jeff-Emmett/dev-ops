@@ -1,0 +1,133 @@
+# Twenty CRM stack for commons-hub lead funnel
+# Deploy to /opt/twenty-crm/ on Netcup
+#
+# Prerequisites:
+#   - rspace-online stack running (creates rspace-online_rspace-internal network)
+#   - Traefik running on traefik-public network
+#   - .env with POSTGRES_PASSWORD + APP_SECRET
+#
+# All services use rspace-internal network for inter-container communication.
+# This avoids Docker br_netfilter issues with freshly-created bridge networks.
+
+services:
+  twenty-ch-server:
+    image: twentycrm/twenty:latest
+    container_name: twenty-ch-server
+    mem_limit: 768m
+    restart: unless-stopped
+    depends_on:
+      twenty-ch-db:
+        condition: service_healthy
+      twenty-ch-redis:
+        condition: service_healthy
+    environment:
+      # ── Core ──
+      - NODE_ENV=production
+      - SERVER_URL=https://crm.rspace.online
+      - FRONT_BASE_URL=https://crm.rspace.online
+      - NODE_PORT=3000
+      # ── Database ──
+      - PG_DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@twenty-ch-db:5432/default
+      # ── Redis ──
+      - REDIS_URL=redis://twenty-ch-redis:6379
+      # ── Auth ──
+      - APP_SECRET=${APP_SECRET}
+      # ── Storage ──
+      - STORAGE_TYPE=local
+      - STORAGE_LOCAL_PATH=.local-storage
+      # ── Misc ──
+      - SIGN_IN_PREFILLED=false
+      - IS_BILLING_ENABLED=false
+      - TELEMETRY_ENABLED=false
+      - IS_MULTIWORKSPACE_ENABLED=false
+    volumes:
+      - twenty-ch-server-data:/app/.local-storage
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.twenty-crm.rule=Host(`crm.rspace.online`)"
+      - "traefik.http.routers.twenty-crm.entrypoints=web"
+      - "traefik.http.routers.twenty-crm.priority=130"
+      - "traefik.http.services.twenty-crm.loadbalancer.server.port=3000"
+      - "traefik.docker.network=traefik-public"
+    networks:
+      - traefik-public
+      - rspace-internal
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  twenty-ch-worker:
+    image: twentycrm/twenty:latest
+    container_name: twenty-ch-worker
+    mem_limit: 768m
+    restart: unless-stopped
+    command: ["yarn", "worker:prod"]
+    depends_on:
+      twenty-ch-db:
+        condition: service_healthy
+      twenty-ch-redis:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PG_DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@twenty-ch-db:5432/default
+      - REDIS_URL=redis://twenty-ch-redis:6379
+      - APP_SECRET=${APP_SECRET}
+      - STORAGE_TYPE=local
+      - STORAGE_LOCAL_PATH=.local-storage
+      - SERVER_URL=https://crm.rspace.online
+      - TELEMETRY_ENABLED=false
+      - IS_MULTIWORKSPACE_ENABLED=false
+    volumes:
+      - twenty-ch-server-data:/app/.local-storage
+    networks:
+      - rspace-internal
+
+  twenty-ch-db:
+    image: postgres:16-alpine
+    container_name: twenty-ch-db
+    mem_limit: 512m
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=default
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - twenty-ch-pgdata:/var/lib/postgresql/data
+    networks:
+      - rspace-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d default"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  twenty-ch-redis:
+    image: redis:7
+    container_name: twenty-ch-redis
+    mem_limit: 256m
+    restart: unless-stopped
+    volumes:
+      - twenty-ch-redis-data:/data
+    networks:
+      - rspace-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  twenty-ch-server-data:
+  twenty-ch-pgdata:
+  twenty-ch-redis-data:
+
+networks:
+  traefik-public:
+    external: true
+  rspace-internal:
+    name: rspace-online_rspace-internal
+    external: true

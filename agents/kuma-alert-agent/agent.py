@@ -15,6 +15,7 @@ import os
 import re
 import smtplib
 import subprocess
+import sys
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -107,38 +108,63 @@ def audit(entry: dict) -> None:
 
 # ─── Uptime Kuma API ──────────────────────────────────────────────────
 
-def get_monitor_statuses() -> dict:
-    """Connect to Kuma, return {monitor_id: info_dict}."""
-    api = UptimeKumaApi(KUMA_URL)
+_KUMA_FETCH_SCRIPT = '''
+import json, os, sys
+from uptime_kuma_api import UptimeKumaApi
+api = UptimeKumaApi(os.environ["KUMA_URL"], timeout=30, wait_events=3)
+try:
+    api.login(os.environ["KUMA_USERNAME"], os.environ["KUMA_PASSWORD"])
+    monitors = api.get_monitors()
+    heartbeats = api.get_heartbeats()
+    results = {}
+    for m in monitors:
+        mid = m["id"]
+        beats = heartbeats.get(mid, [])
+        latest = beats[-1] if beats else None
+        if isinstance(latest, list):
+            latest = latest[-1] if latest else None
+        if latest and not isinstance(latest, dict):
+            latest = None
+        results[mid] = {
+            "id": mid,
+            "name": m.get("name", f"Monitor {mid}"),
+            "url": m.get("url", ""),
+            "type": str(m.get("type", "")),
+            "active": m.get("active", True),
+            "status": latest["status"] if latest else None,
+            "status_msg": latest.get("msg", "") if latest else "",
+            "last_check": latest.get("time", "") if latest else "",
+        }
+    json.dump(results, sys.stdout)
+finally:
     try:
-        api.login(KUMA_USERNAME, KUMA_PASSWORD)
-        monitors = api.get_monitors()
-        heartbeats = api.get_heartbeats()
+        api.disconnect()
+    except:
+        pass
+'''
 
-        results = {}
-        for monitor in monitors:
-            mid = monitor["id"]
-            beats = heartbeats.get(mid, [])
-            latest = beats[-1] if beats else None
-            results[mid] = {
-                "id": mid,
-                "name": monitor.get("name", f"Monitor {mid}"),
-                "url": monitor.get("url", ""),
-                "type": monitor.get("type", ""),
-                "active": monitor.get("active", True),
-                "status": latest["status"] if latest else None,
-                "status_msg": latest.get("msg", "") if latest else "",
-                "last_check": latest.get("time", "") if latest else "",
-            }
-        return results
+
+def get_monitor_statuses() -> dict:
+    """Fetch monitor statuses via a subprocess to enforce hard timeout."""
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", _KUMA_FETCH_SCRIPT],
+            capture_output=True, text=True, timeout=45,
+            env={**os.environ},
+        )
+        if result.returncode != 0:
+            log.warning("Kuma fetch subprocess failed (rc=%d): %s",
+                        result.returncode, result.stderr[:300])
+            return {}
+        data = json.loads(result.stdout)
+        # Convert string keys back to int
+        return {int(k): v for k, v in data.items()}
+    except subprocess.TimeoutExpired:
+        log.warning("Kuma fetch subprocess timed out after 45s")
+        return {}
     except Exception as e:
         log.error("Kuma API error: %s", e)
         return {}
-    finally:
-        try:
-            api.disconnect()
-        except Exception:
-            pass
 
 
 # ─── Claude CLI ────────────────────────────────────────────────────────
@@ -181,7 +207,7 @@ def run_claude(prompt: str, system: str, budget: str, timeout: int = 300) -> str
         "claude", "-p", prompt,
         "--output-format", "text",
         "--max-budget-usd", budget,
-        "--permission-mode", "auto-accept",
+        "--permission-mode", "auto",
         "--append-system-prompt", system,
     ]
     log.info("Running Claude CLI (budget=$%s)", budget)
@@ -223,7 +249,7 @@ def parse_diagnosis(response: str) -> dict:
 def send_email(to: str, subject: str, body: str, message_id: str | None = None,
                in_reply_to: str | None = None, references: str | None = None) -> str | None:
     msg = MIMEMultipart("alternative")
-    msg["From"] = f"Kuma Alert Agent <{SMTP_FROM}>"
+    msg["From"] = f"Jeff's Claude Agent <{SMTP_FROM}>"
     msg["To"] = to
     msg["Subject"] = subject
     if message_id:
@@ -530,7 +556,9 @@ def main() -> None:
     while True:
         try:
             # ── Poll monitors ──
+            log.info("Polling Kuma...")
             monitors = get_monitor_statuses()
+            log.info("Got %d monitors", len(monitors))
             if monitors:
                 for mid_int, info in monitors.items():
                     if not info.get("active", True):

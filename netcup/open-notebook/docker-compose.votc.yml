@@ -1,0 +1,30 @@
+services:
+  open-notebook-votc:
+    image: ghcr.io/lfnovo/open-notebook:v1-latest-single
+    container_name: open-notebook-votc
+    mem_limit: 1g
+    restart: always
+    env_file:
+      - ./votc.env
+    volumes:
+      - ./spaces/votc/notebook_data:/app/data
+      - ./spaces/votc/surreal_data:/mydata
+      - ./.streamlit/config.toml:/app/.streamlit/config.toml:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.routers.open-notebook-votc.rule=Host(`opennotebook-votc.rnotes.online`)"
+      - "traefik.http.routers.open-notebook-votc.entrypoints=web"
+      - "traefik.http.routers.open-notebook-votc.priority=120"
+      - "traefik.http.routers.open-notebook-votc.service=open-notebook-votc"
+      - "traefik.http.services.open-notebook-votc.loadbalancer.server.port=8502"
+    networks:
+      - traefik-public
+      - ai-internal
+
+networks:
+  traefik-public:
+    external: true
+  ai-internal:
+    external: true
+    name: ai-internal

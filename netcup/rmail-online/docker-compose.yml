@@ -1,0 +1,127 @@
+services:
+  # ─── rInbox Next.js App ───
+  app:
+    build:
+      context: ..
+      dockerfile: rinbox-online/Dockerfile
+    container_name: rinbox
+    restart: unless-stopped
+    environment:
+      - INFISICAL_CLIENT_ID=${INFISICAL_CLIENT_ID}
+      - INFISICAL_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}
+      - INFISICAL_PROJECT_SLUG=rinbox
+      - INFISICAL_ENV=prod
+      - INFISICAL_URL=http://infisical:8080
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rinbox.rule=Host(`rinbox.online`) || HostRegexp(`{subdomain:[a-z0-9-]+}.rinbox.online`)"
+      - "traefik.http.routers.rinbox.priority=130"
+      - "traefik.http.services.rinbox.loadbalancer.server.port=3000"
+      - "traefik.docker.network=traefik-public"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - traefik-public
+      - rmail-internal
+
+  # ─── WebSocket Server (real-time) ───
+  ws:
+    build:
+      context: ..
+      dockerfile: rinbox-online/Dockerfile
+    container_name: rinbox-ws
+    restart: unless-stopped
+    command: ["npx", "tsx", "workers/ws-server.ts"]
+    environment:
+      - NODE_PATH=/app/full_node_modules
+      - INFISICAL_CLIENT_ID=${INFISICAL_CLIENT_ID}
+      - INFISICAL_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}
+      - INFISICAL_PROJECT_SLUG=rinbox
+      - INFISICAL_ENV=prod
+      - INFISICAL_URL=http://infisical:8080
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://rmail:${POSTGRES_PASSWORD:-changeme}@postgres:5432/rmail
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rinbox-ws.rule=Host(`rinbox.online`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.rinbox-ws.priority=130"
+      - "traefik.http.services.rinbox-ws.loadbalancer.server.port=3001"
+      - "traefik.docker.network=traefik-public"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - traefik-public
+      - rmail-internal
+
+  # ─── IMAP Sync Worker ───
+  sync-worker:
+    build:
+      context: ..
+      dockerfile: rinbox-online/Dockerfile
+    container_name: rinbox-sync
+    restart: unless-stopped
+    command: ["npx", "tsx", "workers/imap-sync.ts"]
+    environment:
+      - NODE_PATH=/app/full_node_modules
+      - INFISICAL_CLIENT_ID=${INFISICAL_CLIENT_ID}
+      - INFISICAL_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}
+      - INFISICAL_PROJECT_SLUG=rinbox
+      - INFISICAL_ENV=prod
+      - INFISICAL_URL=http://infisical:8080
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://rmail:${POSTGRES_PASSWORD:-changeme}@postgres:5432/rmail
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - rmail-internal
+      - rmail-mailcow
+
+  # ─── PostgreSQL ───
+  postgres:
+    image: postgres:16-alpine
+    container_name: rinbox-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rmail
+      POSTGRES_USER: rmail
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rmail"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rmail-internal
+
+  # ─── Redis (pub/sub for real-time) ───
+  redis:
+    image: redis:7-alpine
+    container_name: rinbox-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rmail-internal
+
+volumes:
+  pgdata:
+
+networks:
+  traefik-public:
+    external: true
+  rmail-internal:
+    driver: bridge
+  rmail-mailcow:
+    driver: bridge

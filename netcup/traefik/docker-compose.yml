@@ -3,9 +3,14 @@ services:
     image: traefik:v2.11
     container_name: traefik
     restart: always
+    mem_limit: 1g
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     command:
-      - "--api.dashboard=true"
-      - "--api.insecure=true"
+      - "--api.dashboard=false"
+      - "--api.insecure=false"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=traefik-public"
@@ -15,16 +20,20 @@ services:
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.web.http.middlewares=security-headers@file"
       - "--entrypoints.websecure.http.middlewares=security-headers@file"
+      - "--certificatesresolvers.letsencrypt.acme.email=jeff@jeffemmett.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
       - "--log.level=INFO"
       - "--experimental.plugins.sablier.moduleName=github.com/sablierapp/sablier-traefik-plugin"
       - "--experimental.plugins.sablier.version=v1.1.0"
     ports:
       - "80:80"
       - "443:443"
-      - "8888:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./config:/etc/traefik/config:ro
+      - ./certs:/etc/traefik/certs:ro
+      - ./acme.json:/etc/traefik/acme.json
     networks:
       - traefik-public
 

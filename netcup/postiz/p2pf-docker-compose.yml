@@ -2,6 +2,8 @@ services:
   postiz-p2pf:
     image: ghcr.io/gitroomhq/postiz-app:latest
     container_name: postiz-p2pf
+    mem_limit: 4G
+    cpus: 2
     restart: unless-stopped
     entrypoint: ["/infisical-entrypoint.sh"]
     command: ["docker-entrypoint.sh", "sh", "-c", "nginx && pnpm run pm2"]
@@ -27,7 +29,7 @@ services:
       NEXT_PUBLIC_UPLOAD_DIRECTORY: "/uploads"
       # === OAuth config (client_id/secret come from Infisical) ===
       POSTIZ_GENERIC_OAUTH: "true"
-      NEXT_PUBLIC_POSTIZ_OAUTH_DISPLAY_NAME: "EncryptID"
+      NEXT_PUBLIC_POSTIZ_OAUTH_DISPLAY_NAME: "rSpace EncryptID"
       NEXT_PUBLIC_POSTIZ_OAUTH_LOGO_URL: ""
       POSTIZ_OAUTH_URL: "https://auth.ridentity.online"
       POSTIZ_OAUTH_AUTH_URL: "https://auth.ridentity.online/oidc/authorize"

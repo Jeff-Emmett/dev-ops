@@ -1,0 +1,30 @@
+services:
+  open-notebook-cca:
+    image: ghcr.io/lfnovo/open-notebook:v1-latest-single
+    container_name: open-notebook-cca
+    mem_limit: 1g
+    restart: always
+    env_file:
+      - ./cca.env
+    volumes:
+      - ./spaces/cca/notebook_data:/app/data
+      - ./spaces/cca/surreal_data:/mydata
+      - ./.streamlit/config.toml:/app/.streamlit/config.toml:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.routers.open-notebook-cca.rule=Host(`opennotebook-cca.rnotes.online`)"
+      - "traefik.http.routers.open-notebook-cca.entrypoints=web"
+      - "traefik.http.routers.open-notebook-cca.priority=120"
+      - "traefik.http.routers.open-notebook-cca.service=open-notebook-cca"
+      - "traefik.http.services.open-notebook-cca.loadbalancer.server.port=8502"
+    networks:
+      - traefik-public
+      - ai-internal
+
+networks:
+  traefik-public:
+    external: true
+  ai-internal:
+    external: true
+    name: ai-internal

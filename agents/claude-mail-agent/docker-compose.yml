@@ -1,0 +1,26 @@
+services:
+  claude-mail-agent:
+    build: .
+    container_name: claude-mail-agent
+    restart: always
+    env_file: .env
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    volumes:
+      # Docker socket for exec into claude-dev
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Persistent data (sessions, audit log)
+      - agent-data:/data
+    networks:
+      - mailcow-network
+    depends_on: []
+
+volumes:
+  agent-data:
+
+networks:
+  mailcow-network:
+    external: true
+    name: mailcowdockerized_mailcow-network

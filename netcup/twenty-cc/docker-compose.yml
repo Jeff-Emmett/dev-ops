@@ -1,0 +1,130 @@
+services:
+  twenty-cc-server:
+    image: twentycrm/twenty:${TAG:-latest}
+    container_name: twenty-cc-server
+    mem_limit: 768m
+    volumes:
+      - twenty-cc-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      NODE_PORT: 3000
+      PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:-postgres}@twenty-cc-db:5432/default
+      SERVER_URL: ${SERVER_URL}
+      REDIS_URL: redis://twenty-cc-redis:6379
+      STORAGE_TYPE: ${STORAGE_TYPE}
+      APP_SECRET: ${APP_SECRET}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      EMAIL_SYSTEM_ADDRESS: ${EMAIL_SYSTEM_ADDRESS}
+      EMAIL_DRIVER: ${EMAIL_DRIVER}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER}
+      EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD}
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    depends_on:
+      twenty-cc-db:
+        condition: service_healthy
+      twenty-cc-redis:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:3000/healthz
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.services.twenty-cc.loadbalancer.server.port=3000"
+      # Tunnel route: crm.crypto-commons.org (HTTP via CF tunnel)
+      - "traefik.http.routers.twenty-cc-tunnel.rule=Host(`crm.crypto-commons.org`)"
+      - "traefik.http.routers.twenty-cc-tunnel.entrypoints=web"
+      - "traefik.http.routers.twenty-cc-tunnel.priority=140"
+      # Direct route: crm.crypto-commons.org (HTTPS with Let's Encrypt)
+      - "traefik.http.routers.twenty-cc.rule=Host(`crm.crypto-commons.org`)"
+      - "traefik.http.routers.twenty-cc.entrypoints=websecure"
+      - "traefik.http.routers.twenty-cc.tls=true"
+      - "traefik.http.routers.twenty-cc.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.twenty-cc.priority=140"
+    networks:
+      - twenty-cc-internal
+      - traefik-public
+
+  twenty-cc-worker:
+    image: twentycrm/twenty:${TAG:-latest}
+    container_name: twenty-cc-worker
+    mem_limit: 768m
+    volumes:
+      - twenty-cc-local-data:/app/packages/twenty-server/.local-storage
+    command: ["yarn", "worker:prod"]
+    environment:
+      PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:-postgres}@twenty-cc-db:5432/default
+      SERVER_URL: ${SERVER_URL}
+      REDIS_URL: redis://twenty-cc-redis:6379
+      DISABLE_DB_MIGRATIONS: "true"
+      DISABLE_CRON_JOBS_REGISTRATION: "true"
+      STORAGE_TYPE: ${STORAGE_TYPE}
+      APP_SECRET: ${APP_SECRET}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      EMAIL_SYSTEM_ADDRESS: ${EMAIL_SYSTEM_ADDRESS}
+      EMAIL_DRIVER: ${EMAIL_DRIVER}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER}
+      EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD}
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    depends_on:
+      twenty-cc-db:
+        condition: service_healthy
+      twenty-cc-server:
+        condition: service_healthy
+    restart: always
+    networks:
+      - twenty-cc-internal
+
+  twenty-cc-db:
+    image: postgres:16
+    container_name: twenty-cc-db
+    mem_limit: 512m
+    volumes:
+      - twenty-cc-db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: default
+      POSTGRES_PASSWORD: ${PG_DATABASE_PASSWORD:-postgres}
+      POSTGRES_USER: postgres
+    healthcheck:
+      test: pg_isready -U postgres -h localhost -d postgres
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: always
+    networks:
+      - twenty-cc-internal
+
+  twenty-cc-redis:
+    image: redis
+    container_name: twenty-cc-redis
+    mem_limit: 256m
+    restart: always
+    command: ["--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - twenty-cc-internal
+
+volumes:
+  twenty-cc-db-data:
+  twenty-cc-local-data:
+
+networks:
+  twenty-cc-internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.204.0.0/24
+  traefik-public:
+    external: true

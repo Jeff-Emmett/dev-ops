@@ -1,0 +1,322 @@
+services:
+  rspace:
+    build:
+      context: .
+      additional_contexts:
+        encryptid-sdk: ../encryptid-sdk
+    container_name: rspace-online
+    mem_limit: 768m
+    restart: unless-stopped
+    volumes:
+      - rspace-data:/data/communities
+      - rspace-books:/data/books
+      - rspace-swag:/data/swag-artifacts
+      - rspace-files:/data/files
+      - rspace-splats:/data/splats
+      - rspace-docs:/data/docs
+      - rspace-backups:/data/backups
+      - /opt/dev-ops:/repos/dev-ops:rw
+    environment:
+      - NODE_ENV=production
+      - STORAGE_DIR=/data/communities
+      - BOOKS_DIR=/data/books
+      - SWAG_ARTIFACTS_DIR=/data/swag-artifacts
+      - PORT=3000
+      - FILES_DIR=/data/files
+      - SPLATS_DIR=/data/splats
+      - DOCS_STORAGE_DIR=/data/docs
+      - BACKUPS_DIR=/data/backups
+      - INFISICAL_CLIENT_ID=${INFISICAL_CLIENT_ID}
+      - INFISICAL_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}
+      - INFISICAL_PROJECT_SLUG=rspace
+      - INFISICAL_ENV=prod
+      - INFISICAL_URL=http://infisical:8080
+      - FLOW_SERVICE_URL=http://payment-flow:3010
+      - FLOW_ID=a79144ec-e6a2-4e30-a42a-6d8237a5953d
+      - FUNNEL_ID=0ff6a9ac-1667-4fc7-9a01-b1620810509f
+      - UMAMI_URL=https://analytics.rspace.online
+      - UMAMI_WEBSITE_ID=292f6ac6-79f8-497b-ba6a-7a51e3b87b9f
+      - MAPS_SYNC_URL=wss://maps-sync.rspace.online
+      - IMAP_HOST=mail.rmail.online
+      - IMAP_PORT=993
+      - IMAP_TLS_REJECT_UNAUTHORIZED=false
+      - SMTP_HOST=${SMTP_HOST:-mailcowdockerized-postfix-mailcow-1}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-noreply@rmail.online}
+      - SMTP_PASS=${SMTP_PASS}
+      - SITE_URL=https://rspace.online
+      - RTASKS_REPO_BASE=/repos
+      - RTASKS_HMAC_SECRET=${RTASKS_HMAC_SECRET}
+      - RTASKS_API_KEY=${RTASKS_API_KEY}
+      - SPLAT_NOTIFY_EMAIL=jeffemmett@gmail.com
+      - TWENTY_API_URL=http://twenty-ch-server:3000
+      - TWENTY_API_TOKEN=${TWENTY_API_TOKEN:-}
+      - TRANSAK_API_KEY=${TRANSAK_API_KEY:-}
+      - TRANSAK_API_KEY_STAGING=${TRANSAK_API_KEY_STAGING:-}
+      - TRANSAK_API_KEY_PRODUCTION=${TRANSAK_API_KEY_PRODUCTION:-}
+      - TRANSAK_SECRET=${TRANSAK_SECRET:-}
+      - TRANSAK_WEBHOOK_SECRET_STAGING=${TRANSAK_WEBHOOK_SECRET_STAGING:-}
+      - TRANSAK_WEBHOOK_SECRET_PRODUCTION=${TRANSAK_WEBHOOK_SECRET_PRODUCTION:-}
+      - TRANSAK_ENV=${TRANSAK_ENV:-STAGING}
+      - OLLAMA_URL=http://ollama:11434
+      - INFISICAL_AI_CLIENT_ID=${INFISICAL_AI_CLIENT_ID}
+      - INFISICAL_AI_CLIENT_SECRET=${INFISICAL_AI_CLIENT_SECRET}
+      - INFISICAL_AI_PROJECT_SLUG=claude-ops
+      - INFISICAL_AI_SECRET_PATH=/ai
+      - LISTMONK_URL=https://newsletter.cosmolocal.world
+      - NOTEBOOK_API_URL=http://open-notebook:5055
+      - SPLIT_360_URL=http://video360-splitter:5000
+    depends_on:
+      rspace-db:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      # Main domain — serves landing + path-based routing
+      - "traefik.http.routers.rspace-main.rule=Host(`rspace.online`)"
+      - "traefik.http.routers.rspace-main.entrypoints=web"
+      - "traefik.http.routers.rspace-main.priority=110"
+      # Subdomains — backward compat for *.rspace.online canvas
+      - "traefik.http.routers.rspace-canvas.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.rspace.online`) && !Host(`rspace.online`) && !Host(`www.rspace.online`) && !Host(`auth.rspace.online`) && !Host(`maps-sync.rspace.online`) && !Host(`crm.rspace.online`) && !Host(`analytics.rspace.online`) && !Host(`newsletter.rspace.online`)"
+      - "traefik.http.routers.rspace-canvas.entrypoints=web"
+      - "traefik.http.routers.rspace-canvas.priority=100"
+      # ── Standalone domain routing (priority 120) — redirect to rspace.online ──
+      # Each rule matches bare domain + any subdomain (e.g. rnotes.online, alice.rnotes.online)
+      - "traefik.http.routers.rspace-rbooks.rule=Host(`rbooks.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rbooks.online`)"
+      - "traefik.http.routers.rspace-rbooks.entrypoints=web"
+      - "traefik.http.routers.rspace-rbooks.priority=120"
+      - "traefik.http.routers.rspace-rbooks.service=rspace-online"
+      - "traefik.http.routers.rspace-rpubs.rule=Host(`rpubs.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rpubs.online`)"
+      - "traefik.http.routers.rspace-rpubs.entrypoints=web"
+      - "traefik.http.routers.rspace-rpubs.priority=120"
+      - "traefik.http.routers.rspace-rpubs.service=rspace-online"
+      - "traefik.http.routers.rspace-rchoices.rule=Host(`rchoices.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rchoices.online`)"
+      - "traefik.http.routers.rspace-rchoices.entrypoints=web"
+      - "traefik.http.routers.rspace-rchoices.priority=120"
+      - "traefik.http.routers.rspace-rchoices.service=rspace-online"
+      - "traefik.http.routers.rspace-rflows.rule=Host(`rflows.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rflows.online`)"
+      - "traefik.http.routers.rspace-rflows.entrypoints=web"
+      - "traefik.http.routers.rspace-rflows.priority=120"
+      - "traefik.http.routers.rspace-rflows.service=rspace-online"
+      - "traefik.http.routers.rspace-rforum.rule=Host(`rforum.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rforum.online`)"
+      - "traefik.http.routers.rspace-rforum.entrypoints=web"
+      - "traefik.http.routers.rspace-rforum.priority=120"
+      - "traefik.http.routers.rspace-rforum.service=rspace-online"
+      - "traefik.http.routers.rspace-rvote.rule=Host(`rvote.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rvote.online`)"
+      - "traefik.http.routers.rspace-rvote.entrypoints=web"
+      - "traefik.http.routers.rspace-rvote.priority=120"
+      - "traefik.http.routers.rspace-rvote.service=rspace-online"
+      - "traefik.http.routers.rspace-rtasks.rule=Host(`rtasks.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rtasks.online`)"
+      - "traefik.http.routers.rspace-rtasks.entrypoints=web"
+      - "traefik.http.routers.rspace-rtasks.priority=120"
+      - "traefik.http.routers.rspace-rtasks.service=rspace-online"
+      - "traefik.http.routers.rspace-rcal.rule=Host(`rcal.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rcal.online`)"
+      - "traefik.http.routers.rspace-rcal.entrypoints=web"
+      - "traefik.http.routers.rspace-rcal.priority=120"
+      - "traefik.http.routers.rspace-rcal.service=rspace-online"
+      - "traefik.http.routers.rspace-rtrips.rule=Host(`rtrips.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rtrips.online`)"
+      - "traefik.http.routers.rspace-rtrips.entrypoints=web"
+      - "traefik.http.routers.rspace-rtrips.priority=120"
+      - "traefik.http.routers.rspace-rtrips.service=rspace-online"
+      - "traefik.http.routers.rspace-rwallet.rule=Host(`rwallet.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rwallet.online`)"
+      - "traefik.http.routers.rspace-rwallet.entrypoints=web"
+      - "traefik.http.routers.rspace-rwallet.priority=120"
+      - "traefik.http.routers.rspace-rwallet.service=rspace-online"
+      - "traefik.http.routers.rspace-rdata.rule=Host(`rdata.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rdata.online`)"
+      - "traefik.http.routers.rspace-rdata.entrypoints=web"
+      - "traefik.http.routers.rspace-rdata.priority=120"
+      - "traefik.http.routers.rspace-rdata.service=rspace-online"
+      - "traefik.http.routers.rspace-rnetwork.rule=Host(`rnetwork.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rnetwork.online`)"
+      - "traefik.http.routers.rspace-rnetwork.entrypoints=web"
+      - "traefik.http.routers.rspace-rnetwork.priority=120"
+      - "traefik.http.routers.rspace-rnetwork.service=rspace-online"
+      - "traefik.http.routers.rspace-rtube.rule=Host(`rtube.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rtube.online`)"
+      - "traefik.http.routers.rspace-rtube.entrypoints=web"
+      - "traefik.http.routers.rspace-rtube.priority=120"
+      - "traefik.http.routers.rspace-rtube.service=rspace-online"
+      - "traefik.http.routers.rspace-rmaps.rule=Host(`rmaps.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rmaps.online`)"
+      - "traefik.http.routers.rspace-rmaps.entrypoints=web"
+      - "traefik.http.routers.rspace-rmaps.priority=120"
+      - "traefik.http.routers.rspace-rmaps.service=rspace-online"
+      - "traefik.http.routers.rspace-rnotes.rule=Host(`rnotes.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rnotes.online`)"
+      - "traefik.http.routers.rspace-rnotes.entrypoints=web"
+      - "traefik.http.routers.rspace-rnotes.priority=120"
+      - "traefik.http.routers.rspace-rnotes.service=rspace-online"
+      - "traefik.http.routers.rspace-rfiles.rule=Host(`rfiles.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rfiles.online`)"
+      - "traefik.http.routers.rspace-rfiles.entrypoints=web"
+      - "traefik.http.routers.rspace-rfiles.priority=120"
+      - "traefik.http.routers.rspace-rfiles.service=rspace-online"
+      - "traefik.http.routers.rspace-rphotos.rule=Host(`rphotos.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rphotos.online`)"
+      - "traefik.http.routers.rspace-rphotos.entrypoints=web"
+      - "traefik.http.routers.rspace-rphotos.priority=120"
+      - "traefik.http.routers.rspace-rphotos.service=rspace-online"
+      - "traefik.http.routers.rspace-rinbox.rule=Host(`rinbox.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rinbox.online`)"
+      - "traefik.http.routers.rspace-rinbox.entrypoints=web"
+      - "traefik.http.routers.rspace-rinbox.priority=120"
+      - "traefik.http.routers.rspace-rinbox.service=rspace-online"
+      - "traefik.http.routers.rspace-rcart.rule=Host(`rcart.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rcart.online`)"
+      - "traefik.http.routers.rspace-rcart.entrypoints=web"
+      - "traefik.http.routers.rspace-rcart.priority=120"
+      - "traefik.http.routers.rspace-rcart.service=rspace-online"
+      - "traefik.http.routers.rspace-rsplat.rule=Host(`rsplat.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rsplat.online`)"
+      - "traefik.http.routers.rspace-rsplat.entrypoints=web"
+      - "traefik.http.routers.rspace-rsplat.priority=120"
+      - "traefik.http.routers.rspace-rsplat.service=rspace-online"
+      - "traefik.http.routers.rspace-rswag.rule=Host(`rswag.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rswag.online`)"
+      - "traefik.http.routers.rspace-rswag.entrypoints=web"
+      - "traefik.http.routers.rspace-rswag.priority=120"
+      - "traefik.http.routers.rspace-rswag.service=rspace-online"
+      - "traefik.http.routers.rspace-rsocials.rule=Host(`rsocials.online`) || HostRegexp(`{sub:[a-z0-9-]+}.rsocials.online`)"
+      - "traefik.http.routers.rspace-rsocials.entrypoints=web"
+      - "traefik.http.routers.rspace-rsocials.priority=120"
+      - "traefik.http.routers.rspace-rsocials.service=rspace-online"
+      # Service configuration
+      - "traefik.http.services.rspace-online.loadbalancer.server.port=3000"
+      - "traefik.docker.network=traefik-public"
+    networks:
+      - traefik-public
+      - rspace-internal
+      - payment-network
+      - rmail-mailcow
+      - ai-internal
+
+  rspace-db:
+    image: postgres:16-alpine
+    container_name: rspace-db
+    restart: unless-stopped
+    volumes:
+      - rspace-pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    environment:
+      - POSTGRES_DB=rspace
+      - POSTGRES_USER=rspace
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rspace"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - rspace-internal
+
+  # ── EncryptID auth service ──
+  encryptid:
+    build:
+      context: .
+      dockerfile: Dockerfile.encryptid
+      additional_contexts:
+        encryptid-sdk: ../encryptid-sdk
+    container_name: encryptid
+    restart: unless-stopped
+    depends_on:
+      encryptid-db:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_URL=postgres://encryptid:${ENCRYPTID_DB_PASSWORD}@encryptid-db:5432/encryptid
+      - SMTP_HOST=${SMTP_HOST:-mailcowdockerized-postfix-mailcow-1}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-noreply@rmail.online}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM:-EncryptID <noreply@rmail.online>}
+      - RECOVERY_URL=${RECOVERY_URL:-https://auth.rspace.online/recover}
+      - MAILCOW_API_URL=${MAILCOW_API_URL:-http://nginx-mailcow:8080}
+      - MAILCOW_API_KEY=${MAILCOW_API_KEY:-}
+      - ADMIN_DIDS=${ADMIN_DIDS}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.encryptid.rule=Host(`auth.rspace.online`) || Host(`auth.ridentity.online`) || Host(`encryptid.jeffemmett.com`)"
+      - "traefik.http.routers.encryptid.entrypoints=web"
+      - "traefik.http.routers.encryptid.priority=150"
+      - "traefik.http.services.encryptid.loadbalancer.server.port=3000"
+      # .well-known/webauthn on RP ID domains
+      - "traefik.http.routers.encryptid-wellknown.rule=Host(`rspace.online`) && PathPrefix(`/.well-known/webauthn`)"
+      - "traefik.http.routers.encryptid-wellknown.entrypoints=web"
+      - "traefik.http.routers.encryptid-wellknown.priority=200"
+      - "traefik.http.routers.encryptid-wellknown.service=encryptid"
+      - "traefik.http.routers.encryptid-wellknown-rid.rule=Host(`ridentity.online`) && PathPrefix(`/.well-known/webauthn`)"
+      - "traefik.http.routers.encryptid-wellknown-rid.entrypoints=web"
+      - "traefik.http.routers.encryptid-wellknown-rid.priority=200"
+      - "traefik.http.routers.encryptid-wellknown-rid.service=encryptid"
+    networks:
+      - traefik-public
+      - rspace-internal
+      - rmail-mailcow
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:3000/health').then(r => r.json()).then(d => process.exit(d.database ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  encryptid-db:
+    image: postgres:16-alpine
+    container_name: encryptid-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=encryptid
+      - POSTGRES_USER=encryptid
+      - POSTGRES_PASSWORD=${ENCRYPTID_DB_PASSWORD}
+    volumes:
+      - encryptid-pgdata:/var/lib/postgresql/data
+    networks:
+      - rspace-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U encryptid -d encryptid"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Open Notebook (NotebookLM-like RAG service) ──
+  open-notebook:
+    image: ghcr.io/lfnovo/open-notebook:v1-latest-single
+    container_name: open-notebook
+    restart: always
+    env_file: ./open-notebook.env
+    volumes:
+      - open-notebook-data:/app/data
+      - open-notebook-db:/mydata
+    networks:
+      - traefik-public
+      - ai-internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      # Frontend UI
+      - "traefik.http.routers.rspace-notebook.rule=Host(`notebook.rspace.online`)"
+      - "traefik.http.routers.rspace-notebook.entrypoints=web"
+      - "traefik.http.routers.rspace-notebook.tls.certresolver=letsencrypt"
+      - "traefik.http.services.rspace-notebook.loadbalancer.server.port=8502"
+      # API endpoint (used by rNotes integration)
+      - "traefik.http.routers.rspace-notebook-api.rule=Host(`notebook-api.rspace.online`)"
+      - "traefik.http.routers.rspace-notebook-api.entrypoints=web"
+      - "traefik.http.routers.rspace-notebook-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.rspace-notebook-api.loadbalancer.server.port=5055"
+
+volumes:
+  rspace-data:
+  rspace-books:
+  rspace-swag:
+  rspace-files:
+  rspace-splats:
+  rspace-docs:
+  rspace-backups:
+  rspace-pgdata:
+  encryptid-pgdata:
+  open-notebook-data:
+  open-notebook-db:
+
+networks:
+  traefik-public:
+    external: true
+  payment-network:
+    name: payment-infra_payment-network
+    external: true
+  rmail-mailcow:
+    name: mailcowdockerized_mailcow-network
+    external: true
+  rspace-internal:
+  ai-internal:
+    external: true
