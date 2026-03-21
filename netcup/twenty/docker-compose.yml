@@ -1,0 +1,160 @@
+name: twenty
+
+services:
+  server:
+    image: twentycrm/twenty:latest
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      NODE_PORT: 3000
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      PG_DATABASE_URL: postgres://${PG_DATABASE_USER}:${PG_DATABASE_PASSWORD}@twenty-db:5432/default
+      SERVER_URL: ${SERVER_URL}
+      REDIS_URL: redis://twenty-redis:6379
+      DISABLE_DB_MIGRATIONS: "false"
+      DISABLE_CRON_JOBS_REGISTRATION: "false"
+      STORAGE_TYPE: local
+      APP_SECRET: ${APP_SECRET}
+      IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED}
+      DEFAULT_SUBDOMAIN: ${DEFAULT_SUBDOMAIN}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      EMAIL_SYSTEM_ADDRESS: ${EMAIL_SYSTEM_ADDRESS}
+      EMAIL_DRIVER: ${EMAIL_DRIVER}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER}
+      EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+
+      # Main route: rnetwork.online subdomain traffic (via tunnel on port 80)
+      - "traefik.http.routers.twenty.rule=Host(`demo.rnetwork.online`) || Host(`app.rnetwork.online`) || Host(`fcdm.rnetwork.online`) || Host(`cosmolocal.rnetwork.online`) || Host(`commonshub.rnetwork.online`) || Host(`crypto-commons.rnetwork.online`) || Host(`valleyofthecommons.rnetwork.online`)"
+      - "traefik.http.routers.twenty.entrypoints=web"
+      - "traefik.http.routers.twenty.service=twenty"
+      - "traefik.http.routers.twenty.priority=100"
+
+      # API routes on bare domain (for cross-origin calls from workspace subdomains)
+      - "traefik.http.routers.twenty-api.rule=Host(`rnetwork.online`) && (PathPrefix(`/metadata`) || PathPrefix(`/api`) || PathPrefix(`/graphql`) || PathPrefix(`/rest`) || PathPrefix(`/files`) || PathPrefix(`/healthz`) || PathPrefix(`/verify`) || PathPrefix(`/auth`) || PathPrefix(`/client-config`))"
+      - "traefik.http.routers.twenty-api.entrypoints=web"
+      - "traefik.http.routers.twenty-api.service=twenty"
+      - "traefik.http.routers.twenty-api.priority=50"
+
+      # /crm redirect: {slug}.rnetwork.online/crm -> {slug}.rnetwork.online/
+      - "traefik.http.routers.twenty-crm-redirect.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.rnetwork.online`) && Path(`/crm`)"
+      - "traefik.http.routers.twenty-crm-redirect.entrypoints=web"
+      - "traefik.http.routers.twenty-crm-redirect.priority=150"
+      - "traefik.http.routers.twenty-crm-redirect.middlewares=crm-redirect"
+      - "traefik.http.routers.twenty-crm-redirect.service=twenty"
+      - "traefik.http.middlewares.crm-redirect.redirectregex.regex=^(https?://[^/]+)/crm(/.*)?$$"
+      - "traefik.http.middlewares.crm-redirect.redirectregex.replacement=$${1}/"
+      - "traefik.http.middlewares.crm-redirect.redirectregex.permanent=false"
+      - "traefik.http.services.twenty.loadbalancer.server.port=3000"
+
+      # Redirect: crm.jeffemmett.com → fcdm.rnetwork.online (via tunnel on port 80)
+      - "traefik.http.routers.twenty-redirect-fcdm.rule=Host(`crm.jeffemmett.com`)"
+      - "traefik.http.routers.twenty-redirect-fcdm.entrypoints=web"
+      - "traefik.http.routers.twenty-redirect-fcdm.middlewares=twenty-redirect-fcdm"
+      - "traefik.http.routers.twenty-redirect-fcdm.service=twenty"
+      - "traefik.http.middlewares.twenty-redirect-fcdm.redirectregex.regex=^https?://crm\\.jeffemmett\\.com(.*)"
+      - "traefik.http.middlewares.twenty-redirect-fcdm.redirectregex.replacement=https://fcdm.rnetwork.online$${1}"
+      - "traefik.http.middlewares.twenty-redirect-fcdm.redirectregex.permanent=true"
+
+
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:3000/healthz
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: always
+    networks:
+      - traefik-public
+      - twenty-internal
+      - mailcow-network
+
+  worker:
+    image: twentycrm/twenty:latest
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    command: ["yarn", "worker:prod"]
+    environment:
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      PG_DATABASE_URL: postgres://${PG_DATABASE_USER}:${PG_DATABASE_PASSWORD}@twenty-db:5432/default
+      SERVER_URL: ${SERVER_URL}
+      REDIS_URL: redis://twenty-redis:6379
+      DISABLE_DB_MIGRATIONS: "true"
+      DISABLE_CRON_JOBS_REGISTRATION: "true"
+      STORAGE_TYPE: local
+      APP_SECRET: ${APP_SECRET}
+      IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED}
+      DEFAULT_SUBDOMAIN: ${DEFAULT_SUBDOMAIN}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      EMAIL_SYSTEM_ADDRESS: ${EMAIL_SYSTEM_ADDRESS}
+      EMAIL_DRIVER: ${EMAIL_DRIVER}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER}
+      EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    restart: always
+    networks:
+      - twenty-internal
+      - mailcow-network
+
+  db:
+    container_name: twenty-db
+    mem_limit: 512m
+    image: postgres:16
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: default
+      POSTGRES_PASSWORD: ${PG_DATABASE_PASSWORD}
+      POSTGRES_USER: ${PG_DATABASE_USER}
+    healthcheck:
+      test: pg_isready -U ${PG_DATABASE_USER} -h localhost -d postgres
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: always
+    networks:
+      - twenty-internal
+
+  redis:
+    container_name: twenty-redis
+    mem_limit: 256m
+    image: redis:7-alpine
+    restart: always
+    command: ["--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - twenty-internal
+
+volumes:
+  db-data:
+  server-local-data:
+
+networks:
+  traefik-public:
+    external: true
+  twenty-internal:
+    driver: bridge
+  mailcow-network:
+    external: true
+    name: mailcowdockerized_mailcow-network

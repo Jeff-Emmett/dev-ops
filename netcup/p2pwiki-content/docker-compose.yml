@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  p2pwiki-ai:
+    build: .
+    container_name: p2pwiki-ai
+    mem_limit: 1536m
+    restart: unless-stopped
+    ports:
+      - "8420:8420"
+    volumes:
+      # Persist vector store and review queue
+      - ./data:/app/data
+      # Mount XML dumps for parsing (read-only)
+      - ./xmldump:/app/xmldump:ro
+    environment:
+      # Ollama connection (adjust host for your setup)
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-20250514}
+      # Hybrid routing settings
+      - USE_CLAUDE_FOR_DRAFTS=${USE_CLAUDE_FOR_DRAFTS:-true}
+      - USE_OLLAMA_FOR_CHAT=${USE_OLLAMA_FOR_CHAT:-true}
+      # Infisical (fetches ANTHROPIC_API_KEY at startup)
+      - INFISICAL_CLIENT_ID=${INFISICAL_CLIENT_ID}
+      - INFISICAL_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}
+      - INFISICAL_PROJECT_SLUG=p2pwiki
+    labels:
+      # Traefik labels for reverse proxy
+      - "traefik.enable=true"
+      - "traefik.http.routers.p2pwiki-ai.rule=Host(`p2pwiki.jeffemmett.com`)"
+      - "traefik.http.services.p2pwiki-ai.loadbalancer.server.port=8420"
+    networks:
+      - traefik-public
+    # Add extra_hosts for Docker Desktop to access host services
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  traefik-public:
+    external: true

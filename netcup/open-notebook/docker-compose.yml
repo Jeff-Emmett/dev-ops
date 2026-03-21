@@ -1,0 +1,42 @@
+services:
+  open-notebook:
+    image: ghcr.io/lfnovo/open-notebook:v1-latest-single
+    container_name: open-notebook
+    restart: always
+    env_file:
+      - ./docker.env
+    ports:
+      - "8502:8502"  # Frontend
+      - "5055:5055"  # API
+    volumes:
+      - ./notebook_data:/app/data
+      - ./surreal_data:/mydata
+      - ./.streamlit/config.toml:/app/.streamlit/config.toml:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      # Frontend routing
+      - "traefik.http.routers.open-notebook.rule=Host(`notebook.jeffemmett.com`)"
+      - "traefik.http.routers.open-notebook.entrypoints=web"
+      - "traefik.http.routers.open-notebook.service=open-notebook"
+      - "traefik.http.services.open-notebook.loadbalancer.server.port=8502"
+      # API routing (for external access if needed)
+      - "traefik.http.routers.open-notebook-api.rule=Host(`notebook-api.jeffemmett.com`)"
+      - "traefik.http.routers.open-notebook-api.entrypoints=web"
+      - "traefik.http.routers.open-notebook-api.service=open-notebook-api"
+      - "traefik.http.services.open-notebook-api.loadbalancer.server.port=5055"
+      # rnotes.online subdomain alias
+      - "traefik.http.routers.open-notebook-rnotes.rule=Host(`opennotebook.rnotes.online`)"
+      - "traefik.http.routers.open-notebook-rnotes.entrypoints=web"
+      - "traefik.http.routers.open-notebook-rnotes.priority=140"
+      - "traefik.http.routers.open-notebook-rnotes.service=open-notebook"
+    networks:
+      - traefik-public
+      - ai-internal
+
+networks:
+  traefik-public:
+    external: true
+  ai-internal:
+    external: true
+    name: ai-internal
