@@ -7,7 +7,7 @@ services:
       - twenty-votc-local-data:/app/packages/twenty-server/.local-storage
     environment:
       NODE_PORT: 3000
-      PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:-postgres}@twenty-votc-db:5432/default
+      PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:?PG_DATABASE_PASSWORD must be set}@twenty-votc-db:5432/default
       SERVER_URL: ${SERVER_URL}
       REDIS_URL: redis://twenty-votc-redis:6379
       STORAGE_TYPE: ${STORAGE_TYPE}
@@ -49,7 +49,7 @@ services:
       - twenty-votc-local-data:/app/packages/twenty-server/.local-storage
     command: ["yarn", "worker:prod"]
     environment:
-      PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:-postgres}@twenty-votc-db:5432/default
+      PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:?PG_DATABASE_PASSWORD must be set}@twenty-votc-db:5432/default
       SERVER_URL: ${SERVER_URL}
       REDIS_URL: redis://twenty-votc-redis:6379
       DISABLE_DB_MIGRATIONS: "true"
@@ -82,7 +82,7 @@ services:
       - twenty-votc-db-data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: default
-      POSTGRES_PASSWORD: ${PG_DATABASE_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${PG_DATABASE_PASSWORD:?PG_DATABASE_PASSWORD must be set}
       POSTGRES_USER: postgres
     healthcheck:
       test: pg_isready -U postgres -h localhost -d postgres

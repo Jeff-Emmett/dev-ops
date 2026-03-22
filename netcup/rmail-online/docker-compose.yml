@@ -43,7 +43,7 @@ services:
       - INFISICAL_ENV=prod
       - INFISICAL_URL=http://infisical:8080
       - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=postgresql://rmail:${POSTGRES_PASSWORD:-changeme}@postgres:5432/rmail
+      - DATABASE_URL=postgresql://rmail:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/rmail
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.rinbox-ws.rule=Host(`rinbox.online`) && PathPrefix(`/ws`)"
@@ -73,7 +73,7 @@ services:
       - INFISICAL_ENV=prod
       - INFISICAL_URL=http://infisical:8080
       - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=postgresql://rmail:${POSTGRES_PASSWORD:-changeme}@postgres:5432/rmail
+      - DATABASE_URL=postgresql://rmail:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/rmail
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,7 +91,7 @@ services:
     environment:
       POSTGRES_DB: rmail
       POSTGRES_USER: rmail
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
