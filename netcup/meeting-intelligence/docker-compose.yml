@@ -105,10 +105,15 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
+      # Router 1: meet.jeffemmett.com/api/intelligence (existing)
       - "traefik.http.routers.meeting-intelligence.rule=Host(`meet.jeffemmett.com`) && PathPrefix(`/api/intelligence`)"
-      - "traefik.http.services.meeting-intelligence.loadbalancer.server.port=8000"
+      - "traefik.http.routers.meeting-intelligence.entrypoints=web"
       - "traefik.http.routers.meeting-intelligence.middlewares=strip-intelligence-prefix"
       - "traefik.http.middlewares.strip-intelligence-prefix.stripprefix.prefixes=/api/intelligence"
+      # Router 2: meets-api.rspace.online (direct API access for rspace-online)
+      - "traefik.http.routers.meeting-intelligence-rspace.rule=Host(`meets-api.rspace.online`)"
+      - "traefik.http.routers.meeting-intelligence-rspace.entrypoints=web"
+      - "traefik.http.services.meeting-intelligence.loadbalancer.server.port=8000"
     networks:
       - meeting-intelligence
       - traefik-public

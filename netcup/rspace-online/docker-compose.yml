@@ -66,6 +66,7 @@ services:
       - LISTMONK_URL=https://newsletter.cosmolocal.world
       - NOTEBOOK_API_URL=http://open-notebook:5055
       - SPLIT_360_URL=http://video360-splitter:5000
+      - MEETING_INTELLIGENCE_API_URL=http://meeting-intelligence-api:8000
     depends_on:
       rspace-db:
         condition: service_healthy
@@ -178,6 +179,7 @@ services:
       - payment-network
       - rmail-mailcow
       - ai-internal
+      - meeting-intelligence
 
   rspace-db:
     image: postgres:16-alpine
@@ -319,4 +321,7 @@ networks:
     external: true
   rspace-internal:
   ai-internal:
+    external: true
+  meeting-intelligence:
+    name: meeting-intelligence_meeting-intelligence
     external: true
