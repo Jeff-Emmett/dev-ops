@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: meeting_intelligence
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: meeting_intelligence
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -60,7 +60,7 @@ services:
     restart: unless-stopped
     environment:
       REDIS_URL: redis://redis:6379
-      POSTGRES_URL: postgresql://meeting_intelligence:${POSTGRES_PASSWORD:-changeme}@postgres:5432/meeting_intelligence
+      POSTGRES_URL: postgresql://meeting_intelligence:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/meeting_intelligence
       WHISPER_MODEL: /models/ggml-small.bin
       WHISPER_THREADS: 8
       NUM_WORKERS: 4
@@ -92,10 +92,10 @@ services:
     restart: unless-stopped
     environment:
       REDIS_URL: redis://redis:6379
-      POSTGRES_URL: postgresql://meeting_intelligence:${POSTGRES_PASSWORD:-changeme}@postgres:5432/meeting_intelligence
+      POSTGRES_URL: postgresql://meeting_intelligence:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/meeting_intelligence
       OLLAMA_URL: http://host.docker.internal:11434
       RECORDINGS_PATH: /recordings
-      SECRET_KEY: ${API_SECRET_KEY:-changeme}
+      SECRET_KEY: ${API_SECRET_KEY:?API_SECRET_KEY must be set}
     volumes:
       - recordings:/recordings
     depends_on:
@@ -105,10 +105,15 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
+      # Router 1: meet.jeffemmett.com/api/intelligence (existing)
       - "traefik.http.routers.meeting-intelligence.rule=Host(`meet.jeffemmett.com`) && PathPrefix(`/api/intelligence`)"
-      - "traefik.http.services.meeting-intelligence.loadbalancer.server.port=8000"
+      - "traefik.http.routers.meeting-intelligence.entrypoints=web"
       - "traefik.http.routers.meeting-intelligence.middlewares=strip-intelligence-prefix"
       - "traefik.http.middlewares.strip-intelligence-prefix.stripprefix.prefixes=/api/intelligence"
+      # Router 2: meets-api.rspace.online (direct API access for rspace-online)
+      - "traefik.http.routers.meeting-intelligence-rspace.rule=Host(`meets-api.rspace.online`)"
+      - "traefik.http.routers.meeting-intelligence-rspace.entrypoints=web"
+      - "traefik.http.services.meeting-intelligence.loadbalancer.server.port=8000"
     networks:
       - meeting-intelligence
       - traefik-public
@@ -137,9 +142,9 @@ services:
       JIBRI_RECORDING_DIR: /recordings
       JIBRI_FINALIZE_RECORDING_SCRIPT_PATH: /config/finalize.sh
       JIBRI_XMPP_USER: jibri
-      JIBRI_XMPP_PASSWORD: ${JIBRI_XMPP_PASSWORD:-changeme}
+      JIBRI_XMPP_PASSWORD: ${JIBRI_XMPP_PASSWORD:?JIBRI_XMPP_PASSWORD must be set}
       JIBRI_RECORDER_USER: recorder
-      JIBRI_RECORDER_PASSWORD: ${JIBRI_RECORDER_PASSWORD:-changeme}
+      JIBRI_RECORDER_PASSWORD: ${JIBRI_RECORDER_PASSWORD:?JIBRI_RECORDER_PASSWORD must be set}
 
       # Display Settings
       DISPLAY: ":0"

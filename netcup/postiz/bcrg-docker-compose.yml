@@ -126,7 +126,7 @@ services:
       - "sablier.group=postiz-bcrg"
     restart: unless-stopped
     environment:
-      POSTGRES_PASSWORD: temporal
+      POSTGRES_PASSWORD: "${TEMPORAL_POSTGRES_PASSWORD}"
       POSTGRES_USER: temporal
     networks:
       - postiz-bcrg-internal
@@ -146,7 +146,7 @@ services:
       - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=temporal
-      - POSTGRES_PWD=temporal
+      - POSTGRES_PWD=${TEMPORAL_POSTGRES_PASSWORD}
       - POSTGRES_SEEDS=postiz-bcrg-temporal-postgres
       - TEMPORAL_NAMESPACE=default
     networks:
