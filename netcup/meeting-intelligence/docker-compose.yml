@@ -113,7 +113,9 @@ services:
       # Router 2: meets-api.rspace.online (direct API access for rspace-online)
       - "traefik.http.routers.meeting-intelligence-rspace.rule=Host(`meets-api.rspace.online`)"
       - "traefik.http.routers.meeting-intelligence-rspace.entrypoints=web"
+      - "traefik.http.routers.meeting-intelligence-rspace.priority=130"
       - "traefik.http.services.meeting-intelligence.loadbalancer.server.port=8000"
+      - "traefik.docker.network=traefik-public"
     networks:
       - meeting-intelligence
       - traefik-public
