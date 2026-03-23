@@ -95,11 +95,11 @@ services:
     environment:
       REDIS_URL: redis://redis:6379
       POSTGRES_URL: postgresql://meeting_intelligence:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/meeting_intelligence
-      OLLAMA_URL: http://host.docker.internal:11434
+      OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: llama3.2:1b
       OLLAMA_TIMEOUT: 600
       AI_ORCHESTRATOR_URL: http://ai-orchestrator:8080
-      AI_ORCHESTRATOR_PRIORITY: normal
+      AI_ORCHESTRATOR_PRIORITY: low
       RECORDINGS_PATH: /recordings
       SECRET_KEY: ${API_SECRET_KEY:?API_SECRET_KEY must be set}
       CORS_ORIGINS: '["https://meet.jeffemmett.com","https://canvas.rspace.online","https://rspace.online","https://meets-api.rspace.online","http://localhost:8080","http://localhost:3000","http://localhost:5173"]'
