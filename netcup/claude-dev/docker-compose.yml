@@ -78,6 +78,9 @@ services:
       - /opt/apps/claude-dev/sync/agent-memory:/home/dev/.claude/agent-memory
       - /opt/apps/claude-dev/sync/projects:/mnt/claude-synced-projects:ro
 
+      # === Synced MCP servers (read-only, entrypoint copies to writable volume) ===
+      - /opt/apps/claude-dev/sync/mcp-servers:/mnt/mcp-servers:ro
+
       # === Persistent shell history ===
       - claude-history:/home/dev/.local/share/fish
 

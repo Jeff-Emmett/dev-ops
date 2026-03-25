@@ -29,8 +29,8 @@ RUN install -m 0755 -d /etc/apt/keyrings \
     && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code globally
-RUN npm install -g @anthropic-ai/claude-code
+# Install Claude Code and backlog.md globally
+RUN npm install -g @anthropic-ai/claude-code backlog.md
 
 # Create dev user matching deploy (uid 1001) on host
 RUN groupadd -g 1001 dev \
