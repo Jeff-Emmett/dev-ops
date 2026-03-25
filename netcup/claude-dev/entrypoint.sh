@@ -79,12 +79,65 @@ if [ -f /opt/infisical/claude-ops.env ] && [ -n "${KEEPASS_MASTER_FILE:-}" ]; th
     fi
 fi
 
-# === Install Claude settings if mounted ===
+# === Source MCP API key secrets ===
+for f in /run/secrets/*.env; do
+    [ -f "$f" ] || continue
+    grep -q '^[A-Z_]*=' "$f" 2>/dev/null && { set -a; . "$f"; set +a; }
+done
+
+# === Install MCP servers from sync mount ===
+if [ -d "/mnt/mcp-servers" ]; then
+    mkdir -p "$HOME/.claude/mcp-servers" "$HOME/generated"
+    cp -a /mnt/mcp-servers/. "$HOME/.claude/mcp-servers/"
+    [ -f "$HOME/.claude/mcp-servers/osmmcp/osmmcp" ] && chmod +x "$HOME/.claude/mcp-servers/osmmcp/osmmcp"
+    echo "[entrypoint] MCP servers installed"
+fi
+
+# === Install Claude settings (permissions/deny rules) ===
 if [ -f /mnt/claude-settings.json ]; then
     mkdir -p "$HOME/.claude"
     cp /mnt/claude-settings.json "$HOME/.claude/settings.json"
     echo "[entrypoint] Claude settings installed"
 fi
+
+# === Inject MCP servers into ~/.claude.json ===
+node -e '
+const fs = require("fs");
+const home = process.env.HOME;
+const cj = home + "/.claude.json";
+const cjLink = home + "/.claude/.claude.json";
+// Read from the persistent volume copy (symlinked)
+let d = {};
+try { d = JSON.parse(fs.readFileSync(cjLink,"utf8")); } catch(e) {
+  try { d = JSON.parse(fs.readFileSync(cj,"utf8")); } catch(e2) {}
+}
+const b = home + "/.claude/mcp-servers";
+d.mcpServers = {
+  "kiwi-flights": {type:"http",url:"https://mcp.kiwi.com"},
+  "airbnb": {type:"stdio",command:"npx",args:["-y","@openbnb/mcp-server-airbnb"],env:{}},
+  "memory": {type:"stdio",command:"npx",args:["-y","@modelcontextprotocol/server-memory"],env:{}},
+  "backlog": {type:"stdio",command:"backlog",args:["mcp","start"],env:{}},
+  "osmmcp": {type:"stdio",command:b+"/osmmcp/osmmcp",args:[],env:{}},
+  "litellm": {type:"stdio",command:"node",args:[b+"/litellm/index.js"],env:{
+    LITELLM_API_KEY:process.env.LITELLM_API_KEY||"",
+    LITELLM_BASE_URL:process.env.LITELLM_BASE_URL||"https://llm.jeffemmett.com"
+  }},
+  "fal-ai": {type:"stdio",command:"node",args:[b+"/fal-ai/index.js"],env:{
+    FAL_KEY:process.env.FAL_KEY||""
+  }},
+  "gemini": {type:"stdio",command:"node",args:[b+"/gemini/index.js"],env:{
+    GEMINI_API_KEY:process.env.GEMINI_API_KEY||""
+  }},
+  "runpod-image-gen": {type:"stdio",command:"node",args:[b+"/runpod-image-gen/index.js"],env:{
+    RUNPOD_API_KEY:process.env.RUNPOD_API_KEY||"",
+    OUTPUT_DIR:"/home/dev/generated"
+  }},
+  "safe": {type:"stdio",command:"node",args:[b+"/safe-mcp/dist/bundle.cjs"],env:{}}
+};
+// Write to the persistent volume path (symlink target)
+fs.writeFileSync(cjLink, JSON.stringify(d,null,2));
+console.log("[entrypoint] .claude.json updated with",Object.keys(d.mcpServers).length,"MCP servers");
+'
 
 # === Link synced project memories into Claude project dirs ===
 SYNCED="/mnt/claude-synced-projects"
