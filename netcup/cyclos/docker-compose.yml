@@ -1,0 +1,60 @@
+services:
+  cyclos:
+    image: cyclos/cyclos:4.16.17
+    container_name: cyclos
+    restart: unless-stopped
+    depends_on:
+      cyclos-db:
+        condition: service_healthy
+    environment:
+      DB_HOST: cyclos-db
+      DB_PORT: "5432"
+      DB_NAME: cyclos
+      DB_USER: cyclos
+      DB_PASSWORD: "${CYCLOS_DB_PASSWORD}"
+      JAVA_OPTS: "-Xmx768m"
+    mem_limit: 1g
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.routers.cyclos.rule=Host(`timebank.rspace.online`)"
+      - "traefik.http.routers.cyclos.entrypoints=web"
+      - "traefik.http.routers.cyclos.priority=130"
+      - "traefik.http.services.cyclos.loadbalancer.server.port=8080"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "-o", "/dev/null", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - traefik-public
+      - cyclos-internal
+
+  cyclos-db:
+    image: postgis/postgis:16-3.4
+    container_name: cyclos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cyclos
+      POSTGRES_USER: cyclos
+      POSTGRES_PASSWORD: "${CYCLOS_DB_PASSWORD}"
+    volumes:
+      - cyclos-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cyclos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
+    networks:
+      - cyclos-internal
+
+volumes:
+  cyclos-db-data:
+
+networks:
+  traefik-public:
+    external: true
+  cyclos-internal:
+    driver: bridge
