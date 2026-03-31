@@ -1,0 +1,2273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+  <title>HCC Commitment Pool & Weaving Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --purple: #8b5cf6;
+      --pink: #ec4899;
+      --bg: #f9fafb;
+      --surface: #fff;
+      --surface-alt: #f3f4f6;
+      --text: #374151;
+      --text-muted: #6b7280;
+      --text-faint: #9ca3af;
+      --text-heading: #1f2937;
+      --border: #e5e7eb;
+      --border-light: #f3f4f6;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-700: #374151;
+      --gray-900: #1f2937;
+      --stats-bg: linear-gradient(135deg, #f5f3ff 0%, #fdf2f8 100%);
+      --overlay-bg: rgba(0,0,0,0.4);
+      --shadow-card: 0 8px 32px rgba(0,0,0,0.15);
+      --shadow-panel: 0 16px 64px rgba(0,0,0,0.2);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not(.light) {
+        --bg: #0f172a;
+        --surface: #1e293b;
+        --surface-alt: #334155;
+        --text: #e2e8f0;
+        --text-muted: #94a3b8;
+        --text-faint: #64748b;
+        --text-heading: #f1f5f9;
+        --border: #334155;
+        --border-light: #1e293b;
+        --gray-50: #0f172a;
+        --gray-100: #1e293b;
+        --gray-200: #334155;
+        --gray-300: #475569;
+        --gray-400: #64748b;
+        --gray-500: #94a3b8;
+        --gray-700: #e2e8f0;
+        --gray-900: #f1f5f9;
+        --stats-bg: linear-gradient(135deg, #1e1b4b 0%, #2d1b3d 100%);
+        --overlay-bg: rgba(0,0,0,0.7);
+        --shadow-card: 0 8px 32px rgba(0,0,0,0.4);
+        --shadow-panel: 0 16px 64px rgba(0,0,0,0.5);
+      }
+    }
+    .dark {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-alt: #334155;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-faint: #64748b;
+      --text-heading: #f1f5f9;
+      --border: #334155;
+      --border-light: #1e293b;
+      --gray-50: #0f172a;
+      --gray-100: #1e293b;
+      --gray-200: #334155;
+      --gray-300: #475569;
+      --gray-400: #64748b;
+      --gray-500: #94a3b8;
+      --gray-700: #e2e8f0;
+      --gray-900: #f1f5f9;
+      --stats-bg: linear-gradient(135deg, #1e1b4b 0%, #2d1b3d 100%);
+      --overlay-bg: rgba(0,0,0,0.7);
+      --shadow-card: 0 8px 32px rgba(0,0,0,0.4);
+      --shadow-panel: 0 16px 64px rgba(0,0,0,0.5);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.65rem 1.5rem;
+      background: var(--surface);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      flex-shrink: 0;
+    }
+    .nav-logo {
+      font-weight: 700;
+      font-size: 1.05rem;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .nav-controls { display: flex; gap: 0.5rem; align-items: center; }
+    .nav-btn {
+      padding: 0.35rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 0.375rem;
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .nav-btn:hover { border-color: var(--purple); color: var(--purple); }
+    .theme-toggle { font-size: 1rem; padding: 0.35rem 0.55rem; }
+
+    .tab-bar {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .tab {
+      padding: 0.65rem 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--gray-400);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .tab:hover { color: var(--gray-700); }
+    .tab.active { color: var(--purple); border-bottom-color: var(--purple); }
+
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 0.6rem 1.5rem;
+      background: var(--stats-bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .stat { display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--gray-500); }
+    .stat-value { font-weight: 700; font-size: 1rem; color: var(--gray-900); }
+    .skill-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; flex: 1; min-width: 150px; max-width: 300px; }
+    .skill-bar-segment { transition: width 0.5s ease; }
+    .skill-legend { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .skill-legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; color: var(--gray-500); }
+    .skill-legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    .main { flex: 1; position: relative; overflow: hidden; }
+
+    /* Pool */
+    #pool-view { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+    #pool-canvas { width: 100%; height: 100%; display: block; cursor: default; }
+
+    .pool-detail {
+      position: absolute;
+      background: var(--surface);
+      border-radius: 0.75rem;
+      box-shadow: var(--shadow-card);
+      padding: 1.25rem;
+      min-width: 220px;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.9) translateY(8px);
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 50;
+    }
+    .pool-detail.visible { opacity: 1; transform: scale(1) translateY(0); pointer-events: auto; }
+    .pool-detail-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .pool-detail-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .pool-detail-name { font-weight: 600; font-size: 0.95rem; color: var(--gray-900); }
+    .pool-detail-skill { font-size: 0.82rem; color: var(--gray-500); margin-bottom: 0.3rem; }
+    .pool-detail-hours { font-size: 0.85rem; font-weight: 600; color: var(--purple); }
+    .pool-detail-desc { font-size: 0.8rem; color: var(--gray-500); margin-top: 0.35rem; line-height: 1.4; }
+
+    .add-btn {
+      position: absolute;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      padding: 0.65rem 1.25rem;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      color: #fff;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(139,92,246,0.3);
+      transition: all 0.2s;
+      z-index: 20;
+    }
+    .add-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(139,92,246,0.4); }
+
+    /* Weaving */
+    #weave-view {
+      width: 100%; height: 100%;
+      position: absolute; top: 0; left: 0;
+      display: none; flex-direction: row;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .sidebar-header {
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-items { flex: 1; overflow-y: auto; padding: 0.5rem; }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 0.5rem;
+      cursor: grab;
+      transition: background 0.15s;
+      margin-bottom: 0.25rem;
+    }
+    .sidebar-item:hover { background: var(--gray-100); }
+    .sidebar-item.used { opacity: 0.35; pointer-events: none; }
+    .sidebar-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .sidebar-item-info { flex: 1; min-width: 0; }
+    .sidebar-item-name { font-size: 0.82rem; font-weight: 600; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sidebar-item-meta { font-size: 0.72rem; color: var(--gray-400); }
+
+    .sidebar-section {
+      padding: 0.75rem 1rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-top: 1px solid var(--border);
+      margin-top: 0.25rem;
+    }
+    .sidebar-task {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 0.5rem;
+      cursor: grab;
+      transition: background 0.15s;
+      margin: 0 0.5rem 0.25rem;
+    }
+    .sidebar-task:hover { background: var(--gray-100); }
+    .sidebar-task-icon {
+      width: 24px; height: 24px;
+      border-radius: 0.375rem;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 0.7rem; flex-shrink: 0;
+    }
+
+    .canvas-wrap { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
+    #weave-svg { width: 100%; height: 100%; display: block; }
+
+    .node-group { cursor: grab; }
+    .node-group:active { cursor: grabbing; }
+    .node-rect { fill: var(--surface); stroke: var(--border); stroke-width: 1; transition: stroke 0.15s; }
+    .node-group:hover .node-rect { stroke: var(--purple); }
+    .port { cursor: crosshair; transition: r 0.15s; }
+    .port:hover { r: 7; }
+    .connection-line { fill: none; stroke: var(--gray-300); stroke-width: 2; pointer-events: none; }
+    .connection-line.active { stroke: var(--purple); stroke-width: 2.5; }
+    .temp-connection { fill: none; stroke: var(--purple); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; opacity: 0.6; }
+    .task-node .node-rect { stroke: var(--purple); stroke-width: 1.5; }
+    .task-node.ready .node-rect { stroke: #10b981; stroke-width: 2; }
+
+    /* Execute button on task node */
+    .exec-btn-rect {
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .exec-btn-rect:hover { opacity: 0.85; }
+
+    /* Execution Panel */
+    .exec-overlay {
+      position: fixed; inset: 0;
+      background: var(--overlay-bg);
+      z-index: 300;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .exec-overlay.visible { display: flex; }
+    .exec-panel {
+      background: var(--surface);
+      border-radius: 1rem;
+      width: 520px;
+      max-width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-panel);
+      touch-action: auto;
+    }
+    .exec-panel-header {
+      padding: 1.5rem 1.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .exec-panel-header h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 0.2rem;
+    }
+    .exec-panel-header p {
+      font-size: 0.85rem;
+      color: var(--gray-400);
+    }
+    .exec-panel-badge {
+      display: inline-block;
+      padding: 0.15rem 0.6rem;
+      border-radius: 1rem;
+      background: #d1fae5;
+      color: #059669;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+    .exec-steps { padding: 0.75rem 1.75rem 1.5rem; }
+    .exec-step {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--gray-100);
+      align-items: flex-start;
+      cursor: pointer;
+      transition: background 0.1s;
+      border-radius: 0.5rem;
+      margin: 0 -0.5rem;
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+    .exec-step:hover { background: var(--gray-50); }
+    .exec-step:last-child { border-bottom: none; }
+    .exec-step.active .exec-step-num { background: linear-gradient(135deg, var(--purple), var(--pink)); color: #fff; }
+    .exec-step.done .exec-step-num { background: #10b981; color: #fff; }
+    .exec-step-num {
+      width: 32px; height: 32px; min-width: 32px;
+      border-radius: 50%;
+      background: var(--gray-100);
+      color: var(--gray-400);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.82rem; font-weight: 600;
+      transition: all 0.2s;
+    }
+    .exec-step-content { flex: 1; }
+    .exec-step-title {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-bottom: 0.15rem;
+    }
+    .exec-step.done .exec-step-title { color: #059669; }
+    .exec-step-desc {
+      font-size: 0.8rem;
+      color: var(--gray-400);
+      line-height: 1.4;
+    }
+    .exec-step-detail {
+      margin-top: 0.6rem;
+      padding: 0.75rem;
+      background: var(--bg);
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      display: none;
+    }
+    .exec-step.active .exec-step-detail { display: block; }
+    .exec-step-detail label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--gray-500);
+      margin-bottom: 0.25rem;
+    }
+    .exec-step-detail input,
+    .exec-step-detail textarea,
+    .exec-step-detail select {
+      width: 100%;
+      padding: 0.45rem 0.65rem;
+      border: 1px solid var(--gray-300);
+      border-radius: 0.375rem;
+      font-size: 0.85rem;
+      font-family: inherit;
+      outline: none;
+      margin-bottom: 0.5rem;
+      transition: border-color 0.15s;
+      background: var(--surface);
+      color: var(--text);
+    }
+    .exec-step-detail input:focus,
+    .exec-step-detail textarea:focus,
+    .exec-step-detail select:focus { border-color: var(--purple); }
+    .exec-step-detail textarea { resize: vertical; min-height: 80px; }
+    .exec-step-action {
+      display: inline-block;
+      padding: 0.4rem 1rem;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      color: #fff;
+      border: none;
+      border-radius: 0.375rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 0.25rem;
+    }
+    .exec-panel-footer {
+      padding: 1rem 1.75rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .exec-close {
+      padding: 0.45rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.375rem;
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .exec-launch {
+      padding: 0.5rem 1.5rem;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      border: none;
+      border-radius: 0.375rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .exec-launch:hover { opacity: 0.9; }
+    .exec-launch:disabled { opacity: 0.5; cursor: not-allowed; }
+    .exec-progress {
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+      font-size: 0.78rem;
+      color: var(--gray-400);
+    }
+    .exec-progress-bar {
+      width: 80px;
+      height: 4px;
+      background: var(--gray-200);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .exec-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--purple), #10b981);
+      border-radius: 2px;
+      transition: width 0.3s;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: var(--overlay-bg);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: 1rem;
+      padding: 1.75rem;
+      width: 380px;
+      max-width: 90vw;
+      box-shadow: var(--shadow-panel);
+    }
+    .modal h3 { font-size: 1.1rem; font-weight: 700; color: var(--gray-900); margin-bottom: 1rem; }
+    .modal-field { margin-bottom: 0.85rem; }
+    .modal-field label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--gray-500); margin-bottom: 0.25rem; }
+    .modal-field input, .modal-field select {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1px solid var(--gray-300);
+      border-radius: 0.375rem;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      background: var(--surface);
+      color: var(--text);
+    }
+    .modal-field input:focus, .modal-field select:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.12);
+    }
+    .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.25rem; }
+    .modal-cancel {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.375rem;
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .modal-submit {
+      padding: 0.5rem 1.25rem;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      color: #fff;
+      border: none;
+      border-radius: 0.375rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    /* Phase A: Touch support */
+    #pool-canvas { touch-action: none; }
+    #weave-svg { touch-action: none; }
+    .sidebar-item { touch-action: none; }
+    .sidebar-task { touch-action: none; }
+    .port { touch-action: none; }
+
+    /* Phase D: Task Editor */
+    .task-edit-overlay {
+      position: fixed; inset: 0;
+      background: var(--overlay-bg);
+      z-index: 250;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .task-edit-overlay.visible { display: flex; }
+    .task-edit-panel {
+      background: var(--surface);
+      border-radius: 1rem;
+      width: 480px;
+      max-width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-panel);
+      touch-action: auto;
+    }
+    .task-edit-header {
+      padding: 1.25rem 1.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .task-edit-header h3 { font-size: 1.05rem; font-weight: 700; color: var(--text-heading); }
+    .task-edit-body { padding: 1rem 1.5rem; }
+    .task-edit-field { margin-bottom: 0.85rem; }
+    .task-edit-field label { display: block; font-size: 0.78rem; font-weight: 500; color: var(--text-muted); margin-bottom: 0.25rem; }
+    .task-edit-field input,
+    .task-edit-field textarea {
+      width: 100%;
+      padding: 0.5rem 0.7rem;
+      border: 1px solid var(--gray-300);
+      border-radius: 0.375rem;
+      font-size: 0.85rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+      background: var(--surface);
+      color: var(--text);
+    }
+    .task-edit-field textarea { resize: vertical; min-height: 70px; }
+    .task-edit-field input:focus,
+    .task-edit-field textarea:focus { border-color: var(--purple); }
+    .task-edit-links { margin-bottom: 0.85rem; }
+    .task-edit-link-row { display: flex; gap: 0.4rem; margin-bottom: 0.35rem; align-items: center; }
+    .task-edit-link-row input { flex: 1; padding: 0.35rem 0.5rem; font-size: 0.8rem; border: 1px solid var(--gray-300); border-radius: 0.25rem; background: var(--surface); color: var(--text); outline: none; }
+    .task-edit-link-row input:focus { border-color: var(--purple); }
+    .task-edit-link-rm { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 1rem; padding: 0 0.3rem; }
+    .task-edit-link-rm:hover { color: var(--pink); }
+    .task-edit-add-link { font-size: 0.78rem; color: var(--purple); cursor: pointer; background: none; border: none; font-weight: 500; }
+    .task-edit-footer {
+      padding: 0.75rem 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    /* Sidebar drag ghost */
+    .drag-ghost {
+      position: fixed;
+      padding: 0.5rem 0.85rem;
+      background: var(--surface);
+      border: 2px solid var(--purple);
+      border-radius: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      pointer-events: none;
+      z-index: 9999;
+      box-shadow: 0 4px 16px rgba(139,92,246,0.25);
+      white-space: nowrap;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { width: 200px; }
+      .stats-bar { gap: 1rem; }
+      .exec-panel { width: 95vw; }
+      .task-edit-panel { width: 95vw; }
+    }
+    @media (max-width: 640px) {
+      .sidebar { width: 180px; }
+      .nav-logo { font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-logo">HCC Commitment Pool</div>
+    <div class="nav-controls">
+      <button class="nav-btn theme-toggle" id="themeToggle" title="Toggle dark mode">&#9790;</button>
+      <button class="nav-btn" id="resetBtn" title="Reset demo data">Reset</button>
+    </div>
+  </nav>
+
+  <div class="tab-bar">
+    <div class="tab active" data-view="pool">Commitment Pool</div>
+    <div class="tab" data-view="weave">Weaving Dashboard</div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat"><span class="stat-value" id="statHours">0</span>&nbsp;hours available</div>
+    <div class="stat"><span class="stat-value" id="statContributors">0</span>&nbsp;contributors</div>
+    <div class="skill-bar" id="skillBar"></div>
+    <div class="skill-legend" id="skillLegend"></div>
+  </div>
+
+  <div class="main">
+    <div id="pool-view">
+      <canvas id="pool-canvas"></canvas>
+      <div class="pool-detail" id="poolDetail">
+        <div class="pool-detail-header">
+          <div class="pool-detail-dot" id="detailDot"></div>
+          <div class="pool-detail-name" id="detailName"></div>
+        </div>
+        <div class="pool-detail-skill" id="detailSkill"></div>
+        <div class="pool-detail-hours" id="detailHours"></div>
+        <div class="pool-detail-desc" id="detailDesc"></div>
+      </div>
+      <button class="add-btn" id="addBtn">+ Add Commitment</button>
+    </div>
+
+    <div id="weave-view">
+      <div class="sidebar">
+        <div class="sidebar-header">Available Commitments</div>
+        <div class="sidebar-items" id="sidebarItems"></div>
+        <div class="sidebar-section">Task Templates</div>
+        <div id="sidebarTasks"></div>
+      </div>
+      <div class="canvas-wrap" id="canvasWrap">
+        <svg id="weave-svg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <circle cx="1" cy="1" r="0.5" fill="var(--gray-400)" opacity="0.4"/>
+            </pattern>
+            <filter id="nodeShadow" x="-10%" y="-10%" width="130%" height="140%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.08"/>
+            </filter>
+            <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#10b981" flood-opacity="0.35"/>
+            </filter>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)"/>
+          <g id="connectionsLayer"></g>
+          <g id="nodesLayer"></g>
+          <path id="tempConnection" class="temp-connection" d="" style="display:none"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Commitment Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3>Add Commitment</h3>
+      <div class="modal-field">
+        <label>Your Name</label>
+        <input type="text" id="modalName" placeholder="e.g. Dana Lee">
+      </div>
+      <div class="modal-field">
+        <label>Skill Category</label>
+        <select id="modalSkill">
+          <option value="facilitation">Facilitation</option>
+          <option value="design">Design</option>
+          <option value="tech">Tech</option>
+          <option value="outreach">Outreach</option>
+          <option value="logistics">Logistics</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Hours</label>
+        <input type="number" id="modalHours" min="1" max="10" value="2">
+      </div>
+      <div class="modal-field">
+        <label>Description</label>
+        <input type="text" id="modalDesc" placeholder="What will you contribute?">
+      </div>
+      <div class="modal-actions">
+        <button class="modal-cancel" id="modalCancel">Cancel</button>
+        <button class="modal-submit" id="modalSubmit">Drop into Pool</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Execution Panel -->
+  <div class="exec-overlay" id="execOverlay">
+    <div class="exec-panel">
+      <div class="exec-panel-header">
+        <h2 id="execTitle">Project Execution</h2>
+        <p id="execSubtitle">All commitments woven — prepare for launch</p>
+      </div>
+      <div class="exec-steps" id="execSteps"></div>
+      <div class="exec-panel-footer">
+        <button class="exec-close" id="execClose">Close</button>
+        <div class="exec-progress">
+          <div class="exec-progress-bar"><div class="exec-progress-fill" id="execProgressFill"></div></div>
+          <span id="execProgressText">0/5</span>
+        </div>
+        <button class="exec-launch" id="execLaunch" disabled>Launch Project</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Editor Panel (Phase D) -->
+  <div class="task-edit-overlay" id="taskEditOverlay">
+    <div class="task-edit-panel">
+      <div class="task-edit-header">
+        <h3 id="taskEditTitle">Edit Task</h3>
+      </div>
+      <div class="task-edit-body">
+        <div class="task-edit-field">
+          <label>Task Name</label>
+          <input type="text" id="taskEditName">
+        </div>
+        <div class="task-edit-field">
+          <label>Description</label>
+          <textarea id="taskEditDesc" placeholder="Describe the project goals, context, and requirements..."></textarea>
+        </div>
+        <div class="task-edit-links">
+          <label style="display:block;font-size:0.78rem;font-weight:500;color:var(--text-muted);margin-bottom:0.25rem">Links & Resources</label>
+          <div id="taskEditLinksContainer"></div>
+          <button class="task-edit-add-link" id="taskEditAddLink">+ Add Link</button>
+        </div>
+        <div class="task-edit-field">
+          <label>Notes</label>
+          <textarea id="taskEditNotes" placeholder="Meeting notes, context, decisions..."></textarea>
+        </div>
+      </div>
+      <div class="task-edit-footer">
+        <button class="modal-cancel" id="taskEditCancel">Cancel</button>
+        <button class="modal-submit" id="taskEditSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════
+const SKILL_COLORS = {
+  facilitation: '#8b5cf6', design: '#ec4899', tech: '#3b82f6',
+  outreach: '#10b981', logistics: '#f59e0b'
+};
+const SKILL_LABELS = {
+  facilitation: 'Facilitation', design: 'Design', tech: 'Tech',
+  outreach: 'Outreach', logistics: 'Logistics'
+};
+
+const INITIAL_COMMITMENTS = [
+  { id: 1, name: 'Maya Chen', hours: 3, skill: 'facilitation', desc: 'Circle facilitation for group sessions' },
+  { id: 2, name: 'Jordan Rivera', hours: 2, skill: 'design', desc: 'Event poster and social media graphics' },
+  { id: 3, name: 'Sam Okafor', hours: 4, skill: 'tech', desc: 'Website updates and form setup' },
+  { id: 4, name: 'Priya Sharma', hours: 2, skill: 'outreach', desc: 'Community outreach and flyering' },
+  { id: 5, name: 'Alex Kim', hours: 1, skill: 'logistics', desc: 'Venue setup and teardown' },
+  { id: 6, name: 'Taylor Brooks', hours: 3, skill: 'facilitation', desc: 'Harm reduction education session' },
+  { id: 7, name: 'Robin Patel', hours: 2, skill: 'design', desc: 'Printed resource cards' },
+  { id: 8, name: 'Casey Morgan', hours: 2, skill: 'logistics', desc: 'Supply procurement and transport' },
+];
+
+const TASK_TEMPLATES = [
+  { id: 't1', name: 'Organize Community Event', needs: { facilitation: 3, design: 2, outreach: 2, logistics: 2 } },
+  { id: 't2', name: 'Run Harm Reduction Workshop', needs: { facilitation: 4, design: 2, tech: 4, logistics: 1 } }
+];
+
+// Execution steps per task template
+const EXEC_STEPS = {
+  t1: [
+    { title: 'Set Up Space', desc: 'Configure the physical or virtual venue for the event',
+      detail: 'venue', icon: '1' },
+    { title: 'Communications Hub', desc: 'Create group chat, email thread, and notification channels for the team',
+      detail: 'comms', icon: '2' },
+    { title: 'Shared Notes & Docs', desc: 'Set up collaborative agenda, shared notes doc, and resource links',
+      detail: 'notes', icon: '3' },
+    { title: 'Prep from Input', desc: 'Upload transcripts, meeting notes, or unstructured text to auto-generate briefs and action items',
+      detail: 'prep', icon: '4' },
+    { title: 'Launch & Coordinate', desc: 'Confirm all roles, send final notifications, and begin execution',
+      detail: 'launch', icon: '5' }
+  ],
+  t2: [
+    { title: 'Set Up Space', desc: 'Reserve and configure the workshop room — seating, privacy, supplies',
+      detail: 'venue', icon: '1' },
+    { title: 'Communications Hub', desc: 'Create secure channels for facilitators, prep shared contact list',
+      detail: 'comms', icon: '2' },
+    { title: 'Shared Notes & Docs', desc: 'Build session outline, participant intake forms, and resource handouts',
+      detail: 'notes', icon: '3' },
+    { title: 'Prep from Input', desc: 'Process previous session transcripts and participant feedback into prep materials',
+      detail: 'prep', icon: '4' },
+    { title: 'Launch & Coordinate', desc: 'Final safety check, role confirmations, and session kickoff',
+      detail: 'launch', icon: '5' }
+  ]
+};
+
+let commitments = [];
+let nextId = 100;
+function resetData() { commitments = INITIAL_COMMITMENTS.map(c => ({ ...c })); nextId = 100; }
+resetData();
+
+// ═══════════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════════
+function updateStats() {
+  const total = commitments.reduce((s, c) => s + c.hours, 0);
+  document.getElementById('statHours').textContent = total;
+  document.getElementById('statContributors').textContent = commitments.length;
+  const bySkill = {};
+  commitments.forEach(c => { bySkill[c.skill] = (bySkill[c.skill] || 0) + c.hours; });
+  const bar = document.getElementById('skillBar');
+  const legend = document.getElementById('skillLegend');
+  bar.innerHTML = ''; legend.innerHTML = '';
+  if (total === 0) return;
+  for (const [skill, hrs] of Object.entries(bySkill)) {
+    const seg = document.createElement('div');
+    seg.className = 'skill-bar-segment';
+    seg.style.width = (hrs / total * 100) + '%';
+    seg.style.background = SKILL_COLORS[skill];
+    seg.title = SKILL_LABELS[skill] + ': ' + hrs + 'hr';
+    bar.appendChild(seg);
+    const item = document.createElement('div');
+    item.className = 'skill-legend-item';
+    item.innerHTML = '<div class="skill-legend-dot" style="background:' + SKILL_COLORS[skill] + '"></div>' + SKILL_LABELS[skill] + ' ' + hrs + 'h';
+    legend.appendChild(item);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+const tabs = document.querySelectorAll('.tab');
+const poolView = document.getElementById('pool-view');
+const weaveView = document.getElementById('weave-view');
+let currentView = 'pool';
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    const view = tab.dataset.view;
+    if (view === currentView) return;
+    currentView = view;
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.view === view));
+    poolView.style.display = view === 'pool' ? 'block' : 'none';
+    weaveView.style.display = view === 'weave' ? 'flex' : 'none';
+    if (view === 'pool') resizePoolCanvas();
+    if (view === 'weave') rebuildSidebar();
+  });
+});
+
+// ═══════════════════════════════════════════════════
+// POOL VIEW — Circular Basket Physics
+// ═══════════════════════════════════════════════════
+const canvas = document.getElementById('pool-canvas');
+const ctx = canvas.getContext('2d');
+let orbs = [];
+let poolW = 0, poolH = 0;
+let hoveredOrb = null, selectedOrb = null;
+let dpr = window.devicePixelRatio || 1;
+
+// Basket geometry — computed on resize
+let basketCX = 0, basketCY = 0, basketR = 0;
+
+function resizePoolCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  poolW = rect.width;
+  poolH = rect.height;
+  canvas.width = poolW * dpr;
+  canvas.height = poolH * dpr;
+  canvas.style.width = poolW + 'px';
+  canvas.style.height = poolH + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // Basket: centered circle, leave room for label above
+  basketCX = poolW / 2;
+  basketCY = poolH / 2 + 10;
+  basketR = Math.min(poolW, poolH) * 0.42;
+}
+
+class Orb {
+  constructor(c, x, y) {
+    this.c = c;
+    this.baseRadius = 18 + c.hours * 9;
+    this.radius = this.baseRadius;
+    // Place inside basket if no explicit position
+    if (x != null) { this.x = x; this.y = y; }
+    else {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * (basketR - this.baseRadius - 10);
+      this.x = basketCX + Math.cos(a) * r;
+      this.y = basketCY + Math.sin(a) * r;
+    }
+    this.vx = (Math.random() - 0.5) * 0.4;
+    this.vy = (Math.random() - 0.5) * 0.4;
+    this.hoverT = 0;
+    this.phase = Math.random() * Math.PI * 2;
+    this.opacity = 0;
+    this.color = SKILL_COLORS[c.skill];
+  }
+
+  update() {
+    this.phase += 0.008;
+    this.vx += Math.sin(this.phase) * 0.003;
+    this.vy += Math.cos(this.phase * 0.73 + 1) * 0.003;
+    this.vx *= 0.996;
+    this.vy *= 0.996;
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // Circular basket constraint
+    const dx = this.x - basketCX, dy = this.y - basketCY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const maxDist = basketR - this.radius - 3;
+    if (dist > maxDist && dist > 0.1) {
+      // Push back inside
+      const nx = dx / dist, ny = dy / dist;
+      this.x = basketCX + nx * maxDist;
+      this.y = basketCY + ny * maxDist;
+      // Reflect velocity
+      const dot = this.vx * nx + this.vy * ny;
+      this.vx -= 1.3 * dot * nx;
+      this.vy -= 1.3 * dot * ny;
+      this.vx *= 0.6; this.vy *= 0.6;
+    }
+
+    const isH = hoveredOrb === this;
+    this.hoverT += ((isH ? 1 : 0) - this.hoverT) * 0.12;
+    this.radius = this.baseRadius + this.hoverT * 5;
+    if (this.opacity < 1) this.opacity = Math.min(1, this.opacity + 0.025);
+  }
+
+  draw(ctx) {
+    if (this.opacity < 0.01) return;
+    ctx.save();
+    ctx.globalAlpha = this.opacity;
+    if (this.hoverT > 0.05) { ctx.shadowColor = this.color; ctx.shadowBlur = 24 * this.hoverT; }
+
+    // Outer halo
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = this.color + '15';
+    ctx.fill();
+
+    // Inner
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius * 0.82, 0, Math.PI * 2);
+    const g = ctx.createRadialGradient(
+      this.x - this.radius * 0.15, this.y - this.radius * 0.15, 0,
+      this.x, this.y, this.radius * 0.82
+    );
+    g.addColorStop(0, this.color + 'dd');
+    g.addColorStop(1, this.color);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Lifted shadow on hover
+    if (this.hoverT > 0.05) {
+      ctx.globalAlpha = this.opacity * 0.08 * this.hoverT;
+      ctx.beginPath();
+      ctx.ellipse(this.x, this.y + this.radius + 4, this.radius * 0.6, 4, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#000';
+      ctx.fill();
+      ctx.globalAlpha = this.opacity;
+    }
+
+    // Text
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const fs = Math.max(10, this.radius * 0.3);
+    ctx.font = '600 ' + fs + 'px -apple-system, sans-serif';
+    ctx.fillText(this.c.name.split(' ')[0], this.x, this.y - fs * 0.35);
+    ctx.font = '500 ' + (fs * 0.78) + 'px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffffcc';
+    ctx.fillText(this.c.hours + 'hr \u00b7 ' + SKILL_LABELS[this.c.skill], this.x, this.y + fs * 0.55);
+
+    ctx.restore();
+  }
+
+  contains(px, py) {
+    const dx = px - this.x, dy = py - this.y;
+    return dx * dx + dy * dy < this.radius * this.radius;
+  }
+}
+
+function resolveCollisions() {
+  for (let i = 0; i < orbs.length; i++) {
+    for (let j = i + 1; j < orbs.length; j++) {
+      const a = orbs[i], b = orbs[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const min = a.radius + b.radius + 4;
+      if (dist < min && dist > 0.1) {
+        const nx = dx / dist, ny = dy / dist;
+        const ov = (min - dist) * 0.5;
+        a.x -= nx * ov * 0.5; a.y -= ny * ov * 0.5;
+        b.x += nx * ov * 0.5; b.y += ny * ov * 0.5;
+        a.vx -= nx * 0.04; a.vy -= ny * 0.04;
+        b.vx += nx * 0.04; b.vy += ny * 0.04;
+      }
+    }
+  }
+}
+
+let ripples = [];
+class Ripple {
+  constructor(x, y, color) { this.x = x; this.y = y; this.r = 8; this.o = 0.5; this.color = color || '#8b5cf6'; }
+  update() { this.r += 1.5; this.o -= 0.008; return this.o > 0; }
+  draw(ctx) {
+    ctx.save(); ctx.globalAlpha = this.o;
+    ctx.strokeStyle = this.color; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function isDarkMode() {
+  return document.documentElement.classList.contains('dark') ||
+    (!document.documentElement.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+}
+
+function drawBasket(ctx) {
+  const dark = isDarkMode();
+  // Water-like interior
+  const ig = ctx.createRadialGradient(basketCX, basketCY - basketR * 0.2, 0, basketCX, basketCY, basketR);
+  ig.addColorStop(0, dark ? 'rgba(139,92,246,0.06)' : 'rgba(139,92,246,0.03)');
+  ig.addColorStop(0.7, dark ? 'rgba(139,92,246,0.1)' : 'rgba(139,92,246,0.06)');
+  ig.addColorStop(1, dark ? 'rgba(236,72,153,0.12)' : 'rgba(236,72,153,0.08)');
+  ctx.beginPath();
+  ctx.arc(basketCX, basketCY, basketR, 0, Math.PI * 2);
+  ctx.fillStyle = ig;
+  ctx.fill();
+
+  // Basket rim — double stroke
+  ctx.beginPath();
+  ctx.arc(basketCX, basketCY, basketR, 0, Math.PI * 2);
+  ctx.strokeStyle = dark ? 'rgba(139,92,246,0.25)' : 'rgba(139,92,246,0.12)';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(basketCX, basketCY, basketR, 0, Math.PI * 2);
+  ctx.strokeStyle = dark ? 'rgba(139,92,246,0.4)' : 'rgba(139,92,246,0.25)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Woven texture on rim — small arcs along the circumference
+  ctx.strokeStyle = dark ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.1)';
+  ctx.lineWidth = 1.5;
+  const segs = 48;
+  for (let i = 0; i < segs; i++) {
+    const a1 = (i / segs) * Math.PI * 2;
+    const a2 = ((i + 0.5) / segs) * Math.PI * 2;
+    const r1 = basketR - 3, r2 = basketR + 3;
+    ctx.beginPath();
+    ctx.moveTo(basketCX + Math.cos(a1) * r1, basketCY + Math.sin(a1) * r1);
+    ctx.quadraticCurveTo(
+      basketCX + Math.cos((a1 + a2) / 2) * r2,
+      basketCY + Math.sin((a1 + a2) / 2) * r2,
+      basketCX + Math.cos(a2) * r1,
+      basketCY + Math.sin(a2) * r1
+    );
+    ctx.stroke();
+  }
+
+  // Label above basket
+  ctx.fillStyle = dark ? '#a78bfacc' : '#8b5cf690';
+  ctx.font = '600 13px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('COMMITMENT BASKET', basketCX, basketCY - basketR - 14);
+}
+
+function poolFrame() {
+  ctx.clearRect(0, 0, poolW, poolH);
+  const dark = isDarkMode();
+  const bg = ctx.createLinearGradient(0, 0, 0, poolH);
+  if (dark) { bg.addColorStop(0, '#0f172a'); bg.addColorStop(1, '#1a1033'); }
+  else { bg.addColorStop(0, '#f8f7ff'); bg.addColorStop(1, '#fdf2f8'); }
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, poolW, poolH);
+
+  drawBasket(ctx);
+  ripples = ripples.filter(r => r.update());
+  ripples.forEach(r => r.draw(ctx));
+  orbs.forEach(o => o.update());
+  resolveCollisions();
+  orbs.forEach(o => o.draw(ctx));
+  requestAnimationFrame(poolFrame);
+}
+
+function buildOrbs() { orbs = commitments.map(c => new Orb(c)); }
+
+// Pool pointer events (touch + pen + mouse)
+let poolPointerId = null;
+let poolPointerStart = null;
+let poolLongPressTimer = null;
+
+canvas.addEventListener('pointerdown', e => {
+  if (poolPointerId !== null) return;
+  poolPointerId = e.pointerId;
+  canvas.setPointerCapture(e.pointerId);
+  const r = canvas.getBoundingClientRect();
+  poolPointerStart = { x: e.clientX, y: e.clientY, cx: e.clientX - r.left, cy: e.clientY - r.top, time: Date.now() };
+});
+
+canvas.addEventListener('pointermove', e => {
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+  hoveredOrb = null;
+  for (let i = orbs.length - 1; i >= 0; i--) {
+    if (orbs[i].contains(mx, my)) { hoveredOrb = orbs[i]; break; }
+  }
+  canvas.style.cursor = hoveredOrb ? 'pointer' : 'default';
+  // Cancel long-press if moved too far
+  if (poolPointerStart) {
+    const dx = e.clientX - poolPointerStart.x, dy = e.clientY - poolPointerStart.y;
+    if (dx * dx + dy * dy > 100) poolPointerStart = null;
+  }
+});
+
+canvas.addEventListener('pointerup', e => {
+  if (e.pointerId !== poolPointerId) return;
+  poolPointerId = null;
+  if (!poolPointerStart) return;
+  const r = canvas.getBoundingClientRect();
+  const px = e.clientX - r.left, py = e.clientY - r.top;
+  let clicked = null;
+  for (let i = orbs.length - 1; i >= 0; i--) {
+    if (orbs[i].contains(px, py)) { clicked = orbs[i]; break; }
+  }
+  if (clicked) {
+    selectedOrb = selectedOrb === clicked ? null : clicked;
+    if (selectedOrb) showDetail(selectedOrb, e.clientX, e.clientY); else hideDetail();
+  } else { selectedOrb = null; hideDetail(); }
+  poolPointerStart = null;
+});
+
+canvas.addEventListener('pointercancel', () => { poolPointerId = null; poolPointerStart = null; });
+canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') { hoveredOrb = null; hideDetail(); } });
+
+function showDetail(orb, cx, cy) {
+  const el = document.getElementById('poolDetail');
+  const c = orb.c;
+  document.getElementById('detailDot').style.background = SKILL_COLORS[c.skill];
+  document.getElementById('detailName').textContent = c.name;
+  document.getElementById('detailSkill').textContent = SKILL_LABELS[c.skill];
+  document.getElementById('detailHours').textContent = c.hours + ' hour' + (c.hours !== 1 ? 's' : '') + ' pledged';
+  document.getElementById('detailDesc').textContent = c.desc;
+  const mr = document.querySelector('.main').getBoundingClientRect();
+  let left = cx - mr.left + 15, top = cy - mr.top - 30;
+  if (left + 240 > mr.width) left = cx - mr.left - 250;
+  if (top + 150 > mr.height) top = mr.height - 160;
+  if (top < 10) top = 10;
+  el.style.left = left + 'px'; el.style.top = top + 'px';
+  el.classList.add('visible');
+}
+function hideDetail() { document.getElementById('poolDetail').classList.remove('visible'); }
+
+// ═══════════════════════════════════════════════════
+// ADD COMMITMENT MODAL
+// ═══════════════════════════════════════════════════
+const modal = document.getElementById('modalOverlay');
+document.getElementById('addBtn').addEventListener('click', () => {
+  modal.classList.add('visible');
+  document.getElementById('modalName').value = '';
+  document.getElementById('modalHours').value = '2';
+  document.getElementById('modalDesc').value = '';
+  document.getElementById('modalName').focus();
+});
+document.getElementById('modalCancel').addEventListener('click', () => modal.classList.remove('visible'));
+modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('visible'); });
+
+document.getElementById('modalSubmit').addEventListener('click', () => {
+  const name = document.getElementById('modalName').value.trim();
+  const skill = document.getElementById('modalSkill').value;
+  const hours = Math.max(1, Math.min(10, parseInt(document.getElementById('modalHours').value) || 2));
+  const desc = document.getElementById('modalDesc').value.trim() || SKILL_LABELS[skill] + ' contribution';
+  if (!name) { document.getElementById('modalName').focus(); return; }
+  const c = { id: nextId++, name, skill, hours, desc };
+  commitments.push(c);
+  // Drop from top of basket
+  const orb = new Orb(c, basketCX + (Math.random() - 0.5) * 40, basketCY - basketR - 30);
+  orb.vy = 2.5;
+  orbs.push(orb);
+  setTimeout(() => {
+    ripples.push(new Ripple(basketCX, basketCY, SKILL_COLORS[skill]));
+    ripples.push(new Ripple(basketCX - 15, basketCY + 10, SKILL_COLORS[skill]));
+  }, 400);
+  updateStats();
+  modal.classList.remove('visible');
+});
+
+// ═══════════════════════════════════════════════════
+// WEAVING VIEW — SVG Node Editor
+// ═══════════════════════════════════════════════════
+const svg = document.getElementById('weave-svg');
+const nodesLayer = document.getElementById('nodesLayer');
+const connectionsLayer = document.getElementById('connectionsLayer');
+const tempConn = document.getElementById('tempConnection');
+
+let weaveNodes = [];
+let connections = [];
+let dragNode = null, dragOff = { x: 0, y: 0 };
+let connecting = null;
+
+const NODE_W = 90, NODE_H = 104; // Hex bounding box
+const TASK_W = 220, TASK_H_BASE = 52, TASK_ROW = 26;
+const EXEC_BTN_H = 28;
+const PORT_R = 5.5;
+const HEX_R = 52; // Hex radius (center to vertex)
+
+// Pointy-top hexagon vertices
+function hexPoints(cx, cy, r) {
+  return [0,1,2,3,4,5].map(i => {
+    const angle = -Math.PI / 2 + i * Math.PI / 3; // pointy-top: start at top
+    return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
+  });
+}
+
+function hexPolygonStr(cx, cy, r) {
+  return hexPoints(cx, cy, r).map(p => p[0] + ',' + p[1]).join(' ');
+}
+
+function svgPt(cx, cy) {
+  const p = svg.createSVGPoint();
+  p.x = cx; p.y = cy;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+function mkCommitNode(c, x, y) {
+  return { id: 'cn-' + c.id, type: 'commitment', x, y, w: NODE_W, h: NODE_H, hexR: HEX_R, data: c };
+}
+
+function mkTaskNode(t, x, y) {
+  const n = Object.keys(t.needs).length;
+  const baseH = TASK_H_BASE + n * TASK_ROW + 12;
+  return { id: t.id, type: 'task', x, y, w: TASK_W, h: baseH, baseH, data: { ...t, fulfilled: {} } };
+}
+
+function isTaskReady(node) {
+  if (node.type !== 'task') return false;
+  const t = node.data;
+  for (const skill of Object.keys(t.needs)) {
+    if ((t.fulfilled[skill] || 0) < t.needs[skill]) return false;
+  }
+  return true;
+}
+
+function bezier(x1, y1, x2, y2) {
+  const d = Math.max(40, Math.abs(x2 - x1) * 0.5);
+  return 'M' + x1 + ',' + y1 + ' C' + (x1 + d) + ',' + y1 + ' ' + (x2 - d) + ',' + y2 + ' ' + x2 + ',' + y2;
+}
+
+function ns(tag) { return document.createElementNS('http://www.w3.org/2000/svg', tag); }
+
+function renderConnections() {
+  connectionsLayer.innerHTML = '';
+  connections.forEach(conn => {
+    const from = weaveNodes.find(n => n.id === conn.from);
+    const to = weaveNodes.find(n => n.id === conn.to);
+    if (!from || !to) return;
+    // Hex commitment: output from right vertex
+    let x1, y1;
+    if (from.type === 'commitment') {
+      const cx = from.x + from.w / 2, cy = from.y + from.h / 2;
+      const pts = hexPoints(cx, cy, from.hexR || HEX_R);
+      // Right vertex (index 1 for pointy-top: 30 degrees)
+      x1 = pts[1][0]; y1 = pts[1][1];
+    } else {
+      x1 = from.x + from.w; y1 = from.y + from.h / 2;
+    }
+    let x2 = to.x, y2 = to.y + to.h / 2;
+    if (to.type === 'task') {
+      const skills = Object.keys(to.data.needs);
+      const idx = skills.indexOf(conn.skill);
+      if (idx >= 0) y2 = to.y + TASK_H_BASE + idx * TASK_ROW + TASK_ROW / 2;
+    }
+    const p = ns('path');
+    p.setAttribute('d', bezier(x1, y1, x2, y2));
+    p.setAttribute('class', 'connection-line active');
+    connectionsLayer.appendChild(p);
+  });
+}
+
+function svgText(txt, x, y, size, color, weight, anchor) {
+  const t = ns('text');
+  t.setAttribute('x', x); t.setAttribute('y', y);
+  t.setAttribute('fill', color);
+  t.setAttribute('font-size', size);
+  t.setAttribute('font-weight', weight || '400');
+  t.setAttribute('font-family', '-apple-system, BlinkMacSystemFont, sans-serif');
+  if (anchor) t.setAttribute('text-anchor', anchor);
+  t.textContent = txt;
+  return t;
+}
+
+function renderNode(node) {
+  const g = ns('g');
+  g.setAttribute('data-id', node.id);
+  g.setAttribute('transform', 'translate(' + node.x + ',' + node.y + ')');
+
+  if (node.type === 'commitment') {
+    const c = node.data;
+    const col = SKILL_COLORS[c.skill];
+    const cx = node.w / 2, cy = node.h / 2;
+    const hr = node.hexR || HEX_R;
+    g.setAttribute('class', 'node-group');
+
+    // Hex body
+    const hex = ns('polygon');
+    hex.setAttribute('points', hexPolygonStr(cx, cy, hr));
+    hex.setAttribute('fill', 'var(--surface)');
+    hex.setAttribute('stroke', 'var(--border)');
+    hex.setAttribute('stroke-width', '1');
+    hex.setAttribute('filter', 'url(#nodeShadow)');
+    g.appendChild(hex);
+
+    // Hex header (top portion) — clip with another hex + rect trick
+    const headerHex = ns('polygon');
+    const headerPts = hexPoints(cx, cy, hr);
+    // Top clipped portion: use full hex with clip
+    const clipId = 'hexClip-' + node.id;
+    const clipPath = ns('clipPath');
+    clipPath.setAttribute('id', clipId);
+    const clipRect = ns('rect');
+    clipRect.setAttribute('x', cx - hr); clipRect.setAttribute('y', cy - hr);
+    clipRect.setAttribute('width', hr * 2); clipRect.setAttribute('height', hr * 0.75);
+    clipPath.appendChild(clipRect);
+    g.appendChild(clipPath);
+
+    const headerFill = ns('polygon');
+    headerFill.setAttribute('points', hexPolygonStr(cx, cy, hr));
+    headerFill.setAttribute('fill', col);
+    headerFill.setAttribute('clip-path', 'url(#' + clipId + ')');
+    g.appendChild(headerFill);
+
+    // Hex hover stroke
+    const hexHover = ns('polygon');
+    hexHover.setAttribute('points', hexPolygonStr(cx, cy, hr));
+    hexHover.setAttribute('fill', 'none');
+    hexHover.setAttribute('stroke', col);
+    hexHover.setAttribute('stroke-width', '0');
+    hexHover.setAttribute('class', 'hex-hover-stroke');
+    g.appendChild(hexHover);
+
+    // Text centered in hex
+    const nameText = c.name.length > 12 ? c.name.slice(0, 11) + '\u2026' : c.name;
+    g.appendChild(svgText(nameText, cx, cy - hr * 0.35, 11, '#fff', '600', 'middle'));
+    g.appendChild(svgText(c.hours + 'hr', cx, cy + 4, 13, 'var(--text-heading)', '700', 'middle'));
+    g.appendChild(svgText(SKILL_LABELS[c.skill], cx, cy + 18, 10, 'var(--text-muted)', '400', 'middle'));
+    const d = c.desc.length > 18 ? c.desc.slice(0, 16) + '\u2026' : c.desc;
+    g.appendChild(svgText(d, cx, cy + 32, 9, 'var(--text-faint)', '400', 'middle'));
+
+    // Output port at right vertex (index 1 for pointy-top)
+    const pts = hexPoints(cx, cy, hr);
+    const portX = pts[1][0], portY = pts[1][1];
+    // Large invisible hit target
+    const portHit = ns('circle');
+    portHit.setAttribute('cx', portX); portHit.setAttribute('cy', portY);
+    portHit.setAttribute('r', 18); portHit.setAttribute('fill', 'transparent');
+    portHit.setAttribute('class', 'port'); portHit.dataset.node = node.id; portHit.dataset.port = 'output';
+    g.appendChild(portHit);
+    // Visible port
+    const port = ns('circle');
+    port.setAttribute('cx', portX); port.setAttribute('cy', portY);
+    port.setAttribute('r', PORT_R);
+    port.setAttribute('fill', col); port.setAttribute('stroke', '#fff'); port.setAttribute('stroke-width', 2);
+    port.style.pointerEvents = 'none';
+    g.appendChild(port);
+
+  } else if (node.type === 'task') {
+    const t = node.data;
+    const skills = Object.keys(t.needs);
+    const totalNeeded = Object.values(t.needs).reduce((a, b) => a + b, 0);
+    const totalFulfilled = Object.values(t.fulfilled || {}).reduce((a, b) => a + b, 0);
+    const progress = totalNeeded > 0 ? Math.min(1, totalFulfilled / totalNeeded) : 0;
+    const ready = isTaskReady(node);
+
+    // Adjust node height to include exec button when ready
+    node.h = node.baseH + (ready ? EXEC_BTN_H + 8 : 0);
+
+    g.setAttribute('class', 'node-group task-node' + (ready ? ' ready' : ''));
+
+    const rect = ns('rect');
+    rect.setAttribute('class', 'node-rect');
+    rect.setAttribute('width', node.w); rect.setAttribute('height', node.h);
+    rect.setAttribute('rx', 8); rect.setAttribute('ry', 8);
+    rect.setAttribute('filter', ready ? 'url(#glowGreen)' : 'url(#nodeShadow)');
+    g.appendChild(rect);
+
+    const hCol = ready ? '#10b981' : '#8b5cf6';
+    const h = ns('rect');
+    h.setAttribute('width', node.w); h.setAttribute('height', 28);
+    h.setAttribute('fill', hCol); h.setAttribute('rx', 8); h.setAttribute('ry', 8);
+    g.appendChild(h);
+    const hm = ns('rect');
+    hm.setAttribute('width', node.w); hm.setAttribute('height', 10); hm.setAttribute('y', 20); hm.setAttribute('fill', hCol);
+    g.appendChild(hm);
+
+    g.appendChild(svgText(t.name, 12, 18, 12, '#fff', '600'));
+    g.appendChild(svgText(ready ? 'Ready!' : Math.round(progress * 100) + '%', node.w - 24, 18, 10, '#ffffffcc', '500', 'end'));
+    // Edit icon (pencil)
+    const editIcon = svgText('\u270E', node.w - 10, 18, 11, '#ffffffaa', '400', 'middle');
+    editIcon.style.pointerEvents = 'none';
+    g.appendChild(editIcon);
+
+    // Progress bar
+    const pbW = node.w - 24;
+    const pbBg = ns('rect');
+    pbBg.setAttribute('x', 12); pbBg.setAttribute('y', 36); pbBg.setAttribute('width', pbW); pbBg.setAttribute('height', 4);
+    pbBg.setAttribute('rx', 2); pbBg.setAttribute('fill', 'var(--border)');
+    g.appendChild(pbBg);
+    const pbF = ns('rect');
+    pbF.setAttribute('x', 12); pbF.setAttribute('y', 36); pbF.setAttribute('width', progress * pbW); pbF.setAttribute('height', 4);
+    pbF.setAttribute('rx', 2); pbF.setAttribute('fill', hCol);
+    g.appendChild(pbF);
+
+    // Skill rows
+    skills.forEach((skill, i) => {
+      const ry = TASK_H_BASE + i * TASK_ROW;
+      const needed = t.needs[skill];
+      const ful = (t.fulfilled || {})[skill] || 0;
+      const done = ful >= needed;
+
+      // Large invisible hit target for touch
+      const portHit = ns('circle');
+      portHit.setAttribute('cx', 0); portHit.setAttribute('cy', ry + TASK_ROW / 2);
+      portHit.setAttribute('r', 18); portHit.setAttribute('fill', 'transparent');
+      portHit.setAttribute('class', 'port');
+      portHit.dataset.node = node.id; portHit.dataset.port = 'input'; portHit.dataset.skill = skill;
+      g.appendChild(portHit);
+      // Visible port
+      const port = ns('circle');
+      port.setAttribute('cx', 0); port.setAttribute('cy', ry + TASK_ROW / 2);
+      port.setAttribute('r', PORT_R);
+      port.setAttribute('fill', done ? '#10b981' : SKILL_COLORS[skill]);
+      port.setAttribute('stroke', '#fff'); port.setAttribute('stroke-width', 2);
+      port.style.pointerEvents = 'none';
+      g.appendChild(port);
+
+      const dot = ns('circle');
+      dot.setAttribute('cx', 20); dot.setAttribute('cy', ry + TASK_ROW / 2);
+      dot.setAttribute('r', 4); dot.setAttribute('fill', SKILL_COLORS[skill]);
+      g.appendChild(dot);
+
+      const lbl = SKILL_LABELS[skill] + ': ' + ful + '/' + needed + 'hr';
+      g.appendChild(svgText(lbl, 30, ry + TASK_ROW / 2 + 4, 11, done ? '#10b981' : 'var(--text-muted)', done ? '600' : '400'));
+      if (done) g.appendChild(svgText('\u2713', node.w - 16, ry + TASK_ROW / 2 + 4, 13, '#10b981', '600', 'middle'));
+    });
+
+    // Execute button when ready
+    if (ready) {
+      const btnY = node.baseH + 4;
+      const btnR = ns('rect');
+      btnR.setAttribute('x', 12); btnR.setAttribute('y', btnY);
+      btnR.setAttribute('width', node.w - 24); btnR.setAttribute('height', EXEC_BTN_H);
+      btnR.setAttribute('rx', 6); btnR.setAttribute('ry', 6);
+      btnR.setAttribute('fill', '#10b981');
+      btnR.setAttribute('class', 'exec-btn-rect');
+      btnR.dataset.taskId = node.id;
+      g.appendChild(btnR);
+      const btnT = svgText('Execute Project \u2192', node.w / 2, btnY + EXEC_BTN_H / 2 + 4, 12, '#fff', '600', 'middle');
+      btnT.style.pointerEvents = 'none';
+      g.appendChild(btnT);
+    }
+  }
+
+  return g;
+}
+
+function renderAll() {
+  nodesLayer.innerHTML = '';
+  weaveNodes.forEach(n => nodesLayer.appendChild(renderNode(n)));
+  renderConnections();
+}
+
+// SVG pointer events (touch + pen + mouse)
+let svgActivePointerId = null;
+let svgDblTapTime = 0;
+let svgDblTapPos = null;
+
+svg.addEventListener('pointerdown', e => {
+  if (svgActivePointerId !== null) return; // ignore secondary touches
+  svgActivePointerId = e.pointerId;
+  svg.setPointerCapture(e.pointerId);
+
+  // Check exec button click
+  if (e.target.classList.contains('exec-btn-rect')) {
+    const taskId = e.target.dataset.taskId;
+    openExecPanel(taskId);
+    return;
+  }
+
+  const port = e.target.closest('.port');
+  if (port) {
+    e.preventDefault();
+    connecting = { nodeId: port.dataset.node, portType: port.dataset.port, skill: port.dataset.skill || null };
+    tempConn.style.display = 'block';
+    return;
+  }
+  const ng = e.target.closest('.node-group');
+  if (ng) {
+    const id = ng.dataset.id;
+    dragNode = weaveNodes.find(n => n.id === id);
+    if (dragNode) {
+      const pt = svgPt(e.clientX, e.clientY);
+      dragOff.x = pt.x - dragNode.x; dragOff.y = pt.y - dragNode.y;
+    }
+
+    // Double-tap detection for task editing
+    const now = Date.now();
+    if (svgDblTapPos && now - svgDblTapTime < 300) {
+      const dx = e.clientX - svgDblTapPos.x, dy = e.clientY - svgDblTapPos.y;
+      if (dx * dx + dy * dy < 225) {
+        // Double tap on a task node — open editor
+        const taskNode = weaveNodes.find(n => n.id === id && n.type === 'task');
+        if (taskNode) { openTaskEditor(taskNode); dragNode = null; }
+      }
+    }
+    svgDblTapTime = now;
+    svgDblTapPos = { x: e.clientX, y: e.clientY };
+  }
+});
+
+svg.addEventListener('pointermove', e => {
+  if (e.pointerId !== svgActivePointerId) return;
+  const pt = svgPt(e.clientX, e.clientY);
+  if (connecting) {
+    const fn = weaveNodes.find(n => n.id === connecting.nodeId);
+    if (!fn) return;
+    if (connecting.portType === 'input') {
+      const skills = fn.type === 'task' ? Object.keys(fn.data.needs) : [];
+      const idx = skills.indexOf(connecting.skill);
+      const x1 = fn.x;
+      const y1 = idx >= 0 ? fn.y + TASK_H_BASE + idx * TASK_ROW + TASK_ROW / 2 : fn.y + fn.h / 2;
+      tempConn.setAttribute('d', bezier(pt.x, pt.y, x1, y1));
+    } else {
+      const fromNode = fn;
+      let outX = fromNode.x + fromNode.w, outY = fromNode.y + fromNode.h / 2;
+      if (fromNode.type === 'commitment') {
+        // Hex nodes: output port at right vertex
+        outX = fromNode.x + fromNode.w;
+        outY = fromNode.y + fromNode.h / 2;
+      }
+      tempConn.setAttribute('d', bezier(outX, outY, pt.x, pt.y));
+    }
+    return;
+  }
+  if (dragNode) {
+    dragNode.x = pt.x - dragOff.x; dragNode.y = pt.y - dragOff.y;
+    renderAll();
+  }
+});
+
+svg.addEventListener('pointerup', e => {
+  if (e.pointerId !== svgActivePointerId) return;
+  svgActivePointerId = null;
+
+  if (connecting) {
+    const port = e.target.closest('.port');
+    if (port) {
+      const tId = port.dataset.node, tType = port.dataset.port, tSkill = port.dataset.skill;
+      let fromId, toId, skill;
+      if (connecting.portType === 'output' && tType === 'input' && tId !== connecting.nodeId) {
+        fromId = connecting.nodeId; toId = tId; skill = tSkill;
+      } else if (connecting.portType === 'input' && tType === 'output' && tId !== connecting.nodeId) {
+        fromId = tId; toId = connecting.nodeId; skill = connecting.skill;
+      }
+      if (fromId && toId && skill) {
+        const fNode = weaveNodes.find(n => n.id === fromId);
+        const tNode = weaveNodes.find(n => n.id === toId);
+        if (fNode && tNode && fNode.type === 'commitment' && tNode.type === 'task' && fNode.data.skill === skill) {
+          if (!connections.find(c => c.from === fromId && c.to === toId)) {
+            connections.push({ from: fromId, to: toId, skill });
+            if (!tNode.data.fulfilled) tNode.data.fulfilled = {};
+            tNode.data.fulfilled[skill] = (tNode.data.fulfilled[skill] || 0) + fNode.data.hours;
+
+            const nowReady = isTaskReady(tNode);
+            renderAll();
+            rebuildSidebar();
+            if (nowReady) {
+              setTimeout(() => openExecPanel(tNode.id), 600);
+            }
+          }
+        }
+      }
+    }
+    connecting = null;
+    tempConn.style.display = 'none';
+    tempConn.setAttribute('d', '');
+    return;
+  }
+  dragNode = null;
+});
+
+svg.addEventListener('pointercancel', () => {
+  svgActivePointerId = null;
+  connecting = null; dragNode = null;
+  tempConn.style.display = 'none';
+});
+
+// Double-click for desktop task editing
+svg.addEventListener('dblclick', e => {
+  const ng = e.target.closest('.node-group');
+  if (!ng) return;
+  const id = ng.dataset.id;
+  const taskNode = weaveNodes.find(n => n.id === id && n.type === 'task');
+  if (taskNode) openTaskEditor(taskNode);
+});
+
+// Sidebar — Pointer Events drag (works on mobile)
+let sidebarDragData = null;
+let sidebarGhost = null;
+
+function startSidebarDrag(e, data, label) {
+  e.preventDefault();
+  sidebarDragData = data;
+  sidebarGhost = document.createElement('div');
+  sidebarGhost.className = 'drag-ghost';
+  sidebarGhost.textContent = label;
+  sidebarGhost.style.left = e.clientX + 'px';
+  sidebarGhost.style.top = (e.clientY - 20) + 'px';
+  document.body.appendChild(sidebarGhost);
+  document.addEventListener('pointermove', moveSidebarDrag);
+  document.addEventListener('pointerup', endSidebarDrag);
+  document.addEventListener('pointercancel', cancelSidebarDrag);
+}
+
+function moveSidebarDrag(e) {
+  if (!sidebarGhost) return;
+  sidebarGhost.style.left = e.clientX + 'px';
+  sidebarGhost.style.top = (e.clientY - 20) + 'px';
+}
+
+function endSidebarDrag(e) {
+  document.removeEventListener('pointermove', moveSidebarDrag);
+  document.removeEventListener('pointerup', endSidebarDrag);
+  document.removeEventListener('pointercancel', cancelSidebarDrag);
+  if (sidebarGhost) { sidebarGhost.remove(); sidebarGhost = null; }
+  if (!sidebarDragData) return;
+
+  // Hit-test canvasWrap
+  const wrap = document.getElementById('canvasWrap');
+  const wr = wrap.getBoundingClientRect();
+  if (e.clientX >= wr.left && e.clientX <= wr.right && e.clientY >= wr.top && e.clientY <= wr.bottom) {
+    const pt = svgPt(e.clientX, e.clientY);
+    const data = sidebarDragData;
+    if (data.type === 'commitment') {
+      const c = commitments.find(x => x.id === data.id);
+      if (c && !weaveNodes.find(n => n.id === 'cn-' + c.id)) {
+        weaveNodes.push(mkCommitNode(c, pt.x - NODE_W / 2, pt.y - NODE_H / 2));
+      }
+    } else if (data.type === 'task') {
+      const t = TASK_TEMPLATES.find(x => x.id === data.id);
+      if (t && !weaveNodes.find(n => n.id === t.id)) {
+        weaveNodes.push(mkTaskNode(t, pt.x - TASK_W / 2, pt.y - 40));
+      }
+    }
+    renderAll();
+    rebuildSidebar();
+  }
+  sidebarDragData = null;
+}
+
+function cancelSidebarDrag() {
+  document.removeEventListener('pointermove', moveSidebarDrag);
+  document.removeEventListener('pointerup', endSidebarDrag);
+  document.removeEventListener('pointercancel', cancelSidebarDrag);
+  if (sidebarGhost) { sidebarGhost.remove(); sidebarGhost = null; }
+  sidebarDragData = null;
+}
+
+function rebuildSidebar() {
+  const cont = document.getElementById('sidebarItems');
+  cont.innerHTML = '';
+  const used = new Set(weaveNodes.filter(n => n.type === 'commitment').map(n => n.data.id));
+  commitments.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'sidebar-item' + (used.has(c.id) ? ' used' : '');
+    el.innerHTML = '<div class="sidebar-dot" style="background:' + SKILL_COLORS[c.skill] + '"></div>' +
+      '<div class="sidebar-item-info"><div class="sidebar-item-name">' + c.name + '</div>' +
+      '<div class="sidebar-item-meta">' + c.hours + 'hr \u00b7 ' + SKILL_LABELS[c.skill] + '</div></div>';
+    if (!used.has(c.id)) {
+      el.addEventListener('pointerdown', e => startSidebarDrag(e, { type: 'commitment', id: c.id }, c.name));
+    }
+    cont.appendChild(el);
+  });
+
+  const tc = document.getElementById('sidebarTasks');
+  tc.innerHTML = '';
+  const usedT = new Set(weaveNodes.filter(n => n.type === 'task').map(n => n.id));
+  TASK_TEMPLATES.forEach(t => {
+    if (usedT.has(t.id)) return;
+    const el = document.createElement('div');
+    el.className = 'sidebar-task';
+    const needs = Object.entries(t.needs).map(([s, h]) => h + 'hr ' + SKILL_LABELS[s]).join(', ');
+    el.innerHTML = '<div class="sidebar-task-icon">\u25C9</div>' +
+      '<div class="sidebar-item-info"><div class="sidebar-item-name">' + t.name + '</div>' +
+      '<div class="sidebar-item-meta">' + needs + '</div></div>';
+    el.addEventListener('pointerdown', e => startSidebarDrag(e, { type: 'task', id: t.id }, t.name));
+    tc.appendChild(el);
+  });
+}
+
+// Keep legacy drop support as fallback for desktop
+const canvasWrap = document.getElementById('canvasWrap');
+canvasWrap.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+canvasWrap.addEventListener('drop', e => {
+  e.preventDefault();
+  let data;
+  try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+  const pt = svgPt(e.clientX, e.clientY);
+  if (data.type === 'commitment') {
+    const c = commitments.find(x => x.id === data.id);
+    if (!c || weaveNodes.find(n => n.id === 'cn-' + c.id)) return;
+    weaveNodes.push(mkCommitNode(c, pt.x - NODE_W / 2, pt.y - NODE_H / 2));
+  } else if (data.type === 'task') {
+    const t = TASK_TEMPLATES.find(x => x.id === data.id);
+    if (!t || weaveNodes.find(n => n.id === t.id)) return;
+    weaveNodes.push(mkTaskNode(t, pt.x - TASK_W / 2, pt.y - 40));
+  }
+  renderAll();
+  rebuildSidebar();
+});
+
+// ═══════════════════════════════════════════════════
+// EXECUTION PANEL
+// ═══════════════════════════════════════════════════
+const execOverlay = document.getElementById('execOverlay');
+let execTaskId = null;
+let execStepStates = {}; // { taskId: { stepIdx: 'pending'|'active'|'done' } }
+
+function openExecPanel(taskId) {
+  const node = weaveNodes.find(n => n.id === taskId);
+  if (!node || node.type !== 'task') return;
+  execTaskId = taskId;
+
+  const t = node.data;
+  document.getElementById('execTitle').innerHTML = t.name + ' <span class="exec-panel-badge">All Commitments Woven</span>';
+  document.getElementById('execSubtitle').textContent = 'Set up the project for execution';
+
+  // Get connected members
+  const members = connections.filter(c => c.to === taskId).map(c => {
+    const cn = weaveNodes.find(n => n.id === c.from);
+    return cn ? cn.data.name : '';
+  }).filter(Boolean);
+
+  const steps = EXEC_STEPS[taskId] || EXEC_STEPS.t1;
+  if (!execStepStates[taskId]) {
+    execStepStates[taskId] = {};
+    steps.forEach((_, i) => { execStepStates[taskId][i] = 'pending'; });
+    execStepStates[taskId][0] = 'active'; // First step active by default
+  }
+
+  renderExecSteps(taskId, steps, members);
+  execOverlay.classList.add('visible');
+}
+
+function renderExecSteps(taskId, steps, members) {
+  const container = document.getElementById('execSteps');
+  container.innerHTML = '';
+  const states = execStepStates[taskId];
+  let doneCount = 0;
+
+  steps.forEach((step, i) => {
+    const state = states[i] || 'pending';
+    if (state === 'done') doneCount++;
+
+    const div = document.createElement('div');
+    div.className = 'exec-step ' + state;
+    div.innerHTML = `
+      <div class="exec-step-num">${state === 'done' ? '\u2713' : step.icon}</div>
+      <div class="exec-step-content">
+        <div class="exec-step-title">${step.title}</div>
+        <div class="exec-step-desc">${step.desc}</div>
+        <div class="exec-step-detail" id="execDetail-${i}">
+          ${renderStepDetail(step.detail, members, taskId)}
+        </div>
+      </div>
+    `;
+
+    div.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') return;
+      // Toggle active
+      if (states[i] === 'active') {
+        states[i] = 'pending';
+      } else if (states[i] !== 'done') {
+        // Deactivate others
+        Object.keys(states).forEach(k => { if (states[k] === 'active') states[k] = 'pending'; });
+        states[i] = 'active';
+      }
+      renderExecSteps(taskId, steps, members);
+    });
+
+    container.appendChild(div);
+  });
+
+  // Update progress
+  const pct = steps.length > 0 ? (doneCount / steps.length * 100) : 0;
+  document.getElementById('execProgressFill').style.width = pct + '%';
+  document.getElementById('execProgressText').textContent = doneCount + '/' + steps.length;
+  document.getElementById('execLaunch').disabled = doneCount < steps.length;
+}
+
+function renderStepDetail(type, members, taskId) {
+  const memberOpts = members.map(m => '<option value="' + m + '">' + m + '</option>').join('');
+
+  switch (type) {
+    case 'venue':
+      return `
+        <label>Space Type</label>
+        <select>
+          <option>Community Centre Room</option>
+          <option>Outdoor Pavilion</option>
+          <option>Online (Zoom / Jitsi)</option>
+          <option>Hybrid (In-person + Stream)</option>
+        </select>
+        <label>Location / Link</label>
+        <input type="text" placeholder="e.g. Hamilton Public Library, Room 204">
+        <label>Date & Time</label>
+        <input type="text" placeholder="e.g. April 15, 2026 — 6:30 PM">
+        <label>Space Lead</label>
+        <select><option>-- Assign --</option>${memberOpts}</select>
+        <button class="exec-step-action" onclick="completeExecStep(${taskId === 't1' ? "'t1'" : "'t2'"}, 0)">Confirm Space Setup</button>
+      `;
+    case 'comms':
+      return `
+        <label>Communication Channels</label>
+        <select multiple size="3" style="min-height:60px">
+          <option selected>Signal Group Chat</option>
+          <option>Email Thread</option>
+          <option>Shared Calendar Event</option>
+          <option>Discord Channel</option>
+        </select>
+        <label>Invite List (auto-populated from commitments)</label>
+        <div style="font-size:0.82rem;color:#6b7280;padding:0.4rem;background:#f9fafb;border-radius:0.25rem;margin-bottom:0.5rem">${members.join(', ') || 'No members connected yet'}</div>
+        <label>Comms Lead</label>
+        <select><option>-- Assign --</option>${memberOpts}</select>
+        <button class="exec-step-action" onclick="completeExecStep(${taskId === 't1' ? "'t1'" : "'t2'"}, 1)">Create Channels</button>
+      `;
+    case 'notes':
+      return `
+        <label>Document Type</label>
+        <select>
+          <option>Shared Google Doc</option>
+          <option>HedgeDoc / HackMD</option>
+          <option>Notion Page</option>
+          <option>Plain Text Pad</option>
+        </select>
+        <label>Initial Sections</label>
+        <div style="font-size:0.82rem;color:#6b7280;padding:0.4rem;background:#f9fafb;border-radius:0.25rem;margin-bottom:0.5rem">
+          Agenda &bull; Roles & Responsibilities &bull; Timeline &bull; Resource Links &bull; Meeting Notes &bull; Action Items
+        </div>
+        <label>Shared Drive / Folder Link</label>
+        <input type="text" placeholder="https://drive.google.com/...">
+        <button class="exec-step-action" onclick="completeExecStep(${taskId === 't1' ? "'t1'" : "'t2'"}, 2)">Set Up Docs</button>
+      `;
+    case 'prep':
+      return `
+        <label>Upload Transcript / Notes / Unstructured Input</label>
+        <textarea placeholder="Paste meeting transcript, planning notes, brainstorm dump, or any raw text here...
+
+The system will parse this into:
+ - Action items
+ - Key decisions
+ - Role assignments
+ - Timeline milestones"></textarea>
+        <label>Or upload a file</label>
+        <input type="file" accept=".txt,.md,.pdf,.docx" style="font-size:0.8rem">
+        <label>Processing Mode</label>
+        <select>
+          <option>Extract Action Items</option>
+          <option>Generate Brief / Summary</option>
+          <option>Create Agenda from Notes</option>
+          <option>Map Roles from Discussion</option>
+        </select>
+        <button class="exec-step-action" onclick="completeExecStep(${taskId === 't1' ? "'t1'" : "'t2'"}, 3)">Process & Generate</button>
+      `;
+    case 'launch':
+      return `
+        <label>Pre-Launch Checklist</label>
+        <div style="font-size:0.82rem;color:#374151;line-height:2">
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;margin-bottom:0"><input type="checkbox"> Space confirmed and set up</label>
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;margin-bottom:0"><input type="checkbox"> All team members notified</label>
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;margin-bottom:0"><input type="checkbox"> Shared docs created and populated</label>
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;margin-bottom:0"><input type="checkbox"> Materials and supplies ready</label>
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;margin-bottom:0"><input type="checkbox"> Final role confirmations received</label>
+        </div>
+        <button class="exec-step-action" onclick="completeExecStep(${taskId === 't1' ? "'t1'" : "'t2'"}, 4)" style="background:linear-gradient(135deg,#10b981,#059669);margin-top:0.5rem">Confirm Launch</button>
+      `;
+    default:
+      return '<p style="font-size:0.82rem;color:#9ca3af">Configure this step...</p>';
+  }
+}
+
+window.completeExecStep = function(taskId, stepIdx) {
+  if (!execStepStates[taskId]) return;
+  execStepStates[taskId][stepIdx] = 'done';
+
+  // Auto-advance to next pending step
+  const steps = EXEC_STEPS[taskId] || EXEC_STEPS.t1;
+  let nextActive = -1;
+  for (let i = 0; i < steps.length; i++) {
+    if (execStepStates[taskId][i] !== 'done') { nextActive = i; break; }
+  }
+  if (nextActive >= 0) {
+    Object.keys(execStepStates[taskId]).forEach(k => {
+      if (execStepStates[taskId][k] === 'active') execStepStates[taskId][k] = 'pending';
+    });
+    execStepStates[taskId][nextActive] = 'active';
+  }
+
+  const members = connections.filter(c => c.to === taskId).map(c => {
+    const cn = weaveNodes.find(n => n.id === c.from);
+    return cn ? cn.data.name : '';
+  }).filter(Boolean);
+
+  renderExecSteps(taskId, steps, members);
+};
+
+document.getElementById('execClose').addEventListener('click', () => {
+  execOverlay.classList.remove('visible');
+});
+execOverlay.addEventListener('click', e => {
+  if (e.target === execOverlay) execOverlay.classList.remove('visible');
+});
+document.getElementById('execLaunch').addEventListener('click', async () => {
+  const btn = document.getElementById('execLaunch');
+  if (!execTaskId) return;
+
+  const taskNode = weaveNodes.find(n => n.id === execTaskId);
+  if (!taskNode) return;
+
+  // Gather connected commitments
+  const connectedCommitments = connections
+    .filter(c => c.to === execTaskId)
+    .map(c => weaveNodes.find(n => n.id === c.from))
+    .filter(n => n && n.type === 'commitment');
+
+  if (!USE_CYCLOS || connectedCommitments.length === 0) {
+    // Demo mode — just celebrate
+    btn.textContent = 'Launched!';
+    btn.style.background = 'linear-gradient(135deg, #8b5cf6, #ec4899)';
+    setTimeout(() => {
+      execOverlay.classList.remove('visible');
+      btn.textContent = 'Launch Project';
+      btn.style.background = '';
+    }, 1500);
+    return;
+  }
+
+  // Execute Cyclos commitments
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  btn.style.background = '#6b7280';
+
+  const results = [];
+  for (const node of connectedCommitments) {
+    const { id, name, hours } = node.data;
+    try {
+      await API.addCommitment(id, hours, `${taskNode.data.name} — ${name}`);
+      results.push({ name, hours, ok: true });
+    } catch (err) {
+      results.push({ name, hours, ok: false, error: err.message });
+    }
+  }
+
+  const succeeded = results.filter(r => r.ok);
+  const failed = results.filter(r => !r.ok);
+
+  if (failed.length === 0) {
+    // All succeeded — refresh live balances from Cyclos
+    try {
+      const freshMembers = await API.getMembers();
+      freshMembers.forEach(m => {
+        const c = commitments.find(cm => cm.id === m.id);
+        if (c) c.hours = m.balance || 0;
+      });
+    } catch {
+      // Fallback: subtract locally if API refresh fails
+      for (const node of connectedCommitments) {
+        const c = commitments.find(cm => cm.id === node.data.id);
+        if (c) c.hours = Math.max(0, c.hours - node.data.hours);
+      }
+    }
+    buildOrbs();
+    updateStats();
+
+    btn.textContent = 'Launched!';
+    btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    const totalHrs = succeeded.reduce((s, r) => s + r.hours, 0);
+    document.getElementById('execSubtitle').textContent =
+      `${succeeded.length} commitments executed — ${totalHrs} hrs transferred to community pool`;
+
+    setTimeout(() => {
+      execOverlay.classList.remove('visible');
+      btn.textContent = 'Launch Project';
+      btn.style.background = '';
+      btn.disabled = false;
+    }, 3000);
+  } else {
+    // Partial or full failure
+    btn.textContent = 'Issues Found';
+    btn.style.background = '#ef4444';
+    const msgs = failed.map(r => `${r.name}: ${r.error}`).join('; ');
+    document.getElementById('execSubtitle').textContent =
+      `${succeeded.length} OK, ${failed.length} failed — ${msgs}`;
+    btn.disabled = false;
+    setTimeout(() => {
+      btn.textContent = 'Retry Launch';
+      btn.style.background = '';
+    }, 3000);
+  }
+});
+
+// ═══════════════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════════════
+document.getElementById('resetBtn').addEventListener('click', () => {
+  resetData();
+  buildOrbs();
+  weaveNodes = [];
+  connections = [];
+  execStepStates = {};
+  renderAll();
+  rebuildSidebar();
+  updateStats();
+  hideDetail();
+});
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+function init() {
+  resizePoolCanvas();
+  buildOrbs();
+  updateStats();
+  poolFrame();
+  rebuildSidebar();
+
+  // Pre-place one task
+  const wrap = document.getElementById('canvasWrap');
+  const r = wrap.getBoundingClientRect();
+  weaveNodes.push(mkTaskNode(TASK_TEMPLATES[0], (r.width || 600) * 0.55, (r.height || 400) * 0.2));
+  renderAll();
+  rebuildSidebar();
+}
+
+window.addEventListener('resize', () => { if (currentView === 'pool') resizePoolCanvas(); });
+
+// ═══════════════════════════════════════════════════
+// DARK MODE TOGGLE (Phase B)
+// ═══════════════════════════════════════════════════
+const themeToggle = document.getElementById('themeToggle');
+function applyTheme() {
+  const pref = localStorage.getItem('hcc-theme');
+  if (pref === 'dark') {
+    document.documentElement.classList.add('dark');
+    document.documentElement.classList.remove('light');
+    themeToggle.innerHTML = '&#9788;'; // sun
+  } else if (pref === 'light') {
+    document.documentElement.classList.add('light');
+    document.documentElement.classList.remove('dark');
+    themeToggle.innerHTML = '&#9790;'; // moon
+  } else {
+    // System preference
+    document.documentElement.classList.remove('dark', 'light');
+    themeToggle.innerHTML = window.matchMedia('(prefers-color-scheme: dark)').matches ? '&#9788;' : '&#9790;';
+  }
+}
+themeToggle.addEventListener('click', () => {
+  const current = localStorage.getItem('hcc-theme');
+  if (!current || current === 'light') {
+    localStorage.setItem('hcc-theme', 'dark');
+  } else {
+    localStorage.setItem('hcc-theme', 'light');
+  }
+  applyTheme();
+});
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (!localStorage.getItem('hcc-theme')) applyTheme();
+});
+applyTheme();
+
+// ═══════════════════════════════════════════════════
+// TASK EDITOR (Phase D)
+// ═══════════════════════════════════════════════════
+const taskEditOverlay = document.getElementById('taskEditOverlay');
+let editingTaskNode = null;
+
+function openTaskEditor(node) {
+  editingTaskNode = node;
+  const t = node.data;
+  document.getElementById('taskEditTitle').textContent = 'Edit: ' + t.name;
+  document.getElementById('taskEditName').value = t.name;
+  document.getElementById('taskEditDesc').value = t.description || '';
+  document.getElementById('taskEditNotes').value = t.notes || '';
+  renderTaskEditLinks(t.links || []);
+  taskEditOverlay.classList.add('visible');
+}
+
+function renderTaskEditLinks(links) {
+  const container = document.getElementById('taskEditLinksContainer');
+  container.innerHTML = '';
+  links.forEach((link, i) => {
+    const row = document.createElement('div');
+    row.className = 'task-edit-link-row';
+    row.innerHTML = '<input type="text" placeholder="Label" value="' + (link.label || '').replace(/"/g, '&quot;') + '" data-idx="' + i + '" data-field="label">' +
+      '<input type="text" placeholder="https://..." value="' + (link.url || '').replace(/"/g, '&quot;') + '" data-idx="' + i + '" data-field="url">' +
+      '<button class="task-edit-link-rm" data-idx="' + i + '">&times;</button>';
+    container.appendChild(row);
+  });
+  // Remove handler
+  container.querySelectorAll('.task-edit-link-rm').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      const current = getTaskEditLinks();
+      current.splice(idx, 1);
+      renderTaskEditLinks(current);
+    });
+  });
+}
+
+function getTaskEditLinks() {
+  const rows = document.querySelectorAll('#taskEditLinksContainer .task-edit-link-row');
+  const links = [];
+  rows.forEach(row => {
+    const label = row.querySelector('[data-field="label"]').value.trim();
+    const url = row.querySelector('[data-field="url"]').value.trim();
+    if (label || url) links.push({ label, url });
+  });
+  return links;
+}
+
+document.getElementById('taskEditAddLink').addEventListener('click', () => {
+  const current = getTaskEditLinks();
+  current.push({ label: '', url: '' });
+  renderTaskEditLinks(current);
+});
+
+document.getElementById('taskEditSave').addEventListener('click', () => {
+  if (!editingTaskNode) return;
+  const t = editingTaskNode.data;
+  t.name = document.getElementById('taskEditName').value.trim() || t.name;
+  t.description = document.getElementById('taskEditDesc').value.trim();
+  t.notes = document.getElementById('taskEditNotes').value.trim();
+  t.links = getTaskEditLinks();
+  renderAll();
+  taskEditOverlay.classList.remove('visible');
+  editingTaskNode = null;
+});
+
+document.getElementById('taskEditCancel').addEventListener('click', () => {
+  taskEditOverlay.classList.remove('visible');
+  editingTaskNode = null;
+});
+taskEditOverlay.addEventListener('click', e => {
+  if (e.target === taskEditOverlay) {
+    taskEditOverlay.classList.remove('visible');
+    editingTaskNode = null;
+  }
+});
+
+// ═══════════════════════════════════════════════════
+// API INTEGRATION (Phase F)
+// ═══════════════════════════════════════════════════
+const USE_CYCLOS = true; // Live Cyclos backend at timebank.rspace.online
+
+const API = {
+  base: '/api/hcc',
+  async getMembers() {
+    const resp = await fetch(this.base + '/members');
+    if (!resp.ok) throw new Error('API error');
+    return resp.json();
+  },
+  async addCommitment(fromUserId, amount, description) {
+    const resp = await fetch(this.base + '/commitments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromUserId, amount, description })
+    });
+    if (!resp.ok) throw new Error('API error');
+    return resp.json();
+  },
+  async executeTransfer(fromUserId, toUserId, amount, description) {
+    const resp = await fetch(this.base + '/transfers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromUserId, toUserId, amount, description })
+    });
+    if (!resp.ok) throw new Error('API error');
+    return resp.json();
+  }
+};
+
+async function initWithAPI() {
+  if (!USE_CYCLOS) return false;
+  try {
+    const members = await API.getMembers();
+    if (members.length > 0) {
+      commitments = members.map((m, i) => ({
+        id: m.id || i + 1,
+        name: m.name,
+        hours: m.balance || 2,
+        skill: Object.keys(SKILL_COLORS)[i % 5],
+        desc: 'Cyclos member'
+      }));
+      return true;
+    }
+  } catch (e) {
+    console.warn('Cyclos API unavailable, using demo data:', e.message);
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+initWithAPI().then(usedApi => {
+  if (!usedApi) resetData();
+  init();
+});
+</script>
+</body>
+</html>
