@@ -1,7 +1,7 @@
 services:
   ipfs:
     image: ipfs/kubo:v0.34.1
-    container_name: ipfs
+    container_name: kubo
     restart: unless-stopped
     mem_limit: 2g
     cpus: 1.0
