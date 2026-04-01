@@ -1,0 +1,47 @@
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm
+    restart: unless-stopped
+    # GPU: uncomment when hardware available
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    environment:
+      - VLLM_MODEL=${VLLM_MODEL:-Qwen/Qwen2.5-Coder-7B-Instruct}
+      - VLLM_MAX_MODEL_LEN=${VLLM_MAX_MODEL_LEN:-4096}
+      - VLLM_DTYPE=${VLLM_DTYPE:-auto}
+      - VLLM_QUANTIZATION=${VLLM_QUANTIZATION:-}
+      - VLLM_GPU_MEMORY_UTILIZATION=${VLLM_GPU_MEMORY_UTILIZATION:-0.90}
+      - HF_HOME=/root/.cache/huggingface
+    command: >
+      --model ${VLLM_MODEL:-Qwen/Qwen2.5-Coder-7B-Instruct}
+      --max-model-len ${VLLM_MAX_MODEL_LEN:-4096}
+      --dtype ${VLLM_DTYPE:-auto}
+      --port 8000
+      --host 0.0.0.0
+    ports:
+      - "8000"  # Internal only
+    volumes:
+      - vllm-cache:/root/.cache/huggingface
+    networks:
+      - ai-internal
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s  # Model loading takes time
+    mem_limit: 16g
+    cpus: 8
+
+volumes:
+  vllm-cache:
+
+networks:
+  ai-internal:
+    external: true
