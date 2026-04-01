@@ -1,5 +1,5 @@
 name: CI
-# Runner network: gitea_gitea (job containers resolve 'server' via compose network)
+# Runner: job containers on gitea_gitea network; actions from gitea.com
 
 on:
   push:
