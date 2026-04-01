@@ -9,7 +9,6 @@ If networks: comes before labels:, insert after the last label line instead.
 
 import re
 import os
-import sys
 
 BASE_DIR = "/home/jeffe/Github"
 
