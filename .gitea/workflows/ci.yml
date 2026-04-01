@@ -1,4 +1,5 @@
 name: CI
+# Runner network: gitea_gitea (job containers resolve 'server' via compose network)
 
 on:
   push:
