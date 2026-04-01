@@ -131,7 +131,7 @@ def main():
         try:
             exit_code, duration, results = run_tests(site_name, config)
         except subprocess.TimeoutExpired:
-            print(f"  TIMEOUT after 120s")
+            print("  TIMEOUT after 120s")
             exit_code, duration, results = 1, 120.0, None
 
         log_file = write_log(site_name, exit_code, duration, results)

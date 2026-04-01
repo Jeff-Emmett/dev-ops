@@ -32,7 +32,6 @@ Environment variables:
 
 import email
 import email.utils
-import glob
 import imaplib
 import json
 import logging
@@ -42,7 +41,7 @@ import smtplib
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
