@@ -14,7 +14,7 @@ import os
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 try:
@@ -383,7 +383,7 @@ def fmt_task(t: Task, show_project: bool = True, show_age: bool = False, show_du
         if days < 0:
             parts.append(f" — **OVERDUE by {abs(days)}d**")
         elif days == 0:
-            parts.append(f" — **DUE TODAY**")
+            parts.append(" — **DUE TODAY**")
         elif days <= 3:
             parts.append(f" — due in {days}d")
         else:
@@ -468,7 +468,7 @@ def build_morning_briefing(tasks: list, cfg: dict) -> str:
     unassigned = rule_unassigned_high_priority(tasks, cfg)
 
     lines = [
-        f"# Backlog Morning Briefing",
+        "# Backlog Morning Briefing",
         f"*{now.strftime('%A %B %d, %Y %H:%M')} | {stats_header(tasks)}*",
     ]
 
@@ -514,7 +514,7 @@ def build_afternoon_briefing(tasks: list, cfg: dict) -> str:
     stale_ip = rule_stale_in_progress(tasks, cfg)
 
     lines = [
-        f"# Backlog Afternoon Check-in",
+        "# Backlog Afternoon Check-in",
         f"*{now.strftime('%A %B %d, %Y %H:%M')}*",
     ]
 
@@ -563,7 +563,7 @@ def build_weekly_briefing(tasks: list, cfg: dict) -> str:
     ]
 
     lines = [
-        f"# Backlog Weekly Review",
+        "# Backlog Weekly Review",
         f"*Week ending {now.strftime('%B %d, %Y')} | {stats_header(tasks)}*",
     ]
 
@@ -581,7 +581,7 @@ def build_weekly_briefing(tasks: list, cfg: dict) -> str:
         cap,
     ))
 
-    lines.append(f"\n## Velocity\n")
+    lines.append("\n## Velocity\n")
     lines.append(f"- **{len(completed)}** tasks completed")
     lines.append(f"- **{len(new_this_week)}** tasks created")
     ratio = f"{len(completed)}/{len(new_this_week)}" if new_this_week else f"{len(completed)}/0"
@@ -617,7 +617,7 @@ def build_monthly_briefing(tasks: list, cfg: dict) -> str:
         by_project.setdefault(t.project_name, []).append(t)
 
     lines = [
-        f"# Backlog Monthly Audit",
+        "# Backlog Monthly Audit",
         f"*{now.strftime('%B %Y')} | {stats_header(tasks)}*",
     ]
 
@@ -678,7 +678,7 @@ def send_desktop_notification(mode: str, task_count: int) -> None:
     summary = {
         "morning": f"Morning Briefing: {task_count} items to review",
         "afternoon": f"Afternoon Check-in: {task_count} active tasks",
-        "weekly": f"Weekly Review ready",
+        "weekly": "Weekly Review ready",
         "monthly": f"Monthly Audit: {task_count} stale tasks",
     }.get(mode, f"Backlog: {task_count} items")
     try:

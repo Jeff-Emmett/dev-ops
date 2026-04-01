@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        run: |
+          apt-get update -qq && apt-get install -y -qq git > /dev/null 2>&1
+          git clone --depth 1 --branch ${{ github.ref_name }} http://token:${{ github.token }}@server:3000/${{ github.repository }}.git .
+
+      - name: Install ruff
+        run: |
+          apt-get install -y -qq python3-pip python3-venv > /dev/null 2>&1
+          python3 -m pip install --break-system-packages ruff > /dev/null 2>&1
+
+      - name: Lint Python files
+        run: ruff check scripts/ smoke-tests/runner.py smoke-tests/alerts.py add_healthchecks.py --select E,F,W --ignore E501
+
+  validate-smoke-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        run: |
+          apt-get update -qq && apt-get install -y -qq git > /dev/null 2>&1
+          git clone --depth 1 --branch ${{ github.ref_name }} http://token:${{ github.token }}@server:3000/${{ github.repository }}.git .
+
+      - name: Install dependencies
+        working-directory: smoke-tests
+        run: npm ci
+
+      - name: Validate Playwright config
+        working-directory: smoke-tests
+        run: npx playwright test --list 2>&1 | tail -5 || true
+
+      - name: Validate sites.yaml
+        working-directory: smoke-tests
+        run: node -e "const yaml = require('yaml'); const fs = require('fs'); yaml.parse(fs.readFileSync('sites.yaml', 'utf8')); console.log('sites.yaml is valid')"

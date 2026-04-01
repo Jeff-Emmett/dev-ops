@@ -1,0 +1,96 @@
+# Gitea Actions CI/CD — Python Application
+# Copy to: <repo>/.gitea/workflows/ci.yml
+# Replace: __APP_NAME__, __DEPLOY_PATH__, __HEALTH_URL__
+
+name: CI/CD
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: gitea.jeffemmett.com
+  IMAGE: gitea.jeffemmett.com/jeffemmett/__APP_NAME__
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        run: |
+          apt-get update -qq && apt-get install -y -qq git python3-pip python3-venv > /dev/null 2>&1
+          git clone --depth 1 --branch ${{ github.ref_name }} http://token:${{ github.token }}@server:3000/${{ github.repository }}.git .
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --break-system-packages ruff > /dev/null 2>&1
+          if [ -f requirements.txt ]; then python3 -m pip install --break-system-packages -r requirements.txt > /dev/null 2>&1; fi
+
+      - name: Lint
+        run: ruff check . --select E,F,W --ignore E501
+
+      - name: Test
+        run: |
+          if [ -f pytest.ini ] || [ -f setup.cfg ] || [ -d tests ]; then
+            python3 -m pip install --break-system-packages pytest > /dev/null 2>&1
+            python3 -m pytest
+          else
+            echo "No tests found, skipping"
+          fi
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [lint-test]
+    runs-on: ubuntu-latest
+    container:
+      image: docker:24-cli
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+    steps:
+      - name: Setup tools
+        run: apk add --no-cache git openssh-client curl
+
+      - name: Checkout
+        run: git clone --depth 1 --branch ${{ github.ref_name }} http://token:${{ github.token }}@server:3000/${{ github.repository }}.git .
+
+      - name: Set image tag
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          echo "IMAGE_TAG=${SHORT_SHA}" >> $GITHUB_ENV
+
+      - name: Build and push image
+        run: |
+          docker build -t ${{ env.IMAGE }}:${{ env.IMAGE_TAG }} -t ${{ env.IMAGE }}:latest .
+          echo "${{ secrets.REGISTRY_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ secrets.REGISTRY_USER }} --password-stdin
+          docker push ${{ env.IMAGE }}:${{ env.IMAGE_TAG }}
+          docker push ${{ env.IMAGE }}:latest
+
+      - name: Deploy
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key root@${{ secrets.DEPLOY_HOST }} "
+            cd __DEPLOY_PATH__
+            cat .last-deployed-tag 2>/dev/null > .rollback-tag || true
+            echo '${{ env.IMAGE_TAG }}' > .last-deployed-tag
+            docker pull ${{ env.IMAGE }}:${{ env.IMAGE_TAG }}
+            IMAGE_TAG=${{ env.IMAGE_TAG }} docker compose up -d --no-build
+          "
+
+      - name: Smoke test
+        run: |
+          sleep 10
+          HTTP_CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 __HEALTH_URL__ 2>/dev/null || echo "000")
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Smoke test failed — rolling back"
+            ROLLBACK_TAG=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key root@${{ secrets.DEPLOY_HOST }} "cat __DEPLOY_PATH__/.rollback-tag 2>/dev/null")
+            if [ -n "$ROLLBACK_TAG" ]; then
+              ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key root@${{ secrets.DEPLOY_HOST }} \
+                "cd __DEPLOY_PATH__ && IMAGE_TAG=$ROLLBACK_TAG docker compose up -d --no-build"
+            fi
+            exit 1
+          fi
+          echo "Smoke test passed"
