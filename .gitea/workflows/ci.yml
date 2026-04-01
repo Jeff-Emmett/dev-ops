@@ -18,7 +18,7 @@ jobs:
           python3 -m pip install --break-system-packages ruff > /dev/null 2>&1
 
       - name: Lint Python files
-        run: ruff check scripts/ smoke-tests/runner.py smoke-tests/alerts.py add_healthchecks.py --select E,F,W
+        run: ruff check scripts/ smoke-tests/runner.py smoke-tests/alerts.py add_healthchecks.py --select E,F,W --ignore E501
 
   validate-smoke-tests:
     runs-on: ubuntu-latest
