@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ruff
+        run: |
+          apt-get update -qq && apt-get install -y -qq python3-pip python3-venv > /dev/null 2>&1
+          python3 -m pip install --break-system-packages ruff > /dev/null 2>&1
+
+      - name: Lint Python files
+        run: ruff check scripts/ smoke-tests/runner.py smoke-tests/alerts.py add_healthchecks.py --select E,F,W
+
+  validate-smoke-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        working-directory: smoke-tests
+        run: npm ci
+
+      - name: Validate Playwright config parses
+        working-directory: smoke-tests
+        run: node -e "require('./playwright.config.ts')" || npx playwright test --list > /dev/null 2>&1
+
+      - name: Validate sites.yaml
+        working-directory: smoke-tests
+        run: node -e "const yaml = require('yaml'); const fs = require('fs'); yaml.parse(fs.readFileSync('sites.yaml', 'utf8')); console.log('sites.yaml is valid')"
