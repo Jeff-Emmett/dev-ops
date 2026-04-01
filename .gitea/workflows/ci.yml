@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         run: |
           apt-get update -qq && apt-get install -y -qq git > /dev/null 2>&1
-          git clone --depth 1 --branch ${{ github.ref_name }} http://server:3000/${{ github.repository }}.git .
+          git clone --depth 1 --branch ${{ github.ref_name }} http://token:${{ github.token }}@server:3000/${{ github.repository }}.git .
 
       - name: Install ruff
         run: |
@@ -28,7 +28,8 @@ jobs:
     steps:
       - name: Checkout
         run: |
-          git clone --depth 1 --branch ${{ github.ref_name }} http://server:3000/${{ github.repository }}.git .
+          apt-get update -qq && apt-get install -y -qq git > /dev/null 2>&1
+          git clone --depth 1 --branch ${{ github.ref_name }} http://token:${{ github.token }}@server:3000/${{ github.repository }}.git .
 
       - name: Install dependencies
         working-directory: smoke-tests
