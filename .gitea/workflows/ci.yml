@@ -1,5 +1,4 @@
 name: CI
-# Runner: job containers on gitea_gitea network; actions from gitea.com
 
 on:
   push:
@@ -11,11 +10,14 @@ jobs:
   lint-python:
     runs-on: ubuntu-latest
     steps:
-      - uses: https://gitea.com/actions/checkout@v4
+      - name: Checkout
+        run: |
+          apt-get update -qq && apt-get install -y -qq git > /dev/null 2>&1
+          git clone --depth 1 --branch ${{ github.ref_name }} http://server:3000/${{ github.repository }}.git .
 
       - name: Install ruff
         run: |
-          apt-get update -qq && apt-get install -y -qq python3-pip python3-venv > /dev/null 2>&1
+          apt-get install -y -qq python3-pip python3-venv > /dev/null 2>&1
           python3 -m pip install --break-system-packages ruff > /dev/null 2>&1
 
       - name: Lint Python files
@@ -24,7 +26,9 @@ jobs:
   validate-smoke-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: https://gitea.com/actions/checkout@v4
+      - name: Checkout
+        run: |
+          git clone --depth 1 --branch ${{ github.ref_name }} http://server:3000/${{ github.repository }}.git .
 
       - name: Install dependencies
         working-directory: smoke-tests
