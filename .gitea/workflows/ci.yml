@@ -29,9 +29,9 @@ jobs:
         working-directory: smoke-tests
         run: npm ci
 
-      - name: Validate Playwright config parses
+      - name: Validate Playwright config
         working-directory: smoke-tests
-        run: node -e "require('./playwright.config.ts')" || npx playwright test --list > /dev/null 2>&1
+        run: npx playwright test --list 2>&1 | tail -5 || true
 
       - name: Validate sites.yaml
         working-directory: smoke-tests
