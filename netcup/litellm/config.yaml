@@ -70,6 +70,29 @@ model_list:
       api_key: os.environ/GEMINI_API_KEY
       timeout: 300
 
+  # === RunPod vLLM Serverless (GPU on-demand) ===
+  - model_name: qwen-coder-vllm
+    litellm_params:
+      model: openai/Qwen/Qwen2.5-Coder-7B-Instruct
+      api_base: os.environ/RUNPOD_VLLM_BASE_URL
+      api_key: os.environ/RUNPOD_API_KEY
+      timeout: 120
+
+  # === vLLM Local (self-hosted GPU — activate when hardware available) ===
+  # - model_name: qwen-coder-vllm-local
+  #   litellm_params:
+  #     model: openai/Qwen/Qwen2.5-Coder-7B-Instruct
+  #     api_base: http://vllm:8000/v1
+  #     api_key: "none"
+  #     timeout: 120
+  #
+  # - model_name: llama3-vllm-local
+  #   litellm_params:
+  #     model: openai/meta-llama/Llama-3.1-8B-Instruct
+  #     api_base: http://vllm:8000/v1
+  #     api_key: "none"
+  #     timeout: 120
+
   # === Load-balanced free model groups ===
   - model_name: cheap-code
     litellm_params:
