@@ -15,6 +15,8 @@
       "Bash(command=*push --force*master*)",
       "Bash(command=*push -f*main*)",
       "Bash(command=*push -f*master*)",
+      "Bash(command=*checkout main*)",
+      "Bash(command=*checkout master*)",
       "Bash(command=*reset --hard*origin*)",
       "Bash(command=*curl*|*sh*)",
       "Bash(command=*curl*|*bash*)",
