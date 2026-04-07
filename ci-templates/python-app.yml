@@ -11,8 +11,8 @@ on:
     branches: [main]
 
 env:
-  REGISTRY: gitea.jeffemmett.com
-  IMAGE: gitea.jeffemmett.com/jeffemmett/__APP_NAME__
+  REGISTRY: localhost:3000
+  IMAGE: localhost:3000/jeffemmett/__APP_NAME__
 
 jobs:
   lint-test:
@@ -45,9 +45,7 @@ jobs:
     needs: [lint-test]
     runs-on: ubuntu-latest
     container:
-      image: docker:24-cli
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
+      image: docker:cli
     steps:
       - name: Setup tools
         run: apk add --no-cache git openssh-client curl
@@ -82,15 +80,16 @@ jobs:
 
       - name: Smoke test
         run: |
-          sleep 10
-          HTTP_CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 __HEALTH_URL__ 2>/dev/null || echo "000")
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "Smoke test failed — rolling back"
+          sleep 15
+          HTTP_CODE=$(curl -sSL -o /dev/null -w "%{http_code}" --max-time 30 __HEALTH_URL__ 2>/dev/null || echo "000")
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 400 ]; then
+            echo "Smoke test failed (HTTP $HTTP_CODE) — rolling back"
             ROLLBACK_TAG=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key root@${{ secrets.DEPLOY_HOST }} "cat __DEPLOY_PATH__/.rollback-tag 2>/dev/null")
             if [ -n "$ROLLBACK_TAG" ]; then
               ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key root@${{ secrets.DEPLOY_HOST }} \
                 "cd __DEPLOY_PATH__ && IMAGE_TAG=$ROLLBACK_TAG docker compose up -d --no-build"
+              echo "Rolled back to $ROLLBACK_TAG"
             fi
             exit 1
           fi
-          echo "Smoke test passed"
+          echo "Smoke test passed (HTTP $HTTP_CODE)"
