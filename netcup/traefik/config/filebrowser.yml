@@ -12,7 +12,7 @@ http:
     filebrowser:
       loadBalancer:
         servers:
-          - url: "http://filebrowser:8080"
+          - url: "http://jellyfin-upload:8080"
 
   middlewares:
     filebrowser-headers:
