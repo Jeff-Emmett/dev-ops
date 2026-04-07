@@ -4,7 +4,7 @@ title: Rotate exposed API keys from Obsidian vault git history
 status: To Do
 assignee: []
 created_date: '2026-03-13 05:22'
-updated_date: '2026-03-16 05:29'
+updated_date: '2026-03-24 17:18'
 labels: []
 dependencies: []
 parent_task_id: TASK-CRITICAL
@@ -89,4 +89,32 @@ After rotation:
 - All vault repos confirmed PRIVATE (Gitea 404, GitHub private/not-found)
 
 Remaining: Rotate 10 active keys on provider dashboards
+
+## Daily.co + Google Maps Removed (2026-03-23)
+- Daily.co: all config, env vars, worker types, Dockerfile args removed from canvas-website
+- Google Maps: embed logic replaced with OpenStreetMap (auto-converts Google Maps URLs to OSM)
+- No API keys needed for OSM
+- Commit: 5883228 on canvas-website dev branch
+- These keys no longer need rotation — just revoke on dashboards:
+  - Daily.co: https://dashboard.daily.co/
+  - Google Maps: https://console.cloud.google.com/apis/credentials
+- daily-examples repo can be archived (reference only, no longer used)
+
+## Rotation Complete (2026-03-24)
+
+DONE:
+- Anthropic keys rotated — 1 new consolidated key, 5 old keys deleted
+- GitHub PATs rotated — 1 new fine-grained PAT, 3 old classic PATs deleted
+- gh CLI + ~/.git-credentials rewired to new PAT via Infisical
+- Daily.co key revoked (removed from codebase, replaced with Jitsi)
+- Google Maps key deleted (replaced with OpenStreetMap)
+- Google Cloud service account key deleted
+- Deepgram key revoked
+- Git history scrubbed (7 files removed from all commits)
+- Gitea bare repo updated + GC'd
+
+REMAINING (low priority, no active services):
+- Amadeus — rotate or delete
+- SERP API — delete
+- Duffel — delete test token
 <!-- SECTION:NOTES:END -->
