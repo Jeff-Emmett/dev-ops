@@ -93,6 +93,37 @@ model_list:
   #     api_key: "none"
   #     timeout: 120
 
+  # === Strix Halo Ollama (home GPU — activate when device online) ===
+  # Set STRIX_OLLAMA_URL=http://<tailscale-ip>:11434 in Infisical when device joins mesh
+  #
+  # - model_name: llama3-70b
+  #   litellm_params:
+  #     model: ollama/llama3.1:70b
+  #     api_base: os.environ/STRIX_OLLAMA_URL
+  #     timeout: 300
+  #     stream: true
+  #
+  # - model_name: qwen-coder-32b
+  #   litellm_params:
+  #     model: ollama/qwen2.5-coder:32b
+  #     api_base: os.environ/STRIX_OLLAMA_URL
+  #     timeout: 300
+  #     stream: true
+  #
+  # - model_name: deepseek-r1-70b
+  #   litellm_params:
+  #     model: ollama/deepseek-r1:70b
+  #     api_base: os.environ/STRIX_OLLAMA_URL
+  #     timeout: 300
+  #     stream: true
+  #
+  # - model_name: qwen-72b
+  #   litellm_params:
+  #     model: ollama/qwen2.5:72b
+  #     api_base: os.environ/STRIX_OLLAMA_URL
+  #     timeout: 300
+  #     stream: true
+
   # === Load-balanced free model groups ===
   - model_name: cheap-code
     litellm_params:
@@ -104,6 +135,17 @@ model_list:
       model: ollama/llama3.1:8b
       api_base: http://ollama:11434
       timeout: 120
+  # Strix Halo cheap-code members (activate when online for load-balancing)
+  # - model_name: cheap-code
+  #   litellm_params:
+  #     model: ollama/qwen2.5-coder:7b
+  #     api_base: os.environ/STRIX_OLLAMA_URL
+  #     timeout: 120
+  # - model_name: cheap-code
+  #   litellm_params:
+  #     model: ollama/llama3.1:8b
+  #     api_base: os.environ/STRIX_OLLAMA_URL
+  #     timeout: 120
 
 litellm_settings:
   drop_params: true
