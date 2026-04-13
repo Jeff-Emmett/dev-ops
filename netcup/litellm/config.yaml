@@ -14,61 +14,40 @@ model_list:
       max_tokens: 8192
       timeout: 300
 
-  # === Local Ollama (free) ===
+  # === Gemini (free tier, reliable) ===
+  # Replaced local Ollama for qwen-coder/llama3/qwen — server RAM too constrained
+  # for 8b+ models. Ollama kept only for llama3.2:1b (tiny).
   - model_name: llama3
     litellm_params:
-      model: ollama/llama3.1:8b
-      api_base: http://ollama:11434
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
       timeout: 120
-      stream: true
-
-  - model_name: llama3-small
-    litellm_params:
-      model: ollama/llama3.2:3b
-      api_base: http://ollama:11434
-      timeout: 120
-      stream: true
-
-  - model_name: mistral
-    litellm_params:
-      model: ollama/mistral-small:24b
-      api_base: http://ollama:11434
-      timeout: 180
-      stream: true
 
   - model_name: qwen-coder
     litellm_params:
-      model: ollama/qwen2.5-coder:7b
-      api_base: http://ollama:11434
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
       timeout: 120
-      stream: true
 
   - model_name: qwen
     litellm_params:
-      model: ollama/qwen2.5:7b
-      api_base: http://ollama:11434
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
       timeout: 120
-      stream: true
 
-  # === OpenAI (activate when key added to Infisical) ===
-  # - model_name: gpt-4o
-  #   litellm_params:
-  #     model: openai/gpt-4o
-  #     api_key: os.environ/OPENAI_API_KEY
-  #     timeout: 300
-
-  # - model_name: gpt-4o-mini
-  #   litellm_params:
-  #     model: openai/gpt-4o-mini
-  #     api_key: os.environ/OPENAI_API_KEY
-  #     timeout: 300
-
-  # === Google Gemini ===
   - model_name: gemini-flash
     litellm_params:
       model: gemini/gemini-2.0-flash
       api_key: os.environ/GEMINI_API_KEY
       timeout: 300
+
+  # === Local Ollama (tiny models only — server has <5 GiB free RAM) ===
+  - model_name: llama3-small
+    litellm_params:
+      model: ollama/llama3.2:1b
+      api_base: http://10.0.45.1:11434
+      timeout: 120
+      stream: true
 
   # === RunPod vLLM Serverless (GPU on-demand) ===
   - model_name: qwen-coder-vllm
@@ -77,21 +56,6 @@ model_list:
       api_base: os.environ/RUNPOD_VLLM_BASE_URL
       api_key: os.environ/RUNPOD_API_KEY
       timeout: 120
-
-  # === vLLM Local (self-hosted GPU — activate when hardware available) ===
-  # - model_name: qwen-coder-vllm-local
-  #   litellm_params:
-  #     model: openai/Qwen/Qwen2.5-Coder-7B-Instruct
-  #     api_base: http://vllm:8000/v1
-  #     api_key: "none"
-  #     timeout: 120
-  #
-  # - model_name: llama3-vllm-local
-  #   litellm_params:
-  #     model: openai/meta-llama/Llama-3.1-8B-Instruct
-  #     api_base: http://vllm:8000/v1
-  #     api_key: "none"
-  #     timeout: 120
 
   # === Strix Halo Ollama (home GPU — activate when device online) ===
   # Set STRIX_OLLAMA_URL=http://<tailscale-ip>:11434 in Infisical when device joins mesh
@@ -109,43 +73,18 @@ model_list:
   #     api_base: os.environ/STRIX_OLLAMA_URL
   #     timeout: 300
   #     stream: true
-  #
-  # - model_name: deepseek-r1-70b
-  #   litellm_params:
-  #     model: ollama/deepseek-r1:70b
-  #     api_base: os.environ/STRIX_OLLAMA_URL
-  #     timeout: 300
-  #     stream: true
-  #
-  # - model_name: qwen-72b
-  #   litellm_params:
-  #     model: ollama/qwen2.5:72b
-  #     api_base: os.environ/STRIX_OLLAMA_URL
-  #     timeout: 300
-  #     stream: true
 
   # === Load-balanced free model groups ===
   - model_name: cheap-code
     litellm_params:
-      model: ollama/qwen2.5-coder:7b
-      api_base: http://ollama:11434
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
       timeout: 120
   - model_name: cheap-code  # fallback
     litellm_params:
-      model: ollama/llama3.1:8b
-      api_base: http://ollama:11434
+      model: ollama/llama3.2:1b
+      api_base: http://10.0.45.1:11434
       timeout: 120
-  # Strix Halo cheap-code members (activate when online for load-balancing)
-  # - model_name: cheap-code
-  #   litellm_params:
-  #     model: ollama/qwen2.5-coder:7b
-  #     api_base: os.environ/STRIX_OLLAMA_URL
-  #     timeout: 120
-  # - model_name: cheap-code
-  #   litellm_params:
-  #     model: ollama/llama3.1:8b
-  #     api_base: os.environ/STRIX_OLLAMA_URL
-  #     timeout: 120
 
 litellm_settings:
   drop_params: true
@@ -155,7 +94,6 @@ litellm_settings:
   max_budget: 50.0
   budget_duration: "30d"
 
-  # Fallback: paid models fail → try local Ollama
   default_fallbacks: ["llama3"]
 
 general_settings:
