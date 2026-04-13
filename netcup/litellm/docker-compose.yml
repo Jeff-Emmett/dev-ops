@@ -80,6 +80,8 @@ services:
       retries: 5
     networks:
       - litellm-internal
+    mem_limit: 256m
+    cpus: 0.5
 
 volumes:
   litellm-db-data:

@@ -1,0 +1,201 @@
+<?php
+# P2P Wiki LocalSettings.php
+
+$wgSitename = "P2P Foundation Wiki";
+$wgMetaNamespace = "P2P_Foundation_Wiki";
+
+$wgScriptPath = "";
+# Primary domain is wiki.p2pfoundation.net
+$wgServer = "https://wiki.p2pfoundation.net";
+$wgCanonicalServer = "https://wiki.p2pfoundation.net";
+$wgResourceBasePath = $wgScriptPath;
+
+# Database settings
+$wgDBtype = "mysql";
+$wgDBserver = "p2pwiki-db";
+$wgDBname = "p2pwiki";
+$wgDBuser = "wikiuser";
+$wgDBpassword = "CHANGE_ME";  # Real value on server only
+$wgDBprefix = "";
+$wgDBTableOptions = "ENGINE=InnoDB, DEFAULT CHARSET=binary";
+
+# Secret keys
+$wgSecretKey = "CHANGE_ME";  # Generate with: head -c 32 /dev/urandom | xxd -p
+$wgUpgradeKey = "CHANGE_ME";  # Generate with: head -c 8 /dev/urandom | xxd -p
+
+$wgMainCacheType = CACHE_NONE;
+$wgMemCachedServers = [];
+
+$wgEnableEmail = false;
+$wgEnableUploads = true;
+$wgUseImageMagick = true;
+$wgImageMagickConvertCommand = "/usr/bin/convert";
+$wgUseInstantCommons = true;
+$wgPingback = false;
+$wgLanguageCode = "en";
+
+$wgRightsUrl = "https://creativecommons.org/licenses/by-sa/4.0/";
+$wgRightsText = "Creative Commons Attribution-ShareAlike";
+$wgRightsIcon = "/resources/assets/licenses/cc-by-sa.png";
+
+$wgDiff3 = "/usr/bin/diff3";
+$wgDefaultSkin = "vector";
+wfLoadSkin( 'Vector' );
+
+# Logo configuration
+$wgLogos = [
+    '1x' => "$wgResourceBasePath/images/p/pf/p2pf-logo-160.jpg",
+];
+$wgLogo = "$wgResourceBasePath/images/p/pf/p2pf-logo-160.jpg";
+$wgFavicon = "/images/0/09/Logo-final-box-128.png";
+
+# Disable public account creation - only admins can create accounts
+$wgGroupPermissions['*']['createaccount'] = false;
+
+# Increase upload size limits
+$wgMaxUploadSize = 1024 * 1024 * 50; # 50MB
+$wgUploadSizeWarning = 1024 * 1024 * 10; # Warn at 10MB
+
+# Allow registered users to edit pages
+$wgGroupPermissions['user']['edit'] = true;
+$wgGroupPermissions['user']['createpage'] = true;
+$wgGroupPermissions['user']['createtalk'] = true;
+
+# Allow external images (for YouTube thumbnails, etc.)
+$wgAllowExternalImages = true;
+
+# Enable raw HTML for YouTube embeds (use with caution)
+$wgRawHtml = true;
+
+# EmbedVideo extension for YouTube and other video embeds
+wfLoadExtension( 'YouTube' );
+
+# Disable anonymous editing - require login for all edits
+$wgGroupPermissions['*']['edit'] = false;
+$wgGroupPermissions['*']['createpage'] = false;
+$wgGroupPermissions['*']['createtalk'] = false;
+$wgGroupPermissions['*']['writeapi'] = true;
+
+# Only registered users can edit
+$wgGroupPermissions['user']['edit'] = true;
+$wgGroupPermissions['user']['createpage'] = true;
+$wgGroupPermissions['user']['createtalk'] = true;
+
+# CategoryTree extension for better category navigation
+wfLoadExtension( 'CategoryTree' );
+
+# =====================================================
+# =====================================================
+
+# Enable WebAuthn (Passkeys/FIDO2)
+
+# Allow users to configure 2FA in preferences
+
+# =====================================================
+# ConfirmEdit - CAPTCHA for spam protection
+# =====================================================
+wfLoadExtension( 'ConfirmEdit' );
+wfLoadExtension( 'ConfirmEdit/QuestyCaptcha' );
+
+# Use question-based CAPTCHA (more accessible than image CAPTCHA)
+$wgCaptchaClass = 'QuestyCaptcha';
+$wgCaptchaQuestions = [
+    'What is the P2P Foundation about? (hint: peer-to-peer)' => [ 'peer-to-peer', 'p2p', 'peer to peer', 'commons' ],
+    'What year did the P2P Foundation start? (hint: 2005)' => [ '2005' ],
+    'What is 2 + 3?' => [ '5', 'five' ],
+];
+
+# Require CAPTCHA for account creation and adding external links
+$wgCaptchaTriggers['createaccount'] = true;
+$wgCaptchaTriggers['addurl'] = true;
+$wgCaptchaTriggers['edit'] = false;
+$wgCaptchaTriggers['create'] = false;
+
+# Exempt all logged-in users from CAPTCHA
+# New account creation still requires CAPTCHA for bot protection
+$wgGroupPermissions['user']['skipcaptcha'] = true;
+$wgGroupPermissions['sysop']['skipcaptcha'] = true;
+$wgGroupPermissions['bot']['skipcaptcha'] = true;
+
+# =====================================================
+# Enable Self-Registration with CAPTCHA protection
+# =====================================================
+$wgGroupPermissions['*']['createaccount'] = false;
+
+# =====================================================
+# Email Configuration (for password reset, notifications)
+# =====================================================
+$wgEnableEmail = true;
+$wgEnableUserEmail = true;
+$wgEmailAuthentication = true;
+$wgEmergencyContact = 'wiki@p2pfoundation.net';
+$wgPasswordSender = 'wiki@p2pfoundation.net';
+
+# SMTP configuration (using localhost for now - can be updated later)
+$wgSMTP = false; # Set to array with SMTP config if needed
+
+
+# Short URLs
+$wgArticlePath = "/$1";
+$wgUsePathInfo = true;
+
+# Fix action URLs with short URL config
+$wgScript = "/index.php";
+
+# Custom message for non-existent pages (anonymous users)
+$wgHooks['MessagesPreLoad'][] = function(&$title, &$message, $code) {
+    if ($title === 'Noarticletext-nopermission' || $title === 'noarticletext-nopermission') {
+        $message = 'There is currently no text in this page. [[Special:UserLogin|Log in]] to create it.';
+    }
+    return true;
+};
+
+# Draft namespace for article review workflow
+define('NS_DRAFT', 118);
+define('NS_DRAFT_TALK', 119);
+$wgExtraNamespaces[NS_DRAFT] = 'Draft';
+$wgExtraNamespaces[NS_DRAFT_TALK] = 'Draft_talk';
+
+# Allow subpages in Draft namespace
+$wgNamespacesWithSubpages[NS_DRAFT] = true;
+
+# Drafts are not searchable by default (until approved)
+$wgNamespacesToBeSearchedDefault[NS_DRAFT] = false;
+
+# Enable write API for bot accounts
+$wgGroupPermissions['bot']['writeapi'] = true;
+$wgGroupPermissions['sysop']['writeapi'] = true;
+
+# Enable write API globally (required for login)
+$wgEnableWriteAPI = true;
+
+# Allow sysops to edit site-wide JavaScript and CSS
+$wgGroupPermissions['sysop']['editsitejs'] = true;
+$wgGroupPermissions['sysop']['editsitecss'] = true;
+$wgGroupPermissions['sysop']['edituserjs'] = true;
+$wgGroupPermissions['sysop']['editusercss'] = true;
+
+# =====================================================
+# WikiEditor - Enhanced editing toolbar (bold, italic, etc.)
+# =====================================================
+wfLoadExtension( 'WikiEditor' );
+
+# Enable the toolbar for all users by default
+$wgDefaultUserOptions['usebetatoolbar'] = 1;
+
+# =====================================================
+# HitCounters - Page view counter (restored from old wiki)
+# =====================================================
+wfLoadExtension( 'HitCounters' );
+$wgDisableCounters = false;
+# Update hit counter on every page view (1 = every view)
+$wgHitcounterUpdateFreq = 1;
+
+# --- CirrusSearch (Elasticsearch) ---
+# Replaces MySQL full-text search for better results, fuzzy matching, no stopwords
+wfLoadExtension( 'Elastica' );
+wfLoadExtension( 'CirrusSearch' );
+$wgCirrusSearchServers = [ 'p2pwiki-elasticsearch' ];
+$wgSearchType = 'CirrusSearch';
+$wgCirrusSearchIndexBaseName = 'p2pwiki';
+
