@@ -1,0 +1,50 @@
+http:
+  middlewares:
+    sablier-slskd:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000
+          group: slskd
+          sessionDuration: 30m
+          dynamic:
+            displayName: Soulseek / SoulSync
+            theme: hacker-terminal
+            refreshFrequency: 5s
+            showDetails: true
+  routers:
+    slskd:
+      rule: "Host(`soulseek.jefflix.lol`)"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-slskd
+      service: slskd
+    soulsync:
+      rule: "Host(`soulsync.jefflix.lol`)"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-slskd
+      service: soulsync
+      priority: 1
+    soulsync-oauth:
+      rule: "Host(`soulsync.jefflix.lol`) && PathPrefix(`/callback`)"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-slskd
+      service: soulsync-oauth
+      priority: 100
+  services:
+    slskd:
+      loadBalancer:
+        servers:
+          - url: "http://slskd:5030"
+    soulsync:
+      loadBalancer:
+        servers:
+          - url: "http://soulsync:8008"
+    soulsync-oauth:
+      loadBalancer:
+        servers:
+          - url: "http://soulsync:8888"
