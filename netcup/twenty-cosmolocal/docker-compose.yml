@@ -2,11 +2,12 @@ services:
   twenty-cl-server:
     image: twentycrm/twenty:${TAG:-latest}
     container_name: twenty-cl-server
-    mem_limit: 768m
+    mem_limit: 2048m
     volumes:
       - twenty-cl-local-data:/app/packages/twenty-server/.local-storage
     environment:
       NODE_PORT: 3000
+      NODE_OPTIONS: "--max-old-space-size=1536"
       PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:?PG_DATABASE_PASSWORD must be set}@twenty-cl-db:5432/default
       SERVER_URL: ${SERVER_URL}
       REDIS_URL: redis://twenty-cl-redis:6379
@@ -36,16 +37,20 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"
       - "traefik.http.services.twenty-cl.loadbalancer.server.port=3000"
+      # Upload size limit (100 MB)
+      - "traefik.http.middlewares.twenty-cl-body.buffering.maxRequestBodyBytes=104857600"
       # Tunnel route: crm.cosmolocal.world (HTTP via CF tunnel)
       - "traefik.http.routers.twenty-cl-tunnel.rule=Host(`crm.cosmolocal.world`)"
       - "traefik.http.routers.twenty-cl-tunnel.entrypoints=web"
       - "traefik.http.routers.twenty-cl-tunnel.priority=140"
+      - "traefik.http.routers.twenty-cl-tunnel.middlewares=twenty-cl-body"
       # Direct route: crm.cosmolocal.world (HTTPS with Let's Encrypt)
       - "traefik.http.routers.twenty-cl.rule=Host(`crm.cosmolocal.world`)"
       - "traefik.http.routers.twenty-cl.entrypoints=websecure"
       - "traefik.http.routers.twenty-cl.tls=true"
       - "traefik.http.routers.twenty-cl.tls.certresolver=letsencrypt"
       - "traefik.http.routers.twenty-cl.priority=140"
+      - "traefik.http.routers.twenty-cl.middlewares=twenty-cl-body"
     networks:
       - twenty-cl-internal
       - traefik-public
@@ -53,11 +58,12 @@ services:
   twenty-cl-worker:
     image: twentycrm/twenty:${TAG:-latest}
     container_name: twenty-cl-worker
-    mem_limit: 768m
+    mem_limit: 1536m
     volumes:
       - twenty-cl-local-data:/app/packages/twenty-server/.local-storage
     command: ["yarn", "worker:prod"]
     environment:
+      NODE_OPTIONS: "--max-old-space-size=1024"
       PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:?PG_DATABASE_PASSWORD must be set}@twenty-cl-db:5432/default
       SERVER_URL: ${SERVER_URL}
       REDIS_URL: redis://twenty-cl-redis:6379
@@ -86,7 +92,7 @@ services:
   twenty-cl-db:
     image: postgres:16
     container_name: twenty-cl-db
-    mem_limit: 512m
+    mem_limit: 1024m
     volumes:
       - twenty-cl-db-data:/var/lib/postgresql/data
     environment:
@@ -105,7 +111,7 @@ services:
   twenty-cl-redis:
     image: redis:7
     container_name: twenty-cl-redis
-    mem_limit: 256m
+    mem_limit: 512m
     restart: always
     command: ["--maxmemory-policy", "noeviction"]
     healthcheck:
