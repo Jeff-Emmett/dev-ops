@@ -1,0 +1,26 @@
+http:
+  middlewares:
+    sablier-voice:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000
+          group: voice
+          sessionDuration: 15m
+          dynamic:
+            displayName: Voice Command API
+            theme: hacker-terminal
+            refreshFrequency: 5s
+            showDetails: true
+  routers:
+    voice-api:
+      rule: "Host(`voice.jeffemmett.com`)"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-voice
+      service: voice-api
+  services:
+    voice-api:
+      loadBalancer:
+        servers:
+          - url: "http://voice-command-api:8000"
