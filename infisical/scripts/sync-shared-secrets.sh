@@ -42,7 +42,7 @@ FILTER="${1:-}"
 # Define shared key mappings: source_folder/KEY -> list of target project slugs
 # Format: "source_path KEY target_slug1 target_slug2 ..."
 SHARED_KEYS=(
-  "/ai RUNPOD_API_KEY ai-orchestrator mycofi personal-dashboard pkmn-app"
+  "/ai RUNPOD_API_KEY mycofi personal-dashboard pkmn-app"
   "/ai GEMINI_API_KEY mycofi personal-dashboard"
   "/ai FAL_KEY mycofi"
   "/cloudflare CLOUDFLARE_API_TOKEN personal-dashboard"
