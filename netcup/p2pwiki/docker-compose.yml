@@ -46,8 +46,15 @@ services:
     - p2pwiki-extensions:/var/www/html/extensions
     labels:
     - traefik.enable=true
+    # HTTP → HTTPS redirect (CF proxy removed, Traefik handles TLS directly)
+    - traefik.http.routers.p2pwiki-http.rule=Host(`wiki.p2pfoundation.net`)
+    - traefik.http.routers.p2pwiki-http.entrypoints=web
+    - traefik.http.middlewares.p2pwiki-redirect.redirectscheme.scheme=https
+    - traefik.http.routers.p2pwiki-http.middlewares=p2pwiki-redirect
+    # HTTPS with Let's Encrypt
     - traefik.http.routers.p2pwiki.rule=Host(`wiki.p2pfoundation.net`)
-    - traefik.http.routers.p2pwiki.entrypoints=web
+    - traefik.http.routers.p2pwiki.entrypoints=websecure
+    - traefik.http.routers.p2pwiki.tls.certresolver=letsencrypt
     - traefik.http.services.p2pwiki.loadbalancer.server.port=80
     networks:
     - p2pwiki-internal

@@ -15,13 +15,13 @@ $wgDBtype = "mysql";
 $wgDBserver = "p2pwiki-db";
 $wgDBname = "p2pwiki";
 $wgDBuser = "wikiuser";
-$wgDBpassword = "CHANGE_ME";  # Real value on server only
+$wgDBpassword = "CHANGE_ME_DB_PASSWORD";
 $wgDBprefix = "";
 $wgDBTableOptions = "ENGINE=InnoDB, DEFAULT CHARSET=binary";
 
 # Secret keys
-$wgSecretKey = "CHANGE_ME";  # Generate with: head -c 32 /dev/urandom | xxd -p
-$wgUpgradeKey = "CHANGE_ME";  # Generate with: head -c 8 /dev/urandom | xxd -p
+$wgSecretKey = "CHANGE_ME_SECRET_KEY";
+$wgUpgradeKey = "CHANGE_ME_UPGRADE_KEY";
 
 $wgMainCacheType = CACHE_NONE;
 $wgMemCachedServers = [];
@@ -30,7 +30,7 @@ $wgEnableEmail = false;
 $wgEnableUploads = true;
 $wgUseImageMagick = true;
 $wgImageMagickConvertCommand = "/usr/bin/convert";
-$wgUseInstantCommons = true;
+$wgUseInstantCommons = false; # Disabled — was fetching images from upload.wikimedia.org (third-party)
 $wgPingback = false;
 $wgLanguageCode = "en";
 
@@ -61,14 +61,19 @@ $wgGroupPermissions['user']['edit'] = true;
 $wgGroupPermissions['user']['createpage'] = true;
 $wgGroupPermissions['user']['createtalk'] = true;
 
-# Allow external images (for YouTube thumbnails, etc.)
-$wgAllowExternalImages = true;
+# External images disabled — prevents arbitrary third-party image loads
+$wgAllowExternalImages = false;
 
-# Enable raw HTML for YouTube embeds (use with caution)
-$wgRawHtml = true;
+# Raw HTML disabled — was only used for defunct Flash/nabble embeds (136 legacy pages)
+# YouTube embeds use the YouTube extension, not raw HTML
+$wgRawHtml = false;
 
 # EmbedVideo extension for YouTube and other video embeds
 wfLoadExtension( 'YouTube' );
+
+# YouTube privacy: lazy-load thumbnails, only load iframe on click
+# Reduces passive Google tracking — video loads from youtube-nocookie.com only when user clicks
+$wgYouTubeEnableLazyLoad = true;
 
 # Disable anonymous editing - require login for all edits
 $wgGroupPermissions['*']['edit'] = false;
