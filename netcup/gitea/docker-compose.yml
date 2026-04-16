@@ -1,0 +1,78 @@
+services:
+  server:
+    image: gitea/gitea:1.21
+    container_name: gitea
+    mem_limit: 1g
+    cpus: 2
+    environment:
+    - USER_UID=1000
+    - USER_GID=1000
+    - GITEA__database__DB_TYPE=postgres
+    - GITEA__database__HOST=db:5432
+    - GITEA__database__NAME=gitea
+    - GITEA__database__USER=gitea
+    - GITEA__database__PASSWD=${GITEA_DB_PASSWORD:-gitea}
+    restart: always
+    networks:
+    - gitea
+    - traefik-public
+    volumes:
+    - ./gitea:/data
+    - /etc/timezone:/etc/timezone:ro
+    - /etc/localtime:/etc/localtime:ro
+    ports:
+    - '223:22'
+    - 127.0.0.1:3000:3000
+    depends_on:
+    - db
+    labels:
+    - traefik.enable=true
+    - traefik.http.routers.gitea.rule=Host(`gitea.jeffemmett.com`)
+    - traefik.http.routers.gitea.entrypoints=web
+    - traefik.http.services.gitea.loadbalancer.server.port=3000
+    - traefik.docker.network=traefik-public
+
+  db:
+    image: postgres:14
+    container_name: gitea-db
+    mem_limit: 256m
+    cpus: 0.5
+    restart: always
+    environment:
+    - POSTGRES_USER=gitea
+    - POSTGRES_PASSWORD=${GITEA_DB_PASSWORD:-gitea}
+    - POSTGRES_DB=gitea
+    networks:
+    - gitea
+    volumes:
+    - ./postgres:/var/lib/postgresql/data
+
+  runner:
+    image: gitea/act_runner:latest
+    container_name: gitea-runner
+    # Daemon is minimal — jobs run as sibling containers via docker.sock,
+    # so the runner itself only needs enough resources for the act_runner
+    # binary and its fetcher loop (~5 MiB idle).
+    mem_limit: 512m
+    cpus: 1
+    restart: always
+    depends_on:
+    - server
+    environment:
+    - CONFIG_FILE=/config.yaml
+    - GITEA_INSTANCE_URL=http://server:3000
+    - GITEA_RUNNER_REGISTRATION_TOKEN=${GITEA_RUNNER_REGISTRATION_TOKEN}
+    - GITEA_RUNNER_NAME=${GITEA_RUNNER_NAME:-netcup-runner-01}
+    - GITEA_RUNNER_LABELS=ubuntu-latest:docker://node:20-bookworm-slim,ubuntu-22.04:docker://node:20-bookworm-slim
+    volumes:
+    - ./runner-data:/data
+    - ./runner-config.yaml:/config.yaml
+    - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+    - gitea
+
+networks:
+  gitea:
+    external: false
+  traefik-public:
+    external: true
