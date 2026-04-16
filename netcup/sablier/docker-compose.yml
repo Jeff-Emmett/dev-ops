@@ -17,8 +17,12 @@ services:
       retries: 3
     networks:
       - traefik-public
+      - rspace-internal
     restart: unless-stopped
 
 networks:
   traefik-public:
     external: true
+  rspace-internal:
+    external: true
+    name: rspace-online_rspace-internal
