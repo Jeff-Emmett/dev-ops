@@ -138,9 +138,9 @@ tier1_custom:
     service: IronClaw
     location: /opt/apps/open-claw-iron
     runtime: rust
-    secrets_count: 3
+    secrets_count: 8
     status: migrated
-    notes: "curl+jq added to runtime stage. env_file kept for non-secret config. Migrated 2026-02-24."
+    notes: "curl+jq added to runtime image. entrypoint-wrapper via volume mount. env_file kept for non-secret config. POSTGRES_PASSWORD in .env for compose interpolation. Re-migrated 2026-04-16."
 
   - slug: personal-dashboard
     service: Personal Dashboard
@@ -214,6 +214,70 @@ tier1_custom:
     status: migrated
     priority: high
     notes: "Google service account JSON stored as env var, Mollie payments. Migrated 2026-02-24"
+
+  - slug: rtrips-online
+    service: rTrips Online
+    location: /opt/apps/rtrips-online
+    runtime: node
+    secrets_count: 4
+    status: migrated
+    notes: "entrypoint-wrapper via volume mount. DB_PASSWORD in .env for compose interpolation. Migrated 2026-04-16."
+
+  - slug: natural-language-agreements
+    service: Natural Language Agreements
+    location: /opt/apps/natural-language-agreements
+    runtime: bun
+    secrets_count: 2
+    status: migrated
+    notes: "ANTHROPIC_API_KEY + PRIVATE_KEY. Bun node-fallback runtime. Migrated 2026-04-16."
+
+  - slug: backlog-md
+    service: Backlog MD
+    location: /opt/apps/backlog-md
+    runtime: node
+    secrets_count: 1
+    status: migrated
+    notes: "GITEA_TOKEN. Migrated 2026-04-16."
+
+  - slug: rspace-registry
+    service: rSpace Registry
+    location: /opt/apps/rspace-registry
+    runtime: python
+    secrets_count: 3
+    status: migrated
+    notes: "CLOUDFLARE_INFRA_TOKEN, CLOUDFLARE_ACCOUNT_ID, REGISTRY_API_KEY. Migrated 2026-04-16."
+
+  - slug: rtube-online
+    service: rTube Online
+    location: /opt/apps/rtube-online
+    runtime: node
+    secrets_count: 6
+    status: migrated
+    notes: "R2 credentials + config. entrypoint-wrapper via volume mount. Migrated 2026-04-16."
+
+  - slug: rmesh-reticulum
+    service: rMesh Reticulum Bridge
+    location: /opt/apps/rmesh-reticulum
+    runtime: python
+    secrets_count: 1
+    status: migrated
+    notes: "BRIDGE_API_KEY. entrypoint-wrapper via volume mount. Migrated 2026-04-16."
+
+  - slug: rmesh-online
+    service: rMesh Online
+    location: /opt/apps/rmesh-online
+    runtime: node
+    secrets_count: 3
+    status: migrated
+    notes: "NEXTAUTH_SECRET, DB_PASSWORD, BRIDGE_API_KEY. DB_PASSWORD in .env for compose interpolation. Migrated 2026-04-16."
+
+  - slug: db-backup
+    service: Database Backup
+    location: /opt/apps/db-backup
+    runtime: shell
+    secrets_count: 7
+    status: migrated
+    notes: "All DB root passwords + KUMA_PUSH_URL. entrypoint-wrapper via volume mount (curl+jq runtime). Migrated 2026-04-16."
 
 # ========================================
 # Tier 2: Third-party apps (volume-mount wrapper)

@@ -8,7 +8,14 @@
 #
 set -euo pipefail
 
-INFISICAL_URL="https://secrets.jeffemmett.com"
+# Try internal URL first (avoids CF Access), fall back to external
+if curl -sf --connect-timeout 2 "http://172.27.0.6:8080/api/status" > /dev/null 2>&1; then
+  INFISICAL_URL="http://172.27.0.6:8080"
+  echo "Using internal Infisical URL"
+else
+  INFISICAL_URL="https://secrets.jeffemmett.com"
+  echo "Using external Infisical URL"
+fi
 CLAUDE_OPS_ID="5b64ec1b-5b67-4b48-8808-c2465c0be41a"
 
 # Bootstrap auth
@@ -42,6 +49,9 @@ SHARED_KEYS=(
   "/cloudflare CLOUDFLARE_ANALYTICS_TOKEN personal-dashboard"
   "/git GITEA_TOKEN personal-dashboard"
   "/git GITHUB_TOKEN personal-dashboard"
+  "/ai LITELLM_MASTER_KEY open-claw-iron rtrips-online"
+  "/ai LITELLM_API_KEY open-claw-iron rtrips-online"
+  "/bridge BRIDGE_API_KEY rmesh-reticulum rmesh-online"
 )
 
 synced=0
@@ -79,8 +89,8 @@ for mapping in "${SHARED_KEYS[@]}"; do
       continue
     fi
 
-    # Check current value in target
-    current=$(curl -sf "$INFISICAL_URL/api/v3/secrets/raw/$key?workspaceId=$target_id&environment=prod&secretPath=/" \
+    # Check current value in target (may 404 if secret doesn't exist yet)
+    current=$(curl -s "$INFISICAL_URL/api/v3/secrets/raw/$key?workspaceId=$target_id&environment=prod&secretPath=/" \
       -H "Authorization: Bearer $TOKEN" | jq -r '.secret.secretValue // empty')
 
     if [ "$current" = "$val" ]; then
