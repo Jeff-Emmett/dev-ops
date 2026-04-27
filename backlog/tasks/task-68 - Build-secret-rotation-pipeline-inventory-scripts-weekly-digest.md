@@ -1,9 +1,10 @@
 ---
 id: TASK-68
 title: 'Build secret rotation pipeline (inventory, scripts, weekly digest)'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-04-27 18:33'
+updated_date: '2026-04-27 18:41'
 labels:
   - security
   - infra
@@ -51,11 +52,30 @@ Replaces ad-hoc secret rotation (see TASK-53) with a maintained pipeline so secr
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 `dev-ops/security/secrets-inventory.yaml` exists with at least these entries: gitea-webhook-secret, github-webhook-secret, anthropic-api-key, claude-jeffemmett-mailcow, cloudflare-api-token, gitea-api-token
+- [x] #1 `dev-ops/security/secrets-inventory.yaml` exists with at least these entries: gitea-webhook-secret, github-webhook-secret, anthropic-api-key, claude-jeffemmett-mailcow, cloudflare-api-token, gitea-api-token
 - [ ] #2 `rotate-gitea-webhook.sh` works end-to-end: generates secret, updates all active deploy webhooks via Gitea API, swaps file, restarts container, runs a smoke test push
-- [ ] #3 Manual runbook for Anthropic API key rotation lists every consumer file/service and the exact update command
-- [ ] #4 `check-rotation-due.sh` runs weekly via systemd timer, emails Jeff with secrets due in next 14 days
-- [ ] #5 All scripts are idempotent and can be dry-run with `--dry-run`
-- [ ] #6 Inventory `last_rotated` field is updated atomically by the rotation scripts
-- [ ] #7 README at `dev-ops/security/README.md` documents the pattern, how to add a new secret, and how to rotate
+- [x] #3 Manual runbook for Anthropic API key rotation lists every consumer file/service and the exact update command
+- [x] #4 `check-rotation-due.sh` runs weekly via systemd timer, emails Jeff with secrets due in next 14 days
+- [x] #5 All scripts are idempotent and can be dry-run with `--dry-run`
+- [x] #6 Inventory `last_rotated` field is updated atomically by the rotation scripts
+- [x] #7 README at `dev-ops/security/README.md` documents the pattern, how to add a new secret, and how to rotate
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+**2026-04-27 — Pipeline scaffolded and live.**
+
+Files in `dev-ops/security/`:
+- `secrets-inventory.yaml` — 7 entries (gitea-webhook, github-webhook, anthropic-api-key, claude-jeffemmett-mailcow, cloudflare-api-token, gitea-api-token, porkbun-api-key)
+- `_lib.sh` — shared helpers (inventory_get, inventory_mark_rotated, parse_common_args, dry-run support)
+- `mark-rotated.sh` — bump last_rotated post-manual-rotation
+- `rotate-gitea-webhook.sh` — full automation w/ dry-run; tested in dry-run mode against live Gitea DB, found 125 webhooks correctly
+- `runbook-anthropic-api-key.md` — manual rotation steps + rollback for the 6 .env consumer files identified by grep
+- `check-rotation-due.sh` — weekly digest, tested end-to-end on Netcup (real email sent: 'digest sent: [secrets] 7 secret(s) need rotation attention')
+- `rotation-digest.service` + `.timer` — installed on Netcup, enabled, first scheduled fire 2026-05-04 11:00 CEST
+
+Deployed: dev → main → Gitea push (commit `f2a857f`) → git pull on Netcup `/opt/dev-ops/` → `systemctl enable --now rotation-digest.timer`.
+
+AC#2 left unchecked: the gitea webhook rotation script has been validated in dry-run only. AC#2 will be checked the first time a real rotation is run successfully (smoke test: empty 'Invalid signature' count in deploy-webhook logs after rotation).
+<!-- SECTION:NOTES:END -->
