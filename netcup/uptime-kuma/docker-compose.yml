@@ -1,0 +1,27 @@
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - uptime-kuma-data:/app/data
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.uptime-kuma.rule=Host(`status.jeffemmett.com`)
+      - traefik.http.routers.uptime-kuma.entrypoints=web
+      - traefik.http.services.uptime-kuma.loadbalancer.server.port=3001
+    networks:
+      - traefik-public
+
+volumes:
+  uptime-kuma-data:
+
+networks:
+  traefik-public:
+    external: true

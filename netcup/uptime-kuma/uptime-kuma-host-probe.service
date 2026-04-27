@@ -1,0 +1,14 @@
+[Unit]
+Description=Uptime Kuma host health probe
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/scripts/uptime-kuma-host-probe.sh
+StateDirectory=uptime-kuma-host-probe
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
