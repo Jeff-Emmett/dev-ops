@@ -1,0 +1,15 @@
+[Unit]
+Description=Email Jeff a weekly digest of secrets due for rotation
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/dev-ops/security
+ExecStart=/opt/dev-ops/security/check-rotation-due.sh
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/dev-ops/security
