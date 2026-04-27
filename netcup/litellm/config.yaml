@@ -1,5 +1,98 @@
 model_list:
-  # === Anthropic (paid) ===
+  # ===========================================================
+  # TIER 1 — Self-hosted local (Netcup CPU, Ollama)
+  # Only tiny models run usefully here; bigger ones thrash swap.
+  # ===========================================================
+  - model_name: llama3-small     # llama3.2:1b, fastest local tier
+    litellm_params:
+      model: ollama/llama3.2:1b
+      api_base: http://10.0.45.1:11434
+      timeout: 120
+      stream: true
+
+  - model_name: llama3-3b        # llama3.2:3b, better quality, ~1.2 tok/s
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://10.0.45.1:11434
+      timeout: 300
+      stream: true
+
+  # ===========================================================
+  # TIER 2 — Self-hosted GPU burst (RunPod vLLM)
+  # Primary path for coding + heavy reasoning. Currently serves
+  # Qwen2.5-Coder-7B; plan: upgrade to Qwen3-Coder-30B-A3B MoE.
+  # ===========================================================
+  - model_name: qwen-coder       # primary coder (backward-compat name)
+    litellm_params:
+      model: openai/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+      api_base: os.environ/RUNPOD_VLLM_BASE_URL
+      api_key: os.environ/RUNPOD_API_KEY
+      timeout: 300
+  - model_name: qwen-coder       # fallback → local 3b
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://10.0.45.1:11434
+      timeout: 300
+
+  - model_name: qwen3-coder      # new canonical name
+    litellm_params:
+      model: openai/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+      api_base: os.environ/RUNPOD_VLLM_BASE_URL
+      api_key: os.environ/RUNPOD_API_KEY
+      timeout: 300
+
+  # Generic aliases used by rspace-online etc. — self-hosted primary.
+  - model_name: llama3           # was → Gemini. Now → local 3b (or 1b fallback).
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://10.0.45.1:11434
+      timeout: 300
+  - model_name: llama3           # fallback → 1b
+    litellm_params:
+      model: ollama/llama3.2:1b
+      api_base: http://10.0.45.1:11434
+      timeout: 120
+
+  - model_name: qwen             # was → Gemini. Now → RunPod primary.
+    litellm_params:
+      model: openai/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+      api_base: os.environ/RUNPOD_VLLM_BASE_URL
+      api_key: os.environ/RUNPOD_API_KEY
+      timeout: 300
+  - model_name: qwen             # fallback → local 3b
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://10.0.45.1:11434
+      timeout: 300
+
+  - model_name: cheap-code       # RunPod → local 3b → local 1b
+    litellm_params:
+      model: openai/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+      api_base: os.environ/RUNPOD_VLLM_BASE_URL
+      api_key: os.environ/RUNPOD_API_KEY
+      timeout: 300
+  - model_name: cheap-code
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://10.0.45.1:11434
+      timeout: 300
+  - model_name: cheap-code
+    litellm_params:
+      model: ollama/llama3.2:1b
+      api_base: http://10.0.45.1:11434
+      timeout: 120
+
+  # ===========================================================
+  # TIER 3 — External APIs (paid fallback)
+  # Keys injected at startup via Infisical wrapper from
+  # litellm-proxy/prod/{ANTHROPIC_API_KEY,GEMINI_API_KEY}.
+  # ===========================================================
+  - model_name: gemini-flash
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 300
+
   - model_name: claude-sonnet
     litellm_params:
       model: anthropic/claude-sonnet-4-20250514
@@ -14,78 +107,6 @@ model_list:
       max_tokens: 8192
       timeout: 300
 
-  # === Gemini (free tier, reliable) ===
-  # Replaced local Ollama for qwen-coder/llama3/qwen — server RAM too constrained
-  # for 8b+ models. Ollama kept only for llama3.2:1b (tiny).
-  - model_name: llama3
-    litellm_params:
-      model: gemini/gemini-2.0-flash
-      api_key: os.environ/GEMINI_API_KEY
-      timeout: 120
-
-  - model_name: qwen-coder
-    litellm_params:
-      model: gemini/gemini-2.0-flash
-      api_key: os.environ/GEMINI_API_KEY
-      timeout: 120
-
-  - model_name: qwen
-    litellm_params:
-      model: gemini/gemini-2.0-flash
-      api_key: os.environ/GEMINI_API_KEY
-      timeout: 120
-
-  - model_name: gemini-flash
-    litellm_params:
-      model: gemini/gemini-2.0-flash
-      api_key: os.environ/GEMINI_API_KEY
-      timeout: 300
-
-  # === Local Ollama (tiny models only — server has <5 GiB free RAM) ===
-  - model_name: llama3-small
-    litellm_params:
-      model: ollama/llama3.2:1b
-      api_base: http://10.0.45.1:11434
-      timeout: 120
-      stream: true
-
-  # === RunPod vLLM Serverless (GPU on-demand) ===
-  - model_name: qwen-coder-vllm
-    litellm_params:
-      model: openai/Qwen/Qwen2.5-Coder-7B-Instruct
-      api_base: os.environ/RUNPOD_VLLM_BASE_URL
-      api_key: os.environ/RUNPOD_API_KEY
-      timeout: 120
-
-  # === Strix Halo Ollama (home GPU — activate when device online) ===
-  # Set STRIX_OLLAMA_URL=http://<tailscale-ip>:11434 in Infisical when device joins mesh
-  #
-  # - model_name: llama3-70b
-  #   litellm_params:
-  #     model: ollama/llama3.1:70b
-  #     api_base: os.environ/STRIX_OLLAMA_URL
-  #     timeout: 300
-  #     stream: true
-  #
-  # - model_name: qwen-coder-32b
-  #   litellm_params:
-  #     model: ollama/qwen2.5-coder:32b
-  #     api_base: os.environ/STRIX_OLLAMA_URL
-  #     timeout: 300
-  #     stream: true
-
-  # === Load-balanced free model groups ===
-  - model_name: cheap-code
-    litellm_params:
-      model: gemini/gemini-2.0-flash
-      api_key: os.environ/GEMINI_API_KEY
-      timeout: 120
-  - model_name: cheap-code  # fallback
-    litellm_params:
-      model: ollama/llama3.2:1b
-      api_base: http://10.0.45.1:11434
-      timeout: 120
-
 litellm_settings:
   drop_params: true
   request_timeout: 300
@@ -93,8 +114,7 @@ litellm_settings:
   set_verbose: false
   max_budget: 50.0
   budget_duration: "30d"
-
-  default_fallbacks: ["llama3"]
+  default_fallbacks: ["llama3-3b"]   # safe self-hosted fallback
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
