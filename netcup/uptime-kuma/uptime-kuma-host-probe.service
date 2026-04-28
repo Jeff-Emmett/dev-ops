@@ -7,6 +7,12 @@ Requires=docker.service
 Type=oneshot
 ExecStart=/opt/scripts/uptime-kuma-host-probe.sh
 StateDirectory=uptime-kuma-host-probe
+# Bound runtime so a wedged invocation can't block the next tick
+TimeoutStartSec=60
+# Get scheduled even when the host is thrashing on CPU/IO
+Nice=-5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=2
 # Hardening
 NoNewPrivileges=true
 ProtectSystem=strict

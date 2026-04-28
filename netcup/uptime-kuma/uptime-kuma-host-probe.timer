@@ -1,10 +1,12 @@
 [Unit]
-Description=Run Uptime Kuma host health probe every 5 minutes
+Description=Run Uptime Kuma host health probe every 2 minutes
 
 [Timer]
-OnBootSec=2min
-OnUnitActiveSec=5min
-AccuracySec=30s
+OnBootSec=1min
+OnUnitActiveSec=2min
+AccuracySec=10s
+# Catch up if the host was under load and a tick was missed
+Persistent=true
 
 [Install]
 WantedBy=timers.target
