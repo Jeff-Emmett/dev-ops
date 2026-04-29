@@ -1,0 +1,59 @@
+templates:
+  - "templates/postgres.template.yml"
+  - "templates/redis.template.yml"
+  - "templates/web.template.yml"
+  - "templates/web.ratelimited.template.yml"
+
+params:
+  db_default_text_search_config: "pg_catalog.english"
+  db_shared_buffers: "128MB"
+  db_work_mem: "10MB"
+
+## Memory: launcher ignores mem_limit; use docker_args for an effective limit.
+## Discourse needs ~1.3GB at idle; 2GB gives headroom for boot/sidekiq spikes.
+## NOTE: After any destroy/start, reattach: docker network connect traefik-public p2pforum
+##                                          docker network connect mailcowdockerized_mailcow-network p2pforum
+## (Launcher does not attach custom networks automatically.)
+docker_args: --memory=3g --memory-swap=3g
+
+env:
+  LC_ALL: en_US.UTF-8
+  LANG: en_US.UTF-8
+  LANGUAGE: en_US.UTF-8
+  DISCOURSE_DEFAULT_LOCALE: en
+  DISCOURSE_HOSTNAME: 'forum.p2pfoundation.net'
+  DISCOURSE_DEVELOPER_EMAILS: 'jeff@jeffemmett.com'
+  DISCOURSE_SMTP_ADDRESS: 10.100.0.253
+  DISCOURSE_SMTP_PORT: 25
+  DISCOURSE_SMTP_ENABLE_START_TLS: false
+  DISCOURSE_SMTP_OPENSSL_VERIFY_MODE: none
+  DISCOURSE_SMTP_DOMAIN: p2pfoundation.net
+  DISCOURSE_NOTIFICATION_EMAIL: noreply@p2pfoundation.net
+  DISCOURSE_FORCE_HTTPS: true
+
+volumes:
+  - volume:
+      host: /opt/discourse/shared/p2pforum
+      guest: /shared
+  - volume:
+      host: /opt/discourse/shared/p2pforum/log/var-log
+      guest: /var/log
+
+hooks:
+  after_code:
+    - exec:
+        cd: $home/plugins
+        cmd:
+          - echo "Plugin installation complete"
+
+run:
+  - exec: echo "Beginning of custom commands"
+  - exec:
+      cmd: sed -i 's/default \$scheme;/default https;/' /etc/nginx/conf.d/discourse.conf
+
+labels:
+  app_name: p2pforum
+  traefik.enable: "true"
+  traefik.docker.network: traefik-public
+  traefik.http.routers.p2pforum.rule: "Host(`forum.p2pfoundation.net`)"
+  traefik.http.services.p2pforum.loadbalancer.server.port: "80"
