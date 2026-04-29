@@ -1,0 +1,14 @@
+[Unit]
+Description=Email Jeff a weekly smoke-test PDF report
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/dev-ops
+ExecStart=/opt/dev-ops/scripts/cron/smoke-report-email.sh
+TimeoutStartSec=180
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true

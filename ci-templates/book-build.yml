@@ -1,0 +1,108 @@
+# Gitea Actions CI/CD — Book / Document build pipeline
+# For repos that build PDFs / EPUBs / DOCX from source data via doc-forge.
+#
+# Copy to: <repo>/.gitea/workflows/book-build.yml
+# Replace placeholders below:
+#   __APP_NAME__         short name (release tag prefix)
+#   __BUILD_SCRIPT__     path to build script (e.g. scripts/poetry-export/book_build.py)
+#   __BUILD_ARGS__       arguments to pass (e.g. --all)
+#   __OUTPUT_DIR__       directory the script writes outputs to
+#   __OUTPUT_GLOB__      file glob to capture as release assets (e.g. *.pdf,*.docx)
+#   __WATCH_PATHS__      paths whose changes should trigger a rebuild
+#
+# Source-of-truth model: a single data file (e.g. poems.ts, manuscript.md)
+# drives a build script that POSTs Typst/Markdown/etc. to doc-forge and writes
+# the rendered artifacts back into __OUTPUT_DIR__. Artifacts are attached to a
+# Gitea release tagged with the commit short-sha so each main-branch push
+# yields a downloadable bundle without committing binaries to the repo.
+
+name: book-build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "__WATCH_PATHS__/**"
+      - "__BUILD_SCRIPT__"
+      - ".gitea/workflows/book-build.yml"
+  workflow_dispatch: {}
+
+env:
+  DOCFORGE_URL: https://convert.jeffemmett.com
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq git python3 python3-pip curl jq > /dev/null
+
+      - name: Checkout
+        run: |
+          git clone --depth 1 --branch ${{ github.ref_name }} \
+            http://token:${{ github.token }}@server:3000/${{ github.repository }}.git .
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --break-system-packages httpx > /dev/null
+          if [ -f requirements.txt ]; then
+            python3 -m pip install --break-system-packages -r requirements.txt > /dev/null
+          fi
+
+      - name: Verify doc-forge reachable
+        run: |
+          curl -fsS "${DOCFORGE_URL}/health" | jq .
+
+      - name: Build artifacts
+        run: |
+          mkdir -p __OUTPUT_DIR__
+          python3 __BUILD_SCRIPT__ __BUILD_ARGS__
+
+      - name: Set release tag
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          STAMP=$(date -u +%Y%m%d-%H%M%S)
+          echo "TAG=__APP_NAME__-${STAMP}-${SHORT_SHA}" >> $GITHUB_ENV
+
+      - name: List artifacts
+        run: |
+          ls -la __OUTPUT_DIR__/__OUTPUT_GLOB__ || (echo "no artifacts produced" && exit 1)
+
+      - name: Create Gitea release with artifacts
+        run: |
+          ASSET_ARGS=""
+          for f in __OUTPUT_DIR__/__OUTPUT_GLOB__; do
+            [ -f "$f" ] || continue
+            ASSET_ARGS="$ASSET_ARGS -a \"$f\""
+          done
+          # Gitea CLI in CI image — fall back to API if unavailable.
+          if command -v tea >/dev/null 2>&1; then
+            eval tea releases create \
+              --repo "${{ github.repository }}" \
+              --tag "${TAG}" \
+              --title "Build ${TAG}" \
+              --note "Auto-built artifacts from commit ${{ github.sha }}" \
+              $ASSET_ARGS
+          else
+            # API path: create release, then upload each asset.
+            REL_JSON=$(curl -fsS -X POST \
+              -H "Authorization: token ${{ github.token }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"tag_name\":\"${TAG}\",\"name\":\"Build ${TAG}\",\"body\":\"Auto-built from ${{ github.sha }}\"}" \
+              "http://server:3000/api/v1/repos/${{ github.repository }}/releases")
+            REL_ID=$(echo "$REL_JSON" | jq -r .id)
+            for f in __OUTPUT_DIR__/__OUTPUT_GLOB__; do
+              [ -f "$f" ] || continue
+              curl -fsS -X POST \
+                -H "Authorization: token ${{ github.token }}" \
+                -F "attachment=@$f" \
+                "http://server:3000/api/v1/repos/${{ github.repository }}/releases/${REL_ID}/assets?name=$(basename $f)"
+            done
+          fi
+
+      - name: Summary
+        run: |
+          echo "Released as tag: ${TAG}"
+          ls -la __OUTPUT_DIR__/__OUTPUT_GLOB__

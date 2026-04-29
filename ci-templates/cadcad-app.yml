@@ -1,0 +1,122 @@
+# Gitea Actions CI — cadCAD/JAX model repo
+# Copy to: <repo>/.gitea/workflows/ci.yml
+# Replace: __APP_NAME__, __MODEL_MODULE__
+#
+# Assumes the repo follows cookiecutter-cadcad-model layout:
+#   src/<module>/model.py exposing step_fn, INITIAL_STATE, DEFAULT_PARAMS
+#
+# Jobs:
+#   1. lint-test    — ruff + pytest
+#   2. equivalence  — assert JAX simulate output matches a hand-rolled radCAD baseline within tolerance
+#   3. benchmark    — record (T=10k, T=100k) wall time for the JAX kernel; post to job log
+
+name: cadCAD CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        run: |
+          apt-get update -qq && apt-get install -y -qq git python3-pip python3-venv > /dev/null 2>&1
+          git clone --depth 1 --branch ${{ github.ref_name }} http://token:${{ github.token }}@server:3000/${{ github.repository }}.git .
+
+      - name: Install
+        run: |
+          python3 -m pip install --break-system-packages ruff pytest > /dev/null
+          # cadcad-jax is private; clone with secret CADCAD_DEPS_TOKEN (PAT, read scope).
+          git clone --depth 1 --branch dev http://jeffemmett:${{ secrets.CADCAD_DEPS_TOKEN }}@server:3000/jeffemmett/cadcad-jax.git /tmp/cadcad-jax
+          python3 -m pip install --break-system-packages /tmp/cadcad-jax > /dev/null
+          python3 -m pip install --break-system-packages -e . > /dev/null
+
+      - name: Lint
+        run: ruff check src tests --select E,F,W --ignore E501
+
+      - name: Test
+        run: python3 -m pytest -q
+
+  equivalence:
+    runs-on: ubuntu-latest
+    needs: [lint-test]
+    steps:
+      - name: Checkout
+        run: |
+          apt-get update -qq && apt-get install -y -qq git python3-pip > /dev/null 2>&1
+          git clone --depth 1 --branch ${{ github.ref_name }} http://token:${{ github.token }}@server:3000/${{ github.repository }}.git .
+
+      - name: Install
+        run: |
+          git clone --depth 1 --branch dev http://jeffemmett:${{ secrets.CADCAD_DEPS_TOKEN }}@server:3000/jeffemmett/cadcad-jax.git /tmp/cadcad-jax
+          python3 -m pip install --break-system-packages /tmp/cadcad-jax > /dev/null
+          python3 -m pip install --break-system-packages -e . radcad > /dev/null
+
+      - name: JAX vs radCAD final-state equivalence
+        run: |
+          python3 - <<'PY'
+          import jax.numpy as jnp
+          import numpy as np
+          from cadcad_jax import simulate
+          from __MODEL_MODULE__ import step_fn, INITIAL_STATE, DEFAULT_PARAMS
+
+          # Reference: pure-Python rollout of the same step_fn (no JAX scan, no JIT)
+          def py_rollout(state, params, T):
+              import jax.numpy as jnp
+              s = {k: jnp.asarray(v) for k, v in state.items()}
+              hist = {k: [] for k in s}
+              for _ in range(T):
+                  s = step_fn(s, params, key=None)
+                  for k in hist: hist[k].append(s[k])
+              return {k: jnp.stack(v) for k, v in hist.items()}
+
+          T = 200
+          jax_hist = simulate(step_fn, INITIAL_STATE, DEFAULT_PARAMS, T=T)
+          py_hist = py_rollout(INITIAL_STATE, DEFAULT_PARAMS, T=T)
+
+          ok = True
+          for k in jax_hist:
+              if not jnp.allclose(jax_hist[k][-1], py_hist[k][-1], rtol=1e-4, atol=1e-4):
+                  print(f"DIVERGENCE in {k}: jax={float(jax_hist[k][-1]):.6f} py={float(py_hist[k][-1]):.6f}")
+                  ok = False
+          if not ok:
+              raise SystemExit("JAX scan diverges from sequential rollout")
+          print("equivalence OK on", list(jax_hist.keys()))
+          PY
+
+  benchmark:
+    runs-on: ubuntu-latest
+    needs: [lint-test]
+    steps:
+      - name: Checkout
+        run: |
+          apt-get update -qq && apt-get install -y -qq git python3-pip > /dev/null 2>&1
+          git clone --depth 1 --branch ${{ github.ref_name }} http://token:${{ github.token }}@server:3000/${{ github.repository }}.git .
+
+      - name: Install
+        run: |
+          git clone --depth 1 --branch dev http://jeffemmett:${{ secrets.CADCAD_DEPS_TOKEN }}@server:3000/jeffemmett/cadcad-jax.git /tmp/cadcad-jax
+          python3 -m pip install --break-system-packages /tmp/cadcad-jax > /dev/null
+          python3 -m pip install --break-system-packages -e . > /dev/null
+
+      - name: Bench JAX kernel
+        run: |
+          python3 - <<'PY'
+          import time
+          from cadcad_jax import simulate
+          from __MODEL_MODULE__ import step_fn, INITIAL_STATE, DEFAULT_PARAMS
+
+          # Warm JIT
+          _ = simulate(step_fn, INITIAL_STATE, DEFAULT_PARAMS, T=100)
+
+          for T in (10_000, 100_000):
+              t0 = time.perf_counter()
+              h = simulate(step_fn, INITIAL_STATE, DEFAULT_PARAMS, T=T)
+              for v in h.values(): v.block_until_ready()
+              dt = time.perf_counter() - t0
+              print(f"T={T:>7}: {dt*1000:.2f}ms  ({T/dt:.0f} steps/sec)")
+          PY

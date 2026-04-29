@@ -23,6 +23,11 @@ services:
       # === Project directories ===
       - /opt/websites:/opt/websites
       - /opt/apps:/opt/apps
+      # rSpace live + dev repos — needed so email-driven agent can edit TASK-183.x slices
+      - /opt/rspace-online:/opt/rspace-online
+      - /opt/rspace-online-dev:/opt/rspace-online-dev
+      # dev-ops meta-repo (infra changes via email)
+      - /opt/dev-ops:/opt/dev-ops
 
       # === Docker socket ===
       - /var/run/docker.sock:/var/run/docker.sock

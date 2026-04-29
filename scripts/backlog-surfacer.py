@@ -2,12 +2,16 @@
 """
 Backlog Surfacing Agent — scans all project backlogs and surfaces relevant tasks.
 
-Usage: python3 backlog-surfacer.py [morning|afternoon|weekly|monthly]
+Usage: python3 backlog-surfacer.py [MODE] [--format md|pdf] [--output PATH]
+
+  MODE = morning | afternoon | weekly | monthly  (default: morning)
 
 Reads YAML frontmatter from */backlog/tasks/*.md files, applies surfacing
-rules, and outputs a formatted markdown briefing.
+rules, and outputs a formatted briefing as markdown (default) or a PDF
+rendered through doc-forge (https://convert.jeffemmett.com).
 """
 
+import argparse
 import sys
 import re
 import os
@@ -722,29 +726,60 @@ MODE_BUILDERS = {
 }
 
 
+def render_pdf(markdown_text: str, output_path: Path) -> None:
+    """Render the markdown briefing to PDF via doc-forge.
+
+    Imports docforge_client lazily so the surfacer's md-only mode still
+    works in environments without the client (e.g., minimal CI runners).
+    """
+    sys.path.insert(0, str(Path(__file__).parent))
+    from docforge_client import convert  # noqa: WPS433 (intentional local import)
+
+    pdf_bytes = convert(
+        source=("briefing.md", markdown_text.encode("utf-8")),
+        to="pdf",
+        engine="pandoc",
+    )
+    output_path.write_bytes(pdf_bytes)
+
+
 def main():
-    mode = sys.argv[1] if len(sys.argv) > 1 else "morning"
-    if mode not in MODES:
-        print(f"Usage: backlog-surfacer.py [{' | '.join(MODES)}]", file=sys.stderr)
-        sys.exit(1)
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("mode", nargs="?", default="morning", choices=MODES,
+                    help="briefing cadence (default: morning)")
+    ap.add_argument("--format", choices=["md", "pdf"], default="md",
+                    help="output format; pdf renders via doc-forge (default: md)")
+    ap.add_argument("--output",
+                    help="override default output path (auto-suffixed .md or .pdf)")
+    args = ap.parse_args()
 
     config_path = str(Path(__file__).parent / "backlog-surfacer.yml")
     config = load_config(config_path)
 
     tasks = scan_all_tasks(config)
-    content = MODE_BUILDERS[mode](tasks, config)
+    content = MODE_BUILDERS[args.mode](tasks, config)
 
-    if config["notifications"]["file"]:
-        output_path = config["briefing_output"]
-        write_briefing_file(content, output_path)
-        print(f"Briefing written to {output_path}", file=sys.stderr)
+    output_path = Path(args.output) if args.output else Path(config["briefing_output"])
+    # Adjust extension to match requested format.
+    if args.format == "pdf":
+        output_path = output_path.with_suffix(".pdf")
+    elif args.format == "md" and output_path.suffix != ".md":
+        output_path = output_path.with_suffix(".md")
 
-    if config["notifications"]["stdout"]:
+    if config["notifications"]["file"] or args.output:
+        if args.format == "pdf":
+            render_pdf(content, output_path)
+            print(f"Briefing PDF written to {output_path}", file=sys.stderr)
+        else:
+            write_briefing_file(content, str(output_path))
+            print(f"Briefing written to {output_path}", file=sys.stderr)
+
+    if config["notifications"]["stdout"] and args.format == "md":
         print(content)
 
     if config["notifications"]["notify_send"]:
-        count = extract_surface_count(mode, tasks, config)
-        send_desktop_notification(mode, count)
+        count = extract_surface_count(args.mode, tasks, config)
+        send_desktop_notification(args.mode, count)
 
 
 if __name__ == "__main__":
