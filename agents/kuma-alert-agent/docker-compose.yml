@@ -3,6 +3,7 @@ services:
     build: .
     container_name: kuma-alert-agent
     restart: always
+    mem_limit: 256m
     env_file: .env
     security_opt:
       - no-new-privileges:true
@@ -13,6 +14,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       # Persistent data (incidents, audit, state)
       - agent-data:/data
+      # Infisical secret-injection wrapper — KUMA_PASSWORD, IMAP_PASS, SMTP_PASS
+      # are fetched from Infisical and exported as env vars at startup.
+      - /opt/infisical/entrypoint-wrapper.sh:/infisical-entrypoint.sh:ro
+    entrypoint: ["/infisical-entrypoint.sh"]
+    command: ["python", "-u", "agent.py"]
     networks:
       # Reach uptime-kuma container on port 3001
       - traefik-public

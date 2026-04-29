@@ -3,6 +3,7 @@ services:
     build: .
     container_name: claude-mail-agent
     restart: always
+    mem_limit: 512m
     env_file: .env
     security_opt:
       - no-new-privileges:true
@@ -13,6 +14,15 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       # Persistent data (sessions, audit log)
       - agent-data:/data
+      # Shared inbox for collaborator attachments — visible to claude-dev via /opt/apps mount.
+      # Path inside the Rory-Schemes repo is gitignored; claude-dev reads it via its Read tool.
+      - /opt/apps/Rory-Schemes/.claude-inbox:/data/collab-inbox
+      # Owner attachments — visible to claude-dev via /opt/apps mount for document-tool processing.
+      - /opt/apps/claude-mail-agent/attachments:/data/attachments
+      # Infisical secret-injection wrapper — IMAP_PASS is fetched from Infisical at startup.
+      - /opt/infisical/entrypoint-wrapper.sh:/infisical-entrypoint.sh:ro
+    entrypoint: ["/infisical-entrypoint.sh"]
+    command: ["python", "-u", "agent.py"]
     networks:
       - mailcow-network
     depends_on: []
