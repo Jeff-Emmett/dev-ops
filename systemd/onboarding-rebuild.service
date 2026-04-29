@@ -1,0 +1,15 @@
+[Unit]
+Description=Rebuild the dev-ops onboarding handbook PDF (monthly)
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/dev-ops
+ExecStart=/opt/dev-ops/scripts/cron/onboarding-rebuild.sh
+TimeoutStartSec=300
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/dev-ops/docs

@@ -19,10 +19,26 @@ from pathlib import Path
 
 THIS = Path(__file__).resolve()
 REPO = THIS.parents[1]
-LOG_DIR = REPO / "smoke-tests" / "logs"
+
+# Match the runner's _DEFAULT_LOG_DIR resolution: prefer /var/log/smoke-tests
+# when present (production on netcup, root user), fall back to repo-local
+# smoke-tests/logs/ for development boxes.
+CANDIDATE_LOG_DIRS = [
+    Path("/var/log/smoke-tests"),
+    REPO / "smoke-tests" / "logs",
+]
 
 LOG_RE = re.compile(r"^(?P<site>.+?)_(?P<ts>\d{8}_\d{6})_(?P<status>PASS|FAIL)\.log$")
 DEFAULT_OUTPUT = Path("/tmp/smoke-test-report.pdf")
+
+
+def discover_log_dir(override: Path | None) -> Path | None:
+    if override is not None:
+        return override if override.is_dir() else None
+    for d in CANDIDATE_LOG_DIRS:
+        if d.is_dir():
+            return d
+    return None
 
 
 def parse_log_filename(name: str):
@@ -88,25 +104,49 @@ def assemble_markdown(latest: dict) -> str:
     return "\n".join(parts)
 
 
+def alert_markdown(reason: str) -> str:
+    """Produce a small alert PDF body when no logs are available — empty-state
+    is itself a signal worth surfacing (smoke runner may have stopped)."""
+    today = datetime.now().strftime("%Y-%m-%d %H:%M")
+    candidates = "\n".join(f"  - `{p}`" for p in CANDIDATE_LOG_DIRS)
+    return (
+        "---\n"
+        'title: "Smoke Test Report — Alert"\n'
+        f'subtitle: "{today}"\n'
+        "---\n\n"
+        "# No smoke-test logs found\n\n"
+        f"**Reason:** {reason}\n\n"
+        "**Searched:**\n"
+        f"{candidates}\n\n"
+        "If the smoke-test runner is supposed to be active, this likely means\n"
+        "the runner has stopped. Investigate `runner.py` / its scheduler."
+    )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--output", type=Path, default=DEFAULT_OUTPUT,
                     help=f"output PDF path (default: {DEFAULT_OUTPUT})")
+    ap.add_argument("--log-dir", type=Path, default=None,
+                    help="override log dir (default: auto-detect /var/log/smoke-tests "
+                         "or smoke-tests/logs)")
     args = ap.parse_args()
-
-    if not LOG_DIR.is_dir():
-        print(f"log dir not found: {LOG_DIR}", file=sys.stderr)
-        return 1
 
     sys.path.insert(0, str(THIS.parent))
     from docforge_client import convert  # noqa: WPS433
 
-    latest = latest_per_site(LOG_DIR)
-    if not latest:
-        print("no parseable logs found", file=sys.stderr)
-        return 2
-    md = assemble_markdown(latest)
-    print(f"summarized {len(latest)} sites", file=sys.stderr)
+    log_dir = discover_log_dir(args.log_dir)
+    if log_dir is None:
+        md = alert_markdown("no log directory exists at any expected location")
+        print("no log dir found — emitting alert PDF", file=sys.stderr)
+    else:
+        latest = latest_per_site(log_dir)
+        if not latest:
+            md = alert_markdown(f"log dir `{log_dir}` exists but contains no parseable logs")
+            print(f"log dir empty — emitting alert PDF (dir: {log_dir})", file=sys.stderr)
+        else:
+            md = assemble_markdown(latest)
+            print(f"summarized {len(latest)} sites from {log_dir}", file=sys.stderr)
 
     docx_bytes = convert(("smoke.md", md.encode("utf-8")), to="docx", engine="pandoc")
     pdf_bytes = convert(("smoke.docx", docx_bytes), to="pdf", engine="libreoffice")
