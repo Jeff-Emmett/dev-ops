@@ -1,0 +1,58 @@
+services:
+  commons-hub-directus-db:
+    container_name: commons-hub-directus-db
+    image: postgres:15-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: directus
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - directus_db_data:/var/lib/postgresql/data
+    networks:
+      - commons-hub-directus-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d directus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  directus:
+    container_name: commons-hub-directus
+    image: directus/directus:11
+    restart: unless-stopped
+    mem_limit: 1g
+    env_file: .env
+    depends_on:
+      commons-hub-directus-db:
+        condition: service_healthy
+    volumes:
+      - /opt/apps/commons-hub-files/website-images:/directus/uploads
+      - extensions:/directus/extensions
+    networks:
+      - commons-hub-directus-net
+      - traefik-public
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.commons-hub-admin.rule=Host(`commons-hub-admin.jeffemmett.com`)
+      - traefik.http.routers.commons-hub-admin.entrypoints=web
+      - traefik.http.routers.commons-hub-admin.service=commons-hub-admin
+      - traefik.http.services.commons-hub-admin.loadbalancer.server.port=8055
+
+volumes:
+  extensions:
+  directus_db_data:
+
+secrets:
+  db_password:
+    file: ./db_password
+
+networks:
+  commons-hub-directus-net:
+    name: commons-hub-directus-net
+  traefik-public:
+    external: true
