@@ -56,14 +56,31 @@ Extract ffmpeg / yt-dlp / whisper.cpp / scenedetect / gifski / gifsicle / HandBr
 - [x] `~/Github/media-forge/` repo created mirroring doc-forge shape
 - [x] All 6+ endpoints implemented and unit-tested (10 tests, 0 fail)
 - [x] Snip-gif-from-video round-trips: input mp4 → 3-second gif at correct timestamps (gifski path implemented; full e2e validation needs deployed instance)
-- [ ] WireGuard tunnel migrated cleanly (yt-dlp lives in media-forge now)
-- [ ] Deployed to `media.jeffemmett.com`
+- [ ] WireGuard tunnel migrated cleanly (yt-dlp lives in media-forge now) — currently uses direct egress; HTTP_PROXY env var ready to wire when WG client lands
+- [x] Deployed to `media.jeffemmett.com`
 - [ ] clip-forge refactored to call media-forge; no inline ffmpeg/whisper imports remain in `~/Github/clip-forge/backend/`
 - [ ] Existing clip-forge end-to-end test (YouTube URL → clip with subs) still green
 - [ ] Self-describes capabilities to Morpheus registry (when registry lands)
-- [ ] Infisical secrets wired
-- [ ] Uptime Kuma monitors added for both services
+- [x] Infisical wrapper wired (no application secrets needed yet — graceful no-op until project provisioned)
+- [x] Uptime Kuma monitor added for media-forge (id 227); clip-forge monitor pending until refactor lands
 - [ ] No regression in clip-forge user-facing behavior
+
+## Slice 2 — Live deploy on Netcup (2026-05-01)
+
+Live at https://media.jeffemmett.com with Sablier scale-to-zero. Wake cycle measured at ~12s end-to-end (cold-start + first-request fulfillment). Idle TTL 15m.
+
+Deploy artifacts:
+- `/opt/services/media-forge/` on Netcup (cloned from gitea.jeffemmett.com/jeffemmett/media-forge @ 105c73a)
+- `/root/traefik/config/sablier-media-forge.yml` — Traefik file-provider router + Sablier blocking middleware (mirrored at `dev-ops/netcup/traefik/dynamic/sablier-media-forge.yml`)
+- Cloudflare tunnel ingress added for `media.jeffemmett.com` → `http://localhost:80` (Traefik web entrypoint), inserted before catch-all 404 via `/cfd_tunnel/<id>/configurations` PUT
+- DNS CNAME via `cloudflared tunnel route dns`
+- Uptime Kuma monitor id 227, type=keyword, interval=300s (deliberately above the 15m idle TTL so monitoring doesn't keep the container constantly awake)
+
+Recipe documented at `dev-ops/netcup/media-forge-deploy.md`.
+
+Key gotcha solved: when the container is stopped, Traefik's docker provider drops the route and inbound requests 404 before Sablier can wake the container. Fix: register the route via Traefik's file provider instead of docker labels. The file provider keeps routes registered regardless of container state. Container labels keep `sablier.enable=true` + `sablier.group=media-forge` for Sablier discovery; `traefik.enable=false` prevents double-route registration.
+
+Resource footprint: ~250 MB resident when awake, 0 when asleep. Sablier itself ~30 MB always-on. Container limit enforcer's default 256m/0.5cpu cap is fine for /health, /formats, /scenedetect, small /thumbnail; for heavy /clip or /yt-dlp, raise via the enforcer's allowlist (durable) — not via `mem_limit:` in compose (clobbered every 5min by the cron).
 
 ## Slice 1 — Scaffold landed (2026-05-01)
 

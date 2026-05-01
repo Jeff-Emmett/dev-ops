@@ -1,0 +1,28 @@
+http:
+  middlewares:
+    sablier-media-forge:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000
+          group: media-forge
+          sessionDuration: 15m
+          # Blocking mode — media-forge is an HTTP API, callers wait for the
+          # response inline rather than seeing a loading screen. Timeout of
+          # 60s is well above the typical cold-start (~10–15s for ffmpeg
+          # + scenedetect import).
+          blocking:
+            timeout: 60s
+  routers:
+    media-forge:
+      rule: "Host(`media.jeffemmett.com`)"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-media-forge
+      service: media-forge
+      priority: 100
+  services:
+    media-forge:
+      loadBalancer:
+        servers:
+          - url: "http://media-forge:8000"
