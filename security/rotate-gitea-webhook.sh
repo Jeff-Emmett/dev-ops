@@ -3,19 +3,25 @@
 #
 # Sequence:
 #   1. Generate a new 64-char hex secret
-#   2. PATCH every active Gitea webhook pointing at deploy.jeffemmett.com
-#      to use the new secret
-#   3. Atomically replace /root/.secrets/webhook_secret on Netcup
-#   4. Restart deploy-webhook container so it loads the new value
-#   5. Smoke test by triggering one webhook from Gitea API and checking
-#      deploy-webhook accepts the signature
-#   6. Update last_rotated in the inventory
+#   2. Single SSH session to Netcup:
+#      a. backup current /root/.secrets/webhook_secret to .bak.<UTC ts>
+#      b. UPDATE webhook table in gitea-db for every hook whose url
+#         contains deploy.jeffemmett.com (single transaction, atomic)
+#      c. atomically swap the secret file
+#      d. restart deploy-webhook
+#   3. Smoke test: trigger /tests on the first matching hook,
+#      grep deploy-webhook logs for "Invalid signature" — fail if any.
+#   4. Update last_rotated in the inventory.
+#
+# Why direct DB UPDATE:
+#   Gitea 1.21's `PATCH /api/v1/repos/:o/:r/hooks/:id` returns 200 but
+#   silently ignores the `config.secret` field. The DB is the source
+#   of truth; updating it directly is correct and idempotent.
 #
 # Failure modes handled:
-#   - If any Gitea API PATCH fails, abort BEFORE swapping the file (so the
-#     live webhook secret stays valid for whatever wasn't updated).
-#   - If the file swap or container restart fails, attempt to roll the file
-#     back to the previous value.
+#   - DB UPDATE failure aborts before file swap (file unchanged).
+#   - Smoke test failure: the .bak.<ts> file holds the previous value,
+#     and the script prints a one-liner rollback command for the operator.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -37,90 +43,77 @@ log "rotating $NAME (DRY_RUN=$DRY_RUN)"
 NEW_SECRET=$(openssl rand -hex 32)
 log "generated new 64-char secret"
 
-# Pull the current Gitea token from Netcup
-GITEA_TOKEN=$(ssh "$SSH_TARGET" 'cat /root/.secrets/gitea_token' | tr -d '\n')
-[[ -n "$GITEA_TOKEN" ]] || die "could not fetch gitea token from netcup"
-
-# 2. Discover all webhooks pointing at deploy.jeffemmett.com via the Gitea DB
-#    (admin API doesn't list per-repo hooks in one call without paging through
-#    every repo, and the DB query is faster + complete).
-log "discovering deploy webhooks via Gitea DB..."
-HOOK_LIST=$(ssh "$SSH_TARGET" "docker exec gitea-db psql -U gitea -d gitea -tAF$'\t' -c \"
-  SELECT w.id, r.owner_name || '/' || r.name
-  FROM webhook w JOIN repository r ON w.repo_id = r.id
-  WHERE w.url LIKE '%${WEBHOOK_URL_FILTER}%'
-  ORDER BY r.name;
-\"")
-HOOK_COUNT=$(printf '%s\n' "$HOOK_LIST" | grep -c $'\t' || true)
+# 2. Discover hook count via the gitea DB (cheap; one query)
+HOOK_COUNT=$(ssh "$SSH_TARGET" "docker exec gitea-db psql -U gitea -d gitea -tAc \"
+  SELECT count(*) FROM webhook WHERE url LIKE '%${WEBHOOK_URL_FILTER}%';
+\"" | tr -d '[:space:]')
+[[ -n "$HOOK_COUNT" && "$HOOK_COUNT" -gt 0 ]] || die "no webhooks matched filter ${WEBHOOK_URL_FILTER}"
 log "found $HOOK_COUNT webhooks to update"
-[[ "$HOOK_COUNT" -gt 0 ]] || die "no webhooks matched filter ${WEBHOOK_URL_FILTER}"
 
-# 3. PATCH each webhook with the new secret. We intentionally update inactive
-#    hooks too — they should stay in sync for if/when they're re-enabled.
-patch_one() {
-  local id="$1" repo="$2"
-  curl -fsS -X PATCH \
-    -H "Authorization: token ${GITEA_TOKEN}" \
-    -H 'Content-Type: application/json' \
-    -d "{\"config\":{\"secret\":\"${NEW_SECRET}\"}}" \
-    "${GITEA_URL}/api/v1/repos/${repo}/hooks/${id}" >/dev/null
-}
-
-failed=()
-while IFS=$'\t' read -r hookid repo; do
-  [[ -z "$hookid" ]] && continue
-  if (( DRY_RUN )); then
-    log "DRY-RUN: would PATCH ${GITEA_URL}/api/v1/repos/${repo}/hooks/${hookid}"
-  else
-    if ! patch_one "$hookid" "$repo" 2>/dev/null; then
-      failed+=("${repo}#${hookid}")
-    fi
-  fi
-done <<< "$HOOK_LIST"
-
-if (( ${#failed[@]} > 0 )); then
-  die "PATCH failed for ${#failed[@]} hooks (${failed[*]}); aborting before file swap"
-fi
-
-# 4. Swap the file on Netcup atomically + restart deploy-webhook
 if (( DRY_RUN )); then
-  log "DRY-RUN: would write new secret to ${SSH_TARGET}:${SECRET_PATH} and docker restart deploy-webhook"
-else
-  ssh "$SSH_TARGET" "
-    set -e
-    cp '${SECRET_PATH}' '${SECRET_PATH}.bak.\$(date -u +%Y%m%d-%H%M%S)'
-    printf '%s' '${NEW_SECRET}' > '${SECRET_PATH}.new'
-    chmod 600 '${SECRET_PATH}.new'
-    mv '${SECRET_PATH}.new' '${SECRET_PATH}'
-    docker restart deploy-webhook >/dev/null
-  "
-  # Wait for container to be healthy
-  sleep 3
+  log "DRY-RUN: would UPDATE secret on $HOOK_COUNT webhook rows"
+  log "DRY-RUN: would write new secret to ${SSH_TARGET}:${SECRET_PATH}"
+  log "DRY-RUN: would docker restart deploy-webhook"
+  log "DRY-RUN: would smoke test + mark inventory rotated"
+  exit 0
 fi
 
-# 5. Smoke test: ask Gitea to redeliver the most recent push for one repo and
-#    confirm deploy-webhook accepts (look for absence of "Invalid signature"
-#    in the logs in the next 10s).
-if ! (( DRY_RUN )); then
-  smoke_repo=$(printf '%s\n' "$HOOK_LIST" | head -1 | cut -f2)
-  smoke_id=$(printf '%s\n' "$HOOK_LIST" | head -1 | cut -f1)
-  log "smoke test: triggering test delivery on $smoke_repo hook $smoke_id"
-  curl -fsS -X POST \
-    -H "Authorization: token ${GITEA_TOKEN}" \
-    "${GITEA_URL}/api/v1/repos/${smoke_repo}/hooks/${smoke_id}/tests" >/dev/null || \
-    log "WARN: test trigger returned non-200 (some Gitea versions don't support /tests; continue)"
-  sleep 4
-  rejects=$(ssh "$SSH_TARGET" "docker logs deploy-webhook --since 30s 2>&1 | grep -c 'Invalid.*signature' || true")
-  if [[ "$rejects" -gt 0 ]]; then
-    die "smoke test FAILED: deploy-webhook rejected $rejects signature(s) in last 30s"
-  fi
-  log "smoke test passed (no signature rejections)"
-fi
+TS=$(date -u +%Y%m%d-%H%M%S)
+BACKUP_PATH="${SECRET_PATH}.bak.${TS}"
 
-# 6. Mark rotated
-if (( DRY_RUN )); then
-  log "DRY-RUN: would mark $NAME rotated in inventory"
-else
-  new_date=$(inventory_mark_rotated "$NAME")
-  log "rotation complete; inventory updated to last_rotated=$new_date"
+# 3. Atomic-ish sequence on Netcup:
+#    DB UPDATE first (so file write only happens if DB succeeded)
+#    Between UPDATE and file mv there's a ~50-200ms window where
+#    Gitea has the new secret but the file still has the old one.
+#    Worst-case impact: a single delivery during that window gets
+#    rejected and Gitea retries — recoverable.
+ssh "$SSH_TARGET" "
+  set -euo pipefail
+  cp '${SECRET_PATH}' '${BACKUP_PATH}'
+  chmod 600 '${BACKUP_PATH}'
+
+  printf '%s' '${NEW_SECRET}' > '${SECRET_PATH}.new'
+  chmod 600 '${SECRET_PATH}.new'
+
+  # DB UPDATE first; -v ON_ERROR_STOP=1 makes psql exit non-zero on
+  # any SQL error so 'set -e' aborts before we touch the file.
+  docker exec -i gitea-db psql -U gitea -d gitea -v ON_ERROR_STOP=1 <<'SQL'
+BEGIN;
+UPDATE webhook
+   SET secret = '${NEW_SECRET}',
+       updated_unix = extract(epoch from now())::bigint
+ WHERE url LIKE '%${WEBHOOK_URL_FILTER}%';
+COMMIT;
+SQL
+
+  mv '${SECRET_PATH}.new' '${SECRET_PATH}'
+  docker restart deploy-webhook >/dev/null
+"
+sleep 4
+
+# 4. Smoke test: pick the first matching hook, fire /tests, grep logs.
+log "smoke test: triggering test delivery"
+GITEA_TOKEN=$(ssh "$SSH_TARGET" 'cat /root/.secrets/gitea_token' | tr -d '\n')
+SMOKE=$(ssh "$SSH_TARGET" "docker exec gitea-db psql -U gitea -d gitea -tAF$'\t' -c \"
+  SELECT w.id, r.owner_name || '/' || r.name FROM webhook w
+   JOIN repository r ON w.repo_id = r.id
+  WHERE w.url LIKE '%${WEBHOOK_URL_FILTER}%' ORDER BY w.id LIMIT 1;
+\"")
+SMOKE_ID=$(printf '%s' "$SMOKE" | cut -f1 | tr -d '[:space:]')
+SMOKE_REPO=$(printf '%s' "$SMOKE" | cut -f2 | tr -d '[:space:]')
+log "smoke target: hook ${SMOKE_ID} on ${SMOKE_REPO}"
+curl -fsS -X POST -H "Authorization: token ${GITEA_TOKEN}" \
+  "${GITEA_URL}/api/v1/repos/${SMOKE_REPO}/hooks/${SMOKE_ID}/tests" >/dev/null || \
+  log "WARN: test trigger returned non-200 (some Gitea versions don't support /tests; continue)"
+sleep 4
+rejects=$(ssh "$SSH_TARGET" "docker logs deploy-webhook --since 30s 2>&1 | grep -c 'Invalid.*signature' || true")
+if [[ "$rejects" -gt 0 ]]; then
+  log "ERROR: smoke FAILED — $rejects signature rejection(s) in last 30s"
+  log "rollback (manual; copy-paste):"
+  log "  ssh ${SSH_TARGET} 'OLD=\$(cat ${BACKUP_PATH}); cp ${BACKUP_PATH} ${SECRET_PATH}; docker restart deploy-webhook; docker exec -i gitea-db psql -U gitea -d gitea -c \"UPDATE webhook SET secret = '\\''\${OLD}'\\'' WHERE url LIKE '\\''%${WEBHOOK_URL_FILTER}%'\\'';\"'"
+  die "rotation failed — see rollback command above"
 fi
+log "smoke test passed (no signature rejections)"
+
+new_date=$(inventory_mark_rotated "$NAME")
+log "rotation complete; inventory updated to last_rotated=$new_date"

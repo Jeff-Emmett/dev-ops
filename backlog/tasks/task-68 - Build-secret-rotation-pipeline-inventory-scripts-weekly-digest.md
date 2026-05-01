@@ -1,10 +1,10 @@
 ---
 id: TASK-68
 title: 'Build secret rotation pipeline (inventory, scripts, weekly digest)'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-04-27 18:33'
-updated_date: '2026-04-27 18:41'
+updated_date: '2026-05-01 21:28'
 labels:
   - security
   - infra
@@ -53,7 +53,7 @@ Replaces ad-hoc secret rotation (see TASK-53) with a maintained pipeline so secr
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 `dev-ops/security/secrets-inventory.yaml` exists with at least these entries: gitea-webhook-secret, github-webhook-secret, anthropic-api-key, claude-jeffemmett-mailcow, cloudflare-api-token, gitea-api-token
-- [ ] #2 `rotate-gitea-webhook.sh` works end-to-end: generates secret, updates all active deploy webhooks via Gitea API, swaps file, restarts container, runs a smoke test push
+- [x] #2 `rotate-gitea-webhook.sh` works end-to-end: generates secret, updates all active deploy webhooks via Gitea API, swaps file, restarts container, runs a smoke test push
 - [x] #3 Manual runbook for Anthropic API key rotation lists every consumer file/service and the exact update command
 - [x] #4 `check-rotation-due.sh` runs weekly via systemd timer, emails Jeff with secrets due in next 14 days
 - [x] #5 All scripts are idempotent and can be dry-run with `--dry-run`
@@ -78,4 +78,23 @@ Files in `dev-ops/security/`:
 Deployed: dev → main → Gitea push (commit `f2a857f`) → git pull on Netcup `/opt/dev-ops/` → `systemctl enable --now rotation-digest.timer`.
 
 AC#2 left unchecked: the gitea webhook rotation script has been validated in dry-run only. AC#2 will be checked the first time a real rotation is run successfully (smoke test: empty 'Invalid signature' count in deploy-webhook logs after rotation).
+
+**2026-05-01 — AC#2 closed; rotation script overhauled.**
+
+Live rotation attempt revealed Gitea 1.21's `PATCH /api/v1/repos/:o/:r/hooks/:id` silently ignores `config.secret` updates: API returns 200, `updated_at` bumps, but DB column is never touched. Script's PATCH-loop was a 38-second no-op. File got rewritten to a fresh openssl-rand secret while gitea webhooks still held the original — 1 signature rejection from the smoke test. State recovered by reading the still-original DB secret back into the file (no actual rotation done at that point).
+
+Fix: rewrote `rotate-gitea-webhook.sh` to use direct `UPDATE webhook SET secret = ... WHERE url LIKE '%deploy.jeffemmett.com%'` against gitea-db inside the same SSH session as the file swap. Also fixed the `bak.$(date...)` heredoc bug (literal `$(date)` in filename when the script tried escape-quoting through nested ssh strings).
+
+Live rotation re-run cleanly:
+  - `UPDATE 125` (all matching webhooks in one transaction)
+  - host `/root/.secrets/webhook_secret` md5 = container `/run/secrets/webhook_secret` md5 = all 125 webhook DB md5 = `c30165583166bb5d…`
+  - smoke test passed (no `Invalid signature` in deploy-webhook logs)
+  - 5 follow-up `/tests` triggers all returned 204 with zero rejections
+  - `last_rotated` = 2026-05-01
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Secret rotation pipeline shipped: inventory + auto/manual scripts + weekly Mailcow digest, all 7 ACs satisfied. The first live rotation found Gitea 1.21's API silently drops webhook secret PATCHes; pivoted to direct gitea-db UPDATE which is now the script's primary path. Pipeline self-validated end-to-end: 125 webhooks rotated in one transaction, host file + container mount + DB rows all aligned, no signature rejections in deploy-webhook logs post-rotation.
+<!-- SECTION:FINAL_SUMMARY:END -->
