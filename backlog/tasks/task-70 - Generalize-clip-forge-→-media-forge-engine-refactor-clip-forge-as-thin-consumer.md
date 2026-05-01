@@ -58,12 +58,41 @@ Extract ffmpeg / yt-dlp / whisper.cpp / scenedetect / gifski / gifsicle / HandBr
 - [x] Snip-gif-from-video round-trips: input mp4 → 3-second gif at correct timestamps (gifski path implemented; full e2e validation needs deployed instance)
 - [ ] WireGuard tunnel migrated cleanly (yt-dlp lives in media-forge now) — currently uses direct egress; HTTP_PROXY env var ready to wire when WG client lands
 - [x] Deployed to `media.jeffemmett.com`
-- [ ] clip-forge refactored to call media-forge; no inline ffmpeg/whisper imports remain in `~/Github/clip-forge/backend/`
-- [ ] Existing clip-forge end-to-end test (YouTube URL → clip with subs) still green
+- [x] clip-forge refactored — media-forge HTTP client + 3-tier fallback dispatcher landed in clip-forge @ da1e9c3 (USE_MEDIA_FORGE=false by default; flip to true for cutover)
+- [ ] Existing clip-forge end-to-end test (YouTube URL → clip with subs) still green with USE_MEDIA_FORGE=true (manual test pending after cutover flip)
+- [ ] No inline ffmpeg/whisper imports remain — subtitle_render.py + download.py still have them as fallback paths (kept during cutover)
 - [ ] Self-describes capabilities to Morpheus registry (when registry lands)
 - [x] Infisical wrapper wired (no application secrets needed yet — graceful no-op until project provisioned)
 - [x] Uptime Kuma monitor added for media-forge (id 227); clip-forge monitor pending until refactor lands
 - [ ] No regression in clip-forge user-facing behavior
+
+## Slice 3 — clip-forge HTTP client + 3-tier fallback (2026-05-01)
+
+clip-forge gains a new first tier in its fallback chain:
+
+  1. media-forge HTTP   (NEW)  use_media_forge=True
+  2. morpheus engine pool       engine_pool_for_clips=True
+  3. local subprocess           default fallback
+
+Files (clip-forge @ commit `da1e9c3`):
+- `backend/app/services/media_forge.py` (NEW, 250 LOC) — async HTTP client mirroring engine_pool.py's interface. 6 verbs: extract_clip, extract_thumbnail, download_url, transcribe, scenedetect, health.
+- `backend/app/services/clip_extraction.py` — both `extract_clip` and `extract_thumbnail` dispatchers updated to try media-forge first, fall through to engine pool, then local.
+- `backend/app/config.py` — three new settings: `media_forge_url`, `media_forge_timeout`, `use_media_forge` (default False for safe rollout).
+- `backend/tests/test_media_forge.py` (NEW) — 12 passing in the production container. Covers disable/unavailable contract, enable shape, wire format, 5xx-vs-4xx differentiation, ConnectError handling.
+
+End-to-end smoke verified from inside clip-forge-backend-1: `media_forge.health()` returns the live media-forge readiness matrix (200 OK in <1s).
+
+Cutover knob: flip `USE_MEDIA_FORGE=true` env var on the production clip-forge worker. Existing engine-pool + local subprocess paths remain as fallback so the change is reversible at any time.
+
+Closes 1 more AC:
+  [x] clip-forge can call media-forge over HTTP
+
+Remaining 5:
+  [ ] WireGuard tunnel migrated to media-forge (currently both run direct egress; flip HTTP_PROXY env on media-forge once WG sidecar moves)
+  [ ] No inline ffmpeg/whisper imports remain (subtitle_render.py + download.py still have them as fallback paths — kept until cutover proven)
+  [ ] clip-forge end-to-end test (YouTube URL → clip with subs) still green with USE_MEDIA_FORGE=true
+  [ ] Self-describes capabilities to Morpheus registry (when registry lands)
+  [ ] No regression in user-facing behaviour
 
 ## Slice 2 — Live deploy on Netcup (2026-05-01)
 
