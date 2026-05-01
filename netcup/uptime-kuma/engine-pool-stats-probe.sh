@@ -70,12 +70,19 @@ d = json.load(sys.stdin)["engines"]
 for e in ("ffmpeg", "whisper", "imagemagick", "libvips"):
     bucket = d.get(e, {})
     q = bucket.get("queue") or {}
-    print(f"{e.upper()}_N={bucket.get(\"n\") or 0}")
-    print(f"{e.upper()}_MEDIAN={bucket.get(\"median_ms\") or 0}")
-    print(f"{e.upper()}_P95={bucket.get(\"p95_ms\") or 0}")
-    print(f"{e.upper()}_WAITING={q.get(\"waiting\") or 0}")
-    print(f"{e.upper()}_ACTIVE={q.get(\"active\") or 0}")
-    print(f"{e.upper()}_FAILED={q.get(\"failed\") or 0}")
+    n = bucket.get("n") or 0
+    median = bucket.get("median_ms") or 0
+    p95 = bucket.get("p95_ms") or 0
+    waiting = q.get("waiting") or 0
+    active = q.get("active") or 0
+    failed = q.get("failed") or 0
+    pfx = e.upper()
+    print(f"{pfx}_N={n}")
+    print(f"{pfx}_MEDIAN={median}")
+    print(f"{pfx}_P95={p95}")
+    print(f"{pfx}_WAITING={waiting}")
+    print(f"{pfx}_ACTIVE={active}")
+    print(f"{pfx}_FAILED={failed}")
 ' )"
 
 for tup in \
