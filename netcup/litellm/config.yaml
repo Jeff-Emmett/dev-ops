@@ -120,6 +120,13 @@ model_list:
       api_key: os.environ/FUNION_SIDECAR_TOKEN
       timeout: 300
 
+  - model_name: funion-llama-3-8b
+    litellm_params:
+      model: openai/meta-llama-3.1-8b-instruct-Q4
+      api_base: http://funion-sidecar-llama3:9100/v1
+      api_key: os.environ/FUNION_SIDECAR_TOKEN
+      timeout: 600
+
 litellm_settings:
   drop_params: true
   request_timeout: 300
