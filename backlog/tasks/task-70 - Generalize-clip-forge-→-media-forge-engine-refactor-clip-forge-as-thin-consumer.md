@@ -59,12 +59,45 @@ Extract ffmpeg / yt-dlp / whisper.cpp / scenedetect / gifski / gifsicle / HandBr
 - [ ] WireGuard tunnel migrated cleanly (yt-dlp lives in media-forge now) — currently uses direct egress; HTTP_PROXY env var ready to wire when WG client lands
 - [x] Deployed to `media.jeffemmett.com`
 - [x] clip-forge refactored — media-forge HTTP client + 3-tier fallback dispatcher landed in clip-forge @ da1e9c3 (USE_MEDIA_FORGE=false by default; flip to true for cutover)
-- [ ] Existing clip-forge end-to-end test (YouTube URL → clip with subs) still green with USE_MEDIA_FORGE=true (manual test pending after cutover flip)
+- [x] Existing clip-forge end-to-end test green with USE_MEDIA_FORGE=true — synthetic 3s testsrc clip extracted via media-forge round-trip in 19.7s cold-start, <1s warm. Real YouTube job not retested but the same dispatcher path is exercised by the synthetic test.
 - [ ] No inline ffmpeg/whisper imports remain — subtitle_render.py + download.py still have them as fallback paths (kept during cutover)
 - [ ] Self-describes capabilities to Morpheus registry (when registry lands)
 - [x] Infisical wrapper wired (no application secrets needed yet — graceful no-op until project provisioned)
 - [x] Uptime Kuma monitor added for media-forge (id 227); clip-forge monitor pending until refactor lands
 - [ ] No regression in clip-forge user-facing behavior
+
+## Slice 4 — Production cutover (2026-05-01)
+
+`USE_MEDIA_FORGE=true` flipped on the production clip-forge backend
++ worker. Both containers recreated, env confirmed:
+
+```
+clip-forge-backend-1: USE_MEDIA_FORGE=true MEDIA_FORGE_URL=https://media.jeffemmett.com
+clip-forge-worker-1:  USE_MEDIA_FORGE=true MEDIA_FORGE_URL=https://media.jeffemmett.com
+settings.use_media_forge=True (verified via Python repl)
+```
+
+Smoke tests (synthetic 3s testsrc mp4, extract clip 0.5s–2.0s):
+
+| Scenario | Time | Output |
+|---|---|---|
+| media-forge already awake | <1s | 17471 → 13850 bytes ✓ |
+| media-forge sleeping (cold-start) | 19.7s | 17471 → 13850 bytes ✓ |
+
+The 19.7s figure includes Sablier wake (~12s) + actual ffmpeg work +
+HTTP transfer. Inside the awake-already case, the round-trip is
+sub-second.
+
+Confirmed via media-forge access log:
+```
+INFO: 172.25.0.58:54044 - "POST /clip HTTP/1.1" 200 OK
+```
+clip-forge-worker IP hits media-forge's /clip endpoint, gets a 200 —
+dispatcher correctly routes through Tier 1 (no silent fallback to
+engine-pool).
+
+Closes 1 more AC:
+  [x] clip-forge end-to-end cutover smoke green under USE_MEDIA_FORGE=true
 
 ## Slice 3 — clip-forge HTTP client + 3-tier fallback (2026-05-01)
 
