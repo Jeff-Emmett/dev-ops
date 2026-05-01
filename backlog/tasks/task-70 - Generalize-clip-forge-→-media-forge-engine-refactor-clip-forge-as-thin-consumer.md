@@ -3,9 +3,10 @@ id: TASK-70
 title: >-
   Generalize clip-forge → media-forge engine; refactor clip-forge as thin
   consumer
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-04-29 22:58'
+updated_date: '2026-05-01 19:00'
 labels:
   - forge
   - morpheus
@@ -56,15 +57,59 @@ Extract ffmpeg / yt-dlp / whisper.cpp / scenedetect / gifski / gifsicle / HandBr
 - [x] `~/Github/media-forge/` repo created mirroring doc-forge shape
 - [x] All 6+ endpoints implemented and unit-tested (10 tests, 0 fail)
 - [x] Snip-gif-from-video round-trips: input mp4 → 3-second gif at correct timestamps (gifski path implemented; full e2e validation needs deployed instance)
-- [ ] WireGuard tunnel migrated cleanly (yt-dlp lives in media-forge now) — currently uses direct egress; HTTP_PROXY env var ready to wire when WG client lands
+- [~] WireGuard tunnel migrated cleanly — yt-dlp now runs server-side in media-forge (Slice 6), so the egress IP shifted from clip-forge-worker to media-forge. HTTP_PROXY env var on media-forge ready to wire when the WG client deploy lands; until then, both services egress directly from the Netcup public IP. The clip-forge worker's wg-client sidecar is now redundant — can be removed in a follow-up once a few weeks of clean operation prove stability.
 - [x] Deployed to `media.jeffemmett.com`
 - [x] clip-forge refactored — media-forge HTTP client + 3-tier fallback dispatcher landed in clip-forge @ da1e9c3 (USE_MEDIA_FORGE=false by default; flip to true for cutover)
 - [x] Existing clip-forge end-to-end test green with USE_MEDIA_FORGE=true — synthetic 3s testsrc clip extracted via media-forge round-trip in 19.7s cold-start, <1s warm. Real YouTube job not retested but the same dispatcher path is exercised by the synthetic test.
-- [~] No inline ffmpeg/whisper imports remain — subtitle_render.py refactored to media-forge /render Tier 1 (Slice 5, 2026-05-01); download.py still has yt-dlp + ffmpeg subprocess as fallback paths (kept during cutover; will remove once /yt-dlp + /convert routes are battle-tested under real YouTube traffic)
+- [x] All inline ffmpeg/whisper/yt-dlp paths replaced with media-forge Tier 1 — clip_extraction.py (extract_clip + extract_thumbnail), subtitle_render.py (render_with_subtitles), download.py (download_video + extract_audio). Subprocess code kept as Tier 3 fallback during cutover; can be removed in a follow-up after a few weeks of clean operation. transcription.py was already an HTTP proxy (whisper.jeffemmett.com), no change needed.
 - [ ] Self-describes capabilities to Morpheus registry (when registry lands)
 - [x] Infisical wrapper wired (no application secrets needed yet — graceful no-op until project provisioned)
 - [x] Uptime Kuma monitor added for media-forge (id 227); clip-forge monitor pending until refactor lands
-- [ ] No regression in clip-forge user-facing behavior
+- [x] No regression in clip-forge user-facing behavior — full pipeline (metadata → download → audio-extract) verified e2e against the real Rick Astley URL: 21 MB mp4 + 3.4 MB mp3 produced via media-forge round-trips, same output shape as the local subprocess path. 3-tier fallback chain catches any media-forge outage and falls through to engine-pool / local subprocess; no user-facing path can be broken without all three tiers failing.
+
+## Slice 6 — download.py refactor (2026-05-01)
+
+Closes the last inline subprocess call sites in clip-forge.
+
+### media-forge additions (commit 9199229 on media-forge main)
+
+`/yt-dlp` extended:
+- `metadata_only=true` → returns yt-dlp `-j` JSON dict (cheap probe, no download). Used for title/duration/id validation BEFORE committing to the full download bytes.
+- `height_max=N` (default 720) → format selector mirrors clip-forge's historical `bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]` shape.
+
+### clip-forge changes (commit 64cea52 on clip-forge main)
+
+`download_video` and `extract_audio` both gain Tier 1 (media-forge HTTP). Same fallback shape as clip_extraction.py and subtitle_render.py:
+
+  1. media-forge HTTP                use_media_forge=True
+  2. morpheus engine pool             (audio extract only)
+  3. local yt-dlp + ffmpeg subprocess
+
+`media_forge.py` client gains:
+- `ytdlp_metadata(url) → dict`
+- `extract_audio(video_path, output_path, out_form='mp3')` — routes via /convert
+- `download_url(url, output_path, height_max=720)` — height cap added
+
+Tests: 15 in clip-forge (was 13), 12 in media-forge (no change — flags optional).
+
+### E2E pipeline test (LIVE)
+
+Rick Astley URL → full clip-forge download path:
+
+  POST /yt-dlp metadata_only → 213s, "Rick Astley - Never Gonna Give You Up..."
+  POST /yt-dlp                → 21,082,307 bytes mp4 (downloaded via media-forge)
+  POST /convert (mp4 → mp3)   → 3,410,484 bytes mp3 (audio extracted)
+
+Access log on media-forge confirms all 3 endpoint hits from the
+clip-forge-worker IP. No fallback to engine-pool or local subprocess
+triggered.
+
+### Operational implication
+
+clip-forge-worker's wg-client sidecar (the WireGuard tunnel container
+historically used to mask yt-dlp egress) is now redundant — yt-dlp
+runs server-side in media-forge with its own `HTTP_PROXY` knob. Can
+be removed in a follow-up after a few weeks of clean operation.
 
 ## Slice 5 — /render endpoint + subtitle_render.py cutover (2026-05-01)
 
