@@ -1,0 +1,74 @@
+services:
+  funion-sidecar:
+    image: funion-sidecar:llamacpp
+    container_name: funion-sidecar
+    restart: unless-stopped
+    init: true
+    user: "1000:1000"
+    volumes:
+      - ./sidecar:/sidecar:ro
+      - ./models:/models:ro
+    environment:
+      FUNION_SIDECAR_TOKEN: ${FUNION_SIDECAR_TOKEN}
+    command:
+      - python3
+      - /sidecar/main.py
+      - --http
+      - 0.0.0.0:9100
+      - --http-auth-token-env
+      - FUNION_SIDECAR_TOKEN
+      - --model-id
+      - phi-3-mini-4k-instruct-Q4
+      - --backend
+      - llamacpp
+      - --model-path
+      - /models/Phi-3-mini-4k-instruct-q4.gguf
+      - --n-ctx
+      - "4096"
+      - --log-level
+      - INFO
+    networks:
+      - ai-internal
+    expose:
+      - "9100"
+    mem_limit: 4g
+    cpus: 4
+
+  funion-sidecar-llama3:
+    image: funion-sidecar:llamacpp
+    container_name: funion-sidecar-llama3
+    restart: unless-stopped
+    init: true
+    user: "1000:1000"
+    volumes:
+      - ./sidecar:/sidecar:ro
+      - ./models:/models:ro
+    environment:
+      FUNION_SIDECAR_TOKEN: ${FUNION_SIDECAR_TOKEN}
+    command:
+      - python3
+      - /sidecar/main.py
+      - --http
+      - 0.0.0.0:9100
+      - --http-auth-token-env
+      - FUNION_SIDECAR_TOKEN
+      - --model-id
+      - meta-llama-3.1-8b-instruct-Q4
+      - --backend
+      - llamacpp
+      - --model-path
+      - /models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
+      - --n-ctx
+      - "4096"
+      - --log-level
+      - INFO
+    networks:
+      - ai-internal
+    expose:
+      - "9100"
+    mem_limit: 8g
+    cpus: 6
+
+networks:
+  ai-internal:
+    external: true
