@@ -17,6 +17,10 @@ ssh netcup 'cd /opt/apps/uptime-kuma && docker compose up -d'
 
 174 active monitors as of 2026-04-27 — public HTTPS endpoints, Mailcow IMAP/SMTP port checks, daily DB backup push monitor. All wired to the "Mailcow Email Alerts" notification channel.
 
+Monitor specs that need a manual UI add (committed for reproducibility):
+
+- `pay.jeffemmett.com` — payment-forge — see `payment-forge-monitor.md`
+
 ## Internal-network monitor reachability (from `traefik-public`)
 
 | Target                     | Reachable | How                                         |
