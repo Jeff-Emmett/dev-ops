@@ -1,0 +1,13 @@
+[Unit]
+Description=Uptime Kuma morpheus-engine-pool latency probe
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/scripts/uptime-kuma-engine-pool-probe.sh
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
