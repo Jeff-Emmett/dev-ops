@@ -1,0 +1,17 @@
+# Drop-in snippet for /opt/apps/litellm/config.yaml — paste right
+# above the `litellm_settings:` block, after the existing TIER 1.5
+# (funion-phi3) and TIER 1.5 (funion-llama-3-8b) entries.
+#
+# Replace <ENDPOINT_ID> with the value from the RunPod serverless
+# endpoint dashboard once provisioned.
+
+  # ===========================================================
+  # TIER 3 — funion sidecar (Qwen2.5-Coder-32B, RunPod serverless)
+  # GPU-accelerated. Min workers 0; charged only during inference.
+  # ===========================================================
+  - model_name: funion-qwen-coder-32b
+    litellm_params:
+      model: openai/Qwen/Qwen2.5-Coder-32B-Instruct
+      api_base: https://api.runpod.ai/v2/<ENDPOINT_ID>/openai/v1
+      api_key: os.environ/RUNPOD_API_KEY
+      timeout: 600
