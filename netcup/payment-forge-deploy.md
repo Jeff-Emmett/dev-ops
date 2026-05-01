@@ -109,10 +109,50 @@ export INFISICAL_TOKEN=<org admin>
 ~/Github/dev-ops/infisical/scripts/create-project.sh payment-forge
 ```
 
-Then add secrets:
-- `X402_DEFAULT_PAYTO` — wallet address for the demo paywall + IOU recipient default
-- `BASE_RPC_URL`, `BASE_SEPOLIA_RPC_URL` — for cowswap quote calls
-- `COWSWAP_API_KEY` — only if Cowswap requires it (read-only quote endpoint typically doesn't)
+Update `/opt/services/payment-forge/.env` on Netcup with the resulting `INFISICAL_CLIENT_ID` + `INFISICAL_CLIENT_SECRET`, then `docker compose restart payment-forge` to pick up the injected secrets.
 
-Update `.env` on Netcup with the resulting `INFISICAL_CLIENT_ID` + `INFISICAL_CLIENT_SECRET`,
-then `docker compose restart payment-forge` to pick up the injected secrets.
+### Env var reference (all optional — rails auto-register only when set)
+
+| Env var | Activates | Source |
+|---------|-----------|--------|
+| `X402_DEFAULT_PAYTO` | `/demo-paywalled/*` route, IOU recipient default | wallet address |
+| `BASE_RPC_URL` | viem PublicClient for bonding-curve rails | Alchemy / Infura / public node |
+| `BASE_SEPOLIA_RPC_URL` | viem on testnet | (testnet variant) |
+| `COWSWAP_API_KEY` | Cowswap quote API (typically not needed for read-only) | cow.fi |
+| `TRANSAK_PARTNER_API_KEY` | `transak-base` rail | transak.com/partner agreement (TASK-78) |
+| `TRANSAK_ENVIRONMENT` | `staging` or `production` (default) | — |
+| `TRANSAK_ESTIMATED_FEE_BPS` | path-finder fee estimate (default 100) | optional |
+| `ONRAMPER_API_KEY` | `onramper-base` rail | onramper.com (TASK-78) |
+| `ONRAMPER_ESTIMATED_FEE_BPS` | path-finder fee estimate (default 75) | optional |
+| `BITREFILL_API_TOKEN` | `bitrefill-base` rail | bitrefill.com/business/api-access (TASK-79) |
+| `BITREFILL_BASE_URL` | API endpoint override | optional |
+| `RSPACE_CATALOG_BASE_URL` | `rspace-base` rail | rspace-online deploy (TASK-79 prereq) |
+| `GYROSCOPE_RESERVE_BASE` | `gyroscope-base` rail (with GYD + INPUT) | gyro.fi when deployed on Base |
+| `GYROSCOPE_GYD_BASE` | (with above) | GYD token address |
+| `GYROSCOPE_INPUT_BASE` | (with above) | typically USDC |
+| `ERC4626_VAULTS_JSON` | one `erc4626-base-<idSuffix>` rail per entry | Morpho / Yearn / Aave v3 vaults |
+| `MYCO_VAULT_ADDRESS_BASE` | `myco-base` rail (on-chain path) | $MYCO contract once deployed (TASK-80) |
+| `MYCO_ASSET_ADDRESS_BASE` | (with above) | underlying token, typically USDC |
+| `MYCO_HTTP_ENDPOINT` | `myco-base` rail (HTTP path) | simulate.rspace.online/api once REST surface ships |
+
+### `ERC4626_VAULTS_JSON` shape
+
+```json
+[
+  {"chain":"base","address":"0x...","idSuffix":"morpho-usdc","slippageBps":10},
+  {"chain":"base","address":"0x...","idSuffix":"yearn-usdc"}
+]
+```
+
+`slippageBps` defaults to 0; `assetAddress` is fetched via `vault.asset()` if omitted.
+
+### Activation order
+
+The rails fall into four families with separate prerequisites:
+
+1. **TASK-77** — core deploy: `X402_DEFAULT_PAYTO`, `BASE_RPC_URL`, `BASE_SEPOLIA_RPC_URL`
+2. **TASK-78** — fiat: `TRANSAK_PARTNER_API_KEY`, `ONRAMPER_API_KEY`
+3. **TASK-79** — redemption: `BITREFILL_API_TOKEN`, `RSPACE_CATALOG_BASE_URL`
+4. **TASK-80** — bonding curves: Gyroscope addresses, `ERC4626_VAULTS_JSON`, `MYCO_*`
+
+Each family activates independently — no need to wait for the full set.
