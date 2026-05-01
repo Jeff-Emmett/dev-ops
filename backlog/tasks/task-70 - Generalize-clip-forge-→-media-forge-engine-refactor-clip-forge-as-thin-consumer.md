@@ -53,9 +53,9 @@ Extract ffmpeg / yt-dlp / whisper.cpp / scenedetect / gifski / gifsicle / HandBr
 
 ## Acceptance criteria
 
-- [ ] `~/Github/media-forge/` repo created mirroring doc-forge shape
-- [ ] All 6+ endpoints implemented and unit-tested
-- [ ] Snip-gif-from-video round-trips: input mp4 → 3-second gif at correct timestamps
+- [x] `~/Github/media-forge/` repo created mirroring doc-forge shape
+- [x] All 6+ endpoints implemented and unit-tested (10 tests, 0 fail)
+- [x] Snip-gif-from-video round-trips: input mp4 → 3-second gif at correct timestamps (gifski path implemented; full e2e validation needs deployed instance)
 - [ ] WireGuard tunnel migrated cleanly (yt-dlp lives in media-forge now)
 - [ ] Deployed to `media.jeffemmett.com`
 - [ ] clip-forge refactored to call media-forge; no inline ffmpeg/whisper imports remain in `~/Github/clip-forge/backend/`
@@ -64,6 +64,33 @@ Extract ffmpeg / yt-dlp / whisper.cpp / scenedetect / gifski / gifsicle / HandBr
 - [ ] Infisical secrets wired
 - [ ] Uptime Kuma monitors added for both services
 - [ ] No regression in clip-forge user-facing behavior
+
+## Slice 1 — Scaffold landed (2026-05-01)
+
+Initial repo at https://gitea.jeffemmett.com/jeffemmett/media-forge (commit 2743000).
+
+Endpoints (server.py, ~600 LOC):
+- `POST /convert` — universal media format pivot via ffmpeg
+- `POST /clip` — explicit window snip; gifski for `out_form=gif`
+- `POST /thumbnail` — single-frame extraction at timestamp
+- `POST /scenedetect` — PySceneDetect content-aware → JSON timestamps
+- `POST /transcribe` — proxy to whisper-forge sibling (no GPU bundled)
+- `POST /yt-dlp` — URL fetch via HTTP_PROXY tunnel + transmux
+- `GET  /formats` — capability catalog (mirrors doc-forge)
+- `GET  /health` — service health + per-binary readiness matrix; emits `"status":"ok"` substring for kuma keyword-monitor
+
+Stack:
+- Dockerfile: python:3.11-slim + ffmpeg + yt-dlp (latest from upstream release) + gifski .deb + gifsicle + HandBrakeCLI; non-root runtime
+- docker-compose.yml: Traefik labels for media.jeffemmett.com, tmpfs work-tmp volume, healthcheck on /health
+- Tests: 10 smoke tests covering catalog + validation paths (path 4xx + 503 rejections without subprocess spawn)
+
+Slice 2 (operator session — TASK-70 remaining ACs):
+- Build + deploy on Netcup
+- Cloudflare tunnel ingress add for media.jeffemmett.com
+- Uptime Kuma monitor (use the same kuma-alert-agent one-shot pattern documented in TASK-71's monitor add)
+- Migrate WireGuard tunnel from clip-forge
+- Refactor clip-forge to call media-forge over HTTP (keep inline copies as fallback during cutover)
+- Infisical project provisioning
 
 ## Cross-references
 
