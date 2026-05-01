@@ -107,6 +107,19 @@ model_list:
       max_tokens: 8192
       timeout: 300
 
+  # ===========================================================
+  # TIER 1.5 — funion sidecar (Phi-3-mini, Netcup CPU)
+  # OpenAI-compatible endpoint on ai-internal docker network.
+  # Auth-gated by FUNION_SIDECAR_TOKEN. No public Cloudflare exposure.
+  # Backed by /opt/apps/funion-sidecar/ (zknet-labs-src compute-courier).
+  # ===========================================================
+  - model_name: funion-phi3
+    litellm_params:
+      model: openai/phi-3-mini-4k-instruct-Q4
+      api_base: http://funion-sidecar:9100/v1
+      api_key: os.environ/FUNION_SIDECAR_TOKEN
+      timeout: 300
+
 litellm_settings:
   drop_params: true
   request_timeout: 300

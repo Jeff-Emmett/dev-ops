@@ -29,6 +29,11 @@ services:
       INFISICAL_CLIENT_SECRET: ${INFISICAL_CLIENT_SECRET}
       DATABASE_URL: postgresql://litellm:${POSTGRES_PASSWORD}@litellm-db:5432/litellm
       STORE_MODEL_IN_DB: "True"
+      # funion-sidecar bearer token for the funion-phi3 model entry.
+      # Lives in .env (chmod 600); shared with /opt/apps/funion-sidecar/.env
+      # Migrate to Infisical (litellm-proxy/prod/FUNION_SIDECAR_TOKEN) when
+      # external API auth is debugged — see funion-rollout TASK-003 caveats.
+      FUNION_SIDECAR_TOKEN: ${FUNION_SIDECAR_TOKEN}
 
     labels:
       - "traefik.enable=true"
