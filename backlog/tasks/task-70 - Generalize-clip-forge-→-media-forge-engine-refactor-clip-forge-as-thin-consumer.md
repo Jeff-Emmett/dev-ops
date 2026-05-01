@@ -60,11 +60,45 @@ Extract ffmpeg / yt-dlp / whisper.cpp / scenedetect / gifski / gifsicle / HandBr
 - [x] Deployed to `media.jeffemmett.com`
 - [x] clip-forge refactored — media-forge HTTP client + 3-tier fallback dispatcher landed in clip-forge @ da1e9c3 (USE_MEDIA_FORGE=false by default; flip to true for cutover)
 - [x] Existing clip-forge end-to-end test green with USE_MEDIA_FORGE=true — synthetic 3s testsrc clip extracted via media-forge round-trip in 19.7s cold-start, <1s warm. Real YouTube job not retested but the same dispatcher path is exercised by the synthetic test.
-- [ ] No inline ffmpeg/whisper imports remain — subtitle_render.py + download.py still have them as fallback paths (kept during cutover)
+- [~] No inline ffmpeg/whisper imports remain — subtitle_render.py refactored to media-forge /render Tier 1 (Slice 5, 2026-05-01); download.py still has yt-dlp + ffmpeg subprocess as fallback paths (kept during cutover; will remove once /yt-dlp + /convert routes are battle-tested under real YouTube traffic)
 - [ ] Self-describes capabilities to Morpheus registry (when registry lands)
 - [x] Infisical wrapper wired (no application secrets needed yet — graceful no-op until project provisioned)
 - [x] Uptime Kuma monitor added for media-forge (id 227); clip-forge monitor pending until refactor lands
 - [ ] No regression in clip-forge user-facing behavior
+
+## Slice 5 — /render endpoint + subtitle_render.py cutover (2026-05-01)
+
+media-forge gains `/render` (commit 44a0a94 on media-forge main):
+
+  POST /render
+    file:         video bytes
+    aspect_ratio: 9:16 / 16:9 / 1:1 / 4:5 (preset enum, default 9:16)
+    ass:          optional ASS subtitle file (libass-compatible)
+    → libx264 + aac mp4 (preset=fast, crf=23, b:a=128k, faststart)
+
+The aspect-ratio + filter-chain logic is vendored from clip-forge so
+media-forge owns the canonical ffmpeg invocation; clients send the
+ratio key by name (no free-form filter-graph injection).
+
+clip-forge subtitle_render.py refactored to a 3-tier dispatcher
+matching clip_extraction.py:
+
+  1. media-forge /render  use_media_forge=True
+  2. morpheus engine pool aux_files
+  3. local ffmpeg subprocess
+
+E2E smoke (clip-forge-worker → live media-forge):
+- 3s testsrc + minimal ASS file rendered with 9:16 fit + burned subs
+- 46KB → 107KB libx264 mp4 in 9.8s end-to-end (warm)
+- access log on media-forge confirms POST /render 200
+
+Tests: 13 in clip-forge (was 12), 12 in media-forge (was 10).
+
+Closes 1 more AC (partially):
+  [~] No inline ffmpeg imports remain — subtitle_render.py done;
+      download.py still has yt-dlp + ffmpeg fallback paths (deferred
+      until /yt-dlp + /convert routes are battle-tested under real
+      YouTube traffic)
 
 ## Slice 4 — Production cutover (2026-05-01)
 
