@@ -6,6 +6,9 @@ Requires=docker.service
 [Service]
 Type=oneshot
 ExecStart=/opt/scripts/uptime-kuma-engine-pool-probe.sh
+# Per-engine prior-failed-count state lives here; auto-created with
+# the right ownership when systemd starts the unit.
+StateDirectory=uptime-kuma-engine-pool-probe
 # Hardening
 NoNewPrivileges=true
 ProtectSystem=strict
