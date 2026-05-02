@@ -127,6 +127,20 @@ model_list:
       api_key: os.environ/FUNION_SIDECAR_TOKEN
       timeout: 600
 
+  # ===========================================================
+  # TIER 3 — funion sidecar (Qwen3-Coder-30B-A3B-FP8, RunPod serverless)
+  # GPU-accelerated MoE coding model. Auto-scales to zero. Aliases the
+  # existing qwen-coder endpoint under the funion-* naming so the
+  # funion-mcp catalogue is consistent. Same underlying RunPod
+  # endpoint as qwen-coder; no new infra deployed.
+  # ===========================================================
+  - model_name: funion-qwen-coder
+    litellm_params:
+      model: openai/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+      api_base: os.environ/RUNPOD_VLLM_BASE_URL
+      api_key: os.environ/RUNPOD_API_KEY
+      timeout: 300
+
 litellm_settings:
   drop_params: true
   request_timeout: 300
