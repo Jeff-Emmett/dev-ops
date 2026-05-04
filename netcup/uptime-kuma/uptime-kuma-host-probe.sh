@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Aggregated host health probe for Uptime Kuma.
 #
-# Runs every 2 min on Netcup. Performs three local checks and pushes a
+# Runs every 5 min on Netcup (uptime-kuma-host-probe.timer). Three local checks pushed as a
 # heartbeat to a Kuma push monitor. Status reflects whether all checks
 # pass, but the heartbeat itself is sent on every run — under heavy host
 # load, getting *some* signal to Kuma matters more than waiting on slow
@@ -92,5 +92,5 @@ msg="OK"
 url="${KUMA_BASE}/api/push/${HOST_HEALTH_PUSH_TOKEN}?status=${status}&msg=${msg}"
 
 # Short connect/total timeouts so a single push can't run past the next tick.
-curl -fsS --connect-timeout 5 -m 15 -H "Host: ${KUMA_HOST}" "$url" >/dev/null
+curl -fsS --connect-timeout 5 -m 25 -H "Host: ${KUMA_HOST}" "$url" >/dev/null
 exit $?
