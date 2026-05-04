@@ -112,6 +112,20 @@ def list_templates(url: str = DEFAULT_URL, timeout: float = 10.0) -> list[dict]:
     return r.json().get("templates", [])
 
 
+def template_preview(
+    template: str,
+    ppi: int = 72,
+    url: str = DEFAULT_URL,
+    timeout: float = 60.0,
+) -> bytes:
+    """Get a PNG thumbnail of the template's bundled sample. Cached server-side
+    on a content hash; ppi clamped to 36..300."""
+    r = httpx.get(f"{url}/templates/{template}/preview.png", params={"ppi": ppi}, timeout=timeout)
+    if r.status_code != 200:
+        raise ConvertError(r.status_code, r.text)
+    return r.content
+
+
 def list_fonts(url: str = DEFAULT_URL, timeout: float = 10.0) -> list[str]:
     """Return font family names installed in the doc-forge container."""
     r = httpx.get(f"{url}/fonts", timeout=timeout)
@@ -292,26 +306,19 @@ def augment(
 
 
 # ---------------------------------------------------------------------------
-# CLI: `python docforge_client.py SRC DST [--asset PATH ...] [--engine NAME]`
+# CLI: subcommands. Backwards compat: when first arg is an existing file path
+# (legacy `docforge_client.py SRC DST [...]` shape), fall through to convert.
 # ---------------------------------------------------------------------------
 
-def _main() -> int:
-    import argparse
+def _add_url_arg(p):
+    p.add_argument("--url", default=DEFAULT_URL, help=f"doc-forge base URL (default {DEFAULT_URL})")
 
-    ap = argparse.ArgumentParser(description="doc-forge thin CLI")
-    ap.add_argument("src", type=Path, help="source file path")
-    ap.add_argument("dst", type=Path, help="destination file path (extension drives target format)")
-    ap.add_argument("--asset", type=Path, action="append", default=[],
-                    help="sibling asset file (repeatable)")
-    ap.add_argument("--engine", default=None,
-                    help="force engine: libreoffice|tectonic|typst|pandoc")
-    ap.add_argument("--url", default=DEFAULT_URL)
-    args = ap.parse_args()
 
+def _cmd_convert(args) -> int:
     target = args.dst.suffix.lstrip(".").lower()
     if not target:
-        ap.error("destination must have an extension")
-
+        print("error: destination must have an extension", file=sys.stderr)
+        return 2
     out = convert(
         source=args.src,
         to=target,
@@ -322,6 +329,161 @@ def _main() -> int:
     args.dst.write_bytes(out)
     print(f"wrote {args.dst} ({len(out):,} bytes)")
     return 0
+
+
+def _cmd_render(args) -> int:
+    import json as _json
+    data = _json.loads(args.data.read_text(encoding="utf-8"))
+    out = render(
+        template=args.template,
+        data=data,
+        assets=args.asset,
+        to=args.dst.suffix.lstrip(".").lower() or "pdf",
+        determinize=args.determinize,
+        url=args.url,
+    )
+    args.dst.write_bytes(out)
+    print(f"wrote {args.dst} ({len(out):,} bytes) — template={args.template}")
+    return 0
+
+
+def _cmd_finalize(args) -> int:
+    raw = args.src.read_bytes()
+    out = finalize(raw, target=args.target, filename=args.src.name, url=args.url)
+    args.dst.write_bytes(out)
+    print(f"wrote {args.dst} ({len(out):,} bytes) — target={args.target}")
+    return 0
+
+
+def _cmd_impose(args) -> int:
+    raw = args.src.read_bytes()
+    out = impose(raw, layout=args.layout, filename=args.src.name, url=args.url)
+    args.dst.write_bytes(out)
+    print(f"wrote {args.dst} ({len(out):,} bytes) — layout={args.layout}")
+    return 0
+
+
+def _cmd_determinize(args) -> int:
+    raw = args.src.read_bytes()
+    out = determinize(raw, filename=args.src.name, url=args.url)
+    args.dst.write_bytes(out)
+    print(f"wrote {args.dst} ({len(out):,} bytes)")
+    return 0
+
+
+def _cmd_augment(args) -> int:
+    raw = args.src.read_bytes()
+    out = augment(raw, op=args.op, model=args.model, filename=args.src.name, url=args.url)
+    args.dst.write_bytes(out)
+    print(f"wrote {args.dst} ({len(out):,} bytes) — op={args.op}")
+    return 0
+
+
+def _cmd_list(args) -> int:
+    import json as _json
+    if args.what == "templates":
+        body = list_templates(url=args.url)
+    elif args.what == "fonts":
+        body = list_fonts(url=args.url)
+        if args.filter:
+            f = args.filter.lower()
+            body = [n for n in body if f in n.lower()]
+    elif args.what == "finalizers":
+        body = list_finalizers(url=args.url)
+    elif args.what == "augmenters":
+        body = list_augmenters(url=args.url)
+    elif args.what == "formats":
+        body = formats(url=args.url)
+    elif args.what == "health":
+        body = health(url=args.url)
+    else:
+        print(f"unknown list target: {args.what}", file=sys.stderr)
+        return 2
+    print(_json.dumps(body, indent=2))
+    return 0
+
+
+def _main() -> int:
+    import argparse
+    import sys as _sys
+
+    # Backwards compat: legacy `docforge_client.py SRC DST [...]` form. If the
+    # first arg looks like a file path (exists or has a known extension), insert
+    # `convert` as an explicit subcommand.
+    argv = _sys.argv[1:]
+    LEGACY_PASSTHROUGH = {"convert", "render", "finalize", "impose", "determinize",
+                          "augment", "list", "-h", "--help"}
+    if argv and argv[0] not in LEGACY_PASSTHROUGH and not argv[0].startswith("-"):
+        argv = ["convert", *argv]
+
+    ap = argparse.ArgumentParser(prog="docforge", description="doc-forge CLI")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    # convert
+    p = sub.add_parser("convert", help="convert SRC to DST format (extension drives target)")
+    p.add_argument("src", type=Path)
+    p.add_argument("dst", type=Path)
+    p.add_argument("--asset", type=Path, action="append", default=[],
+                   help="sibling asset (repeatable)")
+    p.add_argument("--engine", default=None,
+                   help="force engine: libreoffice|tectonic|typst|pandoc|scribus|inkscape|graphviz|plantuml|mermaid|vips")
+    _add_url_arg(p)
+    p.set_defaults(func=_cmd_convert)
+
+    # render
+    p = sub.add_parser("render", help="render a registered template + JSON data → DST")
+    p.add_argument("template", help="template id (book|flyer|resume|zine|business-card|poster)")
+    p.add_argument("data", type=Path, help="JSON data file matching the template's schema")
+    p.add_argument("dst", type=Path, help="output path (extension drives format: pdf|png|svg)")
+    p.add_argument("--asset", type=Path, action="append", default=[],
+                   help="sibling asset for the template (repeatable)")
+    p.add_argument("--determinize", action="store_true",
+                   help="strip nondeterministic PDF metadata for byte-stable output")
+    _add_url_arg(p)
+    p.set_defaults(func=_cmd_render)
+
+    # finalize
+    p = sub.add_parser("finalize", help="run a prepress finalizer on a PDF")
+    p.add_argument("src", type=Path)
+    p.add_argument("dst", type=Path)
+    p.add_argument("target", help="kdp-print-bw|kdp-print-color|web-pdf")
+    _add_url_arg(p)
+    p.set_defaults(func=_cmd_finalize)
+
+    # impose
+    p = sub.add_parser("impose", help="impose a PDF for fold/cut printing")
+    p.add_argument("src", type=Path)
+    p.add_argument("dst", type=Path)
+    p.add_argument("--layout", default="booklet",
+                   help="booklet (saddle-stitch 2-up). zine-8up + signature-16 stubbed.")
+    _add_url_arg(p)
+    p.set_defaults(func=_cmd_impose)
+
+    # determinize
+    p = sub.add_parser("determinize", help="strip nondeterministic PDF metadata")
+    p.add_argument("src", type=Path)
+    p.add_argument("dst", type=Path)
+    _add_url_arg(p)
+    p.set_defaults(func=_cmd_determinize)
+
+    # augment
+    p = sub.add_parser("augment", help="run an AI augmentation pass over a markdown file")
+    p.add_argument("src", type=Path)
+    p.add_argument("dst", type=Path)
+    p.add_argument("op", help="summarize_md|section_summaries_md")
+    p.add_argument("--model", default=None, help="override default LiteLLM-routed model")
+    _add_url_arg(p)
+    p.set_defaults(func=_cmd_augment)
+
+    # list
+    p = sub.add_parser("list", help="list registry contents (templates, fonts, finalizers, …)")
+    p.add_argument("what", choices=["templates", "fonts", "finalizers", "augmenters", "formats", "health"])
+    p.add_argument("--filter", default=None, help="substring filter (fonts only)")
+    _add_url_arg(p)
+    p.set_defaults(func=_cmd_list)
+
+    args = ap.parse_args(argv)
+    return args.func(args)
 
 
 if __name__ == "__main__":
