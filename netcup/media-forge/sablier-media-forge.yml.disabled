@@ -1,0 +1,46 @@
+# Sablier file-provider config for media-forge — INTENTIONALLY DISABLED.
+#
+# Renaming the on-disk file to `.disabled` removes the public route at
+# media.jeffemmett.com without deleting the config. Traefik file
+# provider only loads `*.yml`, so this `.yml.disabled` extension is
+# how we keep the snippet around for easy revert.
+#
+# This file mirrors the live `/root/traefik/config/sablier-media-forge.yml`
+# at the time of patch authoring. If you're applying the queue, the
+# canonical move is just:
+#
+#     mv /root/traefik/config/sablier-media-forge.yml \
+#        /root/traefik/config/sablier-media-forge.yml.disabled
+#
+# (no need to copy this file). The committed copy here is for
+# reproducibility — if the live file ever drifts and gets lost, this
+# is the recreate reference.
+
+http:
+  middlewares:
+    sablier-media-forge:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000
+          group: media-forge
+          sessionDuration: 15m
+          # Blocking mode — media-forge is an HTTP API, callers wait for the
+          # response inline rather than seeing a loading screen. Timeout of
+          # 60s is well above the typical cold-start (~10–15s for ffmpeg
+          # + scenedetect import).
+          blocking:
+            timeout: 60s
+  routers:
+    media-forge:
+      rule: "Host(`media.jeffemmett.com`)"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-media-forge
+      service: media-forge
+      priority: 100
+  services:
+    media-forge:
+      loadBalancer:
+        servers:
+          - url: "http://media-forge:8000"
