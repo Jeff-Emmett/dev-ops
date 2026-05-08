@@ -1,0 +1,163 @@
+# clip-forge — internal-only deploy (queued change, NOT yet applied).
+#
+# DEPLOY-ORDER: this compose patch removes clip.jeffemmett.com from
+# public Traefik routing. It must NOT be applied to Netcup until the
+# rspace-online `feat/forge-integration-audit` work has merged through
+# dev → main and redeployed. That branch is what introduces the
+# defence layers (per-DID rate limits, SSRF pre-filter, conversion
+# audit log) that REPLACE the Cloudflare Access wall on the direct
+# clip.jeffemmett.com path.
+#
+# Until rspace-online is on the new code, leave clip-forge as-is —
+# the live compose at `/opt/clip-forge/docker-compose.yml` keeps the
+# Traefik labels + CF Access wall in place. Anyone applying this file
+# early would expose /yt-dlp to the public internet (302 from CF
+# Access today; with this patch nothing replaces that gate until
+# rspace mediates it).
+#
+# Apply procedure once rspace defences are live:
+#
+#   scp netcup/clip-forge/docker-compose.yml \
+#       netcup-full:/opt/clip-forge/docker-compose.yml
+#   ssh netcup-full \
+#       "cd /opt/clip-forge && docker compose up -d backend frontend"
+#   # In the same change window, set CLIP_FORGE_URL on rspace-online:
+#   ssh netcup-full \
+#       "echo 'CLIP_FORGE_URL=http://clip-forge:8000' \
+#         >> /opt/apps/rspace-online/.env && \
+#        cd /opt/apps/rspace-online && docker compose up -d"
+#   # Then drop the CF DNS record (or leave it dangling — the tunnel
+#   # ingress allowlist will already 502 since no Traefik route exists).
+#   # Optional: remove the public-hostname allowlist entry from the CF
+#   # Zero Trust dashboard for clip.jeffemmett.com.
+#
+# Diff vs the current /opt/clip-forge/docker-compose.yml:
+#   - backend.labels: traefik.enable=false (was true), routing labels removed
+#   - backend.networks.traefik-public.aliases: + ["clip-forge"]   (NEW)
+#     so rspace-online reaches it via http://clip-forge:8000 even if
+#     the compose project name changes.
+#   - everything else: unchanged
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-clipforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_clipforge_2025}
+      POSTGRES_DB: ${POSTGRES_DB:-clipforge}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clipforge}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - INFISICAL_CLIENT_ID=${INFISICAL_CLIENT_ID}
+      - INFISICAL_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}
+      - INFISICAL_PROJECT_SLUG=clip-forge
+    volumes:
+      - media_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      # PUBLIC ROUTE REMOVED — proxied via rspace-online only.
+      # See file header for the deploy-order constraint.
+      - "traefik.enable=false"
+    networks:
+      default: {}
+      traefik-public:
+        # Stable cross-compose hostname so rspace's CLIP_FORGE_URL can
+        # be `http://clip-forge:8000` regardless of container naming.
+        aliases:
+          - clip-forge
+
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: clipforge-wg
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Berlin
+    volumes:
+      - ./wg-client:/config
+    ports:
+      - 51820:51820/udp
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - traefik-public
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["arq", "app.worker.WorkerSettings"]
+    network_mode: "service:wireguard"
+    env_file: .env
+    environment:
+      - INFISICAL_CLIENT_ID=${INFISICAL_CLIENT_ID}
+      - INFISICAL_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}
+      - INFISICAL_PROJECT_SLUG=clip-forge
+      - YTDLP_COOKIES_FILE=/app/cookies.txt
+    volumes:
+      - media_data:/data
+      - ./cookies.txt:/app/cookies.txt
+    depends_on:
+      wireguard:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=false"
+    networks:
+      - default
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
+
+networks:
+  traefik-public:
+    external: true
