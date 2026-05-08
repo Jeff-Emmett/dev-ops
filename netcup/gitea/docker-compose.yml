@@ -1,6 +1,6 @@
 services:
   server:
-    image: gitea/gitea:1.21
+    image: gitea/gitea:1.24.7
     container_name: gitea
     mem_limit: 1g
     cpus: 2
@@ -48,7 +48,7 @@ services:
     - ./postgres:/var/lib/postgresql/data
 
   runner:
-    image: gitea/act_runner:latest
+    image: gitea/act_runner:0.6.1
     container_name: gitea-runner
     # Daemon is minimal — jobs run as sibling containers via docker.sock,
     # so the runner itself only needs enough resources for the act_runner

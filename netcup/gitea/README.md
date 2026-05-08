@@ -97,9 +97,11 @@ ssh netcup-full "docker exec gitea-db psql -U gitea -d gitea -tAc \
 | `STOPPED_THRESHOLD_MIN` | 3 | Minutes since `stopped` timestamp before declaring orphaned-terminal. Conservative — in healthy operation reconciliation is sub-second. |
 | `STARTED_THRESHOLD_MIN` | 60 | Minutes since `started` (with no stop signal) before declaring truly stuck. Must be > the longest legitimate workflow duration. |
 
-### Why not upgrade `act_runner`?
+### Why keep the watchdog after the runner upgrade?
 
-That's the eventual fix — Gitea v1.23+ ships a server-side reconciliation watchdog that obsoletes this script. Until that upgrade lands, this is a 1-cron mitigation that doesn't touch any other moving part. The script never modifies legitimately-running rows (`status=2 AND stopped=0` only triggers after `STARTED_THRESHOLD_MIN`, well above the 3h job timeout).
+The reconciliation bug was **runner-version-specific to v0.3.x.** Upgrading to act_runner v0.6.1 (deployed 2026-05-08, paired with Gitea 1.24.7) demonstrably fixed it: post-upgrade workflow runs reach terminal status (Success/Failure/Skipped) within seconds, no stale Running entries accumulating.
+
+The watchdog stays installed as belt-and-suspenders — runs every 15 min as a no-op when there's nothing to clean (early-exits silently). If a future runner regression re-introduces the pattern, the queue stays bounded automatically. Cost of keeping it: zero when the system is healthy. The script never modifies legitimately-running rows (`status=2 AND stopped=0` only triggers after `STARTED_THRESHOLD_MIN`, well above the 3h job timeout).
 
 ## History
 
@@ -110,5 +112,9 @@ That's the eventual fix — Gitea v1.23+ ships a server-side reconciliation watc
 - 2026-05-08: Stale-Running watchdog added after a queue jam of ~1,800
   entries was traced to act_runner v0.3.1 reconciliation. See
   TASK-HIGH.8 + TASK-MEDIUM.11.
-# runner upgrade test marker — 2026-05-08T21:18:23Z
-# steady-state test marker A — 2026-05-08T21:19:36Z
+- 2026-05-08 (later): **Gitea 1.21.11 → 1.24.7** + **act_runner v0.3.1 → 0.6.1**.
+  Fixed the v0.3.x reconciliation bug at the source. Watchdog stays
+  in place but now runs as a no-op in steady state. Backups at
+  `/opt/backups/gitea/2026-05-08-pre-1.24.7/` (postgres dump 117 MB +
+  filesystem tarball 5.7 GB excluding the bulk packages/repo-archive
+  dirs that Gitea never rewrites).
