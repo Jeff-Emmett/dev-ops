@@ -110,3 +110,4 @@ That's the eventual fix — Gitea v1.23+ ships a server-side reconciliation watc
 - 2026-05-08: Stale-Running watchdog added after a queue jam of ~1,800
   entries was traced to act_runner v0.3.1 reconciliation. See
   TASK-HIGH.8 + TASK-MEDIUM.11.
+# runner upgrade test marker — 2026-05-08T21:18:23Z
