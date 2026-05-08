@@ -4,7 +4,7 @@ title: Investigate Gitea Actions queue jam — 1800+ stale Running entries
 status: In Progress
 assignee: []
 created_date: '2026-05-08 18:42'
-updated_date: '2026-05-08 20:57'
+updated_date: '2026-05-08 21:23'
 labels: []
 dependencies: []
 parent_task_id: TASK-HIGH
@@ -78,4 +78,27 @@ Watchdog tuning: STOPPED_THRESHOLD_MIN reduced from 5 → 3 min. In healthy oper
 Watchdog now cleared 6 stale entries across the first 4 cycles since install; queue stays bounded (≤4 Running, the runner's true capacity).
 
 **Open question on permanent fix:** upgrade Gitea 1.21 → 1.24.x (skip 1.25.x given the regression). Bigger move requiring a maintenance window and DB schema validation. Leaving the watchdog as the operational mitigation while that upgrade is planned separately.
+
+**2026-05-08 — root-caused + permanent fix deployed.**
+
+Upgrade chain:
+1. Backed up Postgres (117 MB) + filesystem (5.7 GB excluding 340 GB of packages/repo-archive bulk that Gitea doesn't rewrite). Backups at /opt/backups/gitea/2026-05-08-pre-1.24.7/
+2. Stopped server + runner; left gitea-db running.
+3. Bumped image: gitea/gitea:1.21 → gitea/gitea:1.24.7. Pulled + restarted.
+4. Migrations 300-320 applied automatically (incl. issue_pin table extraction in M313, action_runner.Ephemeral in M315). No manual intervention needed.
+5. Verified: gitea.jeffemmett.com 200; /api/v1/version returns '1.24.7'.
+6. Bumped runner: gitea/act_runner:latest (cached as v0.3.1) → gitea/act_runner:0.6.1 (explicit pin). Restarted.
+7. Live verification:
+   - Pre-upgrade workflow run 1845 (forge-jmmj-tests, 64fcc8f6) had stuck status=2 with stopped > 0 — exact bug pattern. Watchdog cleaned it on next cycle.
+   - Post-upgrade test pushes (1849, 1850, 1851 — three separate dev-ops commits) all reached terminal status (Success / Skipped) within 25 seconds. No stale Running entries accumulated.
+
+**Root cause confirmed:** the reconciliation bug was specific to act_runner v0.3.x. Gitea 1.21 was a contributor but the runner upgrade alone (without the Gitea bump) probably would have fixed it too — the symptom shape (runner reports stop, status doesn't transition) points at runner-side reporting logic.
+
+**Watchdog status:** kept installed. Now runs as a no-op in steady state. Cost of keeping it: zero when healthy. Useful insurance if a future runner regression re-introduces the pattern.
+
+**Files committed to dev-ops:**
+- netcup/gitea/docker-compose.yml: pinned versions
+- netcup/gitea/README.md: updated rationale + history
+
+7-day verification window starts now. If queue stays bounded and the watchdog journal stays mostly silent over the next week, this task can move to Done.
 <!-- SECTION:NOTES:END -->
