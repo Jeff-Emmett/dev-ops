@@ -24,8 +24,8 @@
 #   # In the same change window, set CLIP_FORGE_URL on rspace-online:
 #   ssh netcup-full \
 #       "echo 'CLIP_FORGE_URL=http://clip-forge:8000' \
-#         >> /opt/apps/rspace-online/.env && \
-#        cd /opt/apps/rspace-online && docker compose up -d"
+#         >> /opt/websites/rspace-online/.env && \
+#        cd /opt/websites/rspace-online && docker compose up -d"
 #   # Then drop the CF DNS record (or leave it dangling — the tunnel
 #   # ingress allowlist will already 502 since no Traefik route exists).
 #   # Optional: remove the public-hostname allowlist entry from the CF

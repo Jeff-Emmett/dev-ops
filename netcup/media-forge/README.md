@@ -38,10 +38,10 @@ ssh netcup-full \
 # Wire rspace-online to use the internal hostname (already on
 # rspace-internal + traefik-public networks; aliases preserved).
 ssh netcup-full \
-    "grep -q '^MEDIA_FORGE_URL=' /opt/apps/rspace-online/.env || \
-       echo 'MEDIA_FORGE_URL=http://media-forge:8000' >> /opt/apps/rspace-online/.env"
+    "grep -q '^MEDIA_FORGE_URL=' /opt/websites/rspace-online/.env || \
+       echo 'MEDIA_FORGE_URL=http://media-forge:8000' >> /opt/websites/rspace-online/.env"
 ssh netcup-full \
-    "cd /opt/apps/rspace-online && docker compose up -d"
+    "cd /opt/websites/rspace-online && docker compose up -d"
 
 # Verify Traefik dropped the route:
 curl -sS -o /dev/null -w '%{http_code}' https://media.jeffemmett.com/health
