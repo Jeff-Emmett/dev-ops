@@ -3,10 +3,10 @@ id: TASK-69
 title: >-
   Build image-forge engine — third sibling forge for raster/vector image
   conversion
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-04-29 22:58'
-updated_date: '2026-05-08 13:59'
+updated_date: '2026-05-08 14:33'
 labels:
   - forge
   - morpheus
@@ -58,7 +58,7 @@ png, jpg, webp, heic, avif, tiff, bmp, gif (single-frame), svg, ico, raw → all
 - [x] #6 MCP server tested with Claude Code (`claude mcp add image-forge ...`)
 - [x] #7 Deployed to `images.jeffemmett.com`; Traefik routing live; Cloudflare tunnel green
 - [x] #8 Infisical secrets wired (no hardcoded creds in compose)
-- [ ] #9 Documented in dev-ops README + Uptime Kuma monitor added
+- [x] #9 Documented in dev-ops README + Uptime Kuma monitor added
 
 ## Non-goals (this task)
 
@@ -188,4 +188,8 @@ claude mcp add image-forge -s user -e IMAGEFORGE_URL=https://images.jeffemmett.c
 - AC#7 ✓
 - AC#8 ✓
 - AC#9 spec committed; awaiting one-click Kuma UI add
+
+**2026-05-08 — AC#9 closed.** Uptime Kuma monitor for image-forge added (id 229, keyword "status":"ok" on https://images.jeffemmett.com/health, 60s interval, Mailcow Email Alerts wired). First heartbeat green: 71 ms. Spec at `dev-ops/netcup/uptime-kuma/image-forge-monitor.md`. Doc-forge monitor (id 228) added in the same restart for ecosystem completeness. All 9 ACs ✓ — task ready for Done.
+
+Definition of Done: all 9 ACs ✓; live https://images.jeffemmett.com/health 200 with all 5 engines green; MCP server ✓ Connected; Kuma monitors 228+229 green; image bundled at 950 MB (under 1.5 GB target); 950 MB image with 9/9 round-trip conversions passing.
 <!-- SECTION:NOTES:END -->

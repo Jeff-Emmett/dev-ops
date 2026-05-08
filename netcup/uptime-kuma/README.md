@@ -21,6 +21,7 @@ Monitor specs that need a manual UI add (committed for reproducibility):
 
 - `pay.jeffemmett.com` — payment-forge — see `payment-forge-monitor.md`
 - `images.jeffemmett.com` — image-forge — see `image-forge-monitor.md`
+- `convert.jeffemmett.com` — doc-forge — see `doc-forge-monitor.md`
 
 ## Internal-network monitor reachability (from `traefik-public`)
 
