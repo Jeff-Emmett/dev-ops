@@ -94,7 +94,7 @@ ssh netcup-full "docker exec gitea-db psql -U gitea -d gitea -tAc \
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `STOPPED_THRESHOLD_MIN` | 5 | Minutes since `stopped` timestamp before declaring orphaned-terminal. |
+| `STOPPED_THRESHOLD_MIN` | 3 | Minutes since `stopped` timestamp before declaring orphaned-terminal. Conservative — in healthy operation reconciliation is sub-second. |
 | `STARTED_THRESHOLD_MIN` | 60 | Minutes since `started` (with no stop signal) before declaring truly stuck. Must be > the longest legitimate workflow duration. |
 
 ### Why not upgrade `act_runner`?

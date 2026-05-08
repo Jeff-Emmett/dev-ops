@@ -33,9 +33,12 @@
 set -euo pipefail
 
 # Threshold in minutes — how long after `stopped` before we declare
-# orphaned-terminal. 5 min is comfortable: the longest legitimate
-# reconciliation lag observed is <30s.
-STOPPED_THRESHOLD_MIN="${STOPPED_THRESHOLD_MIN:-5}"
+# orphaned-terminal. 3 min is conservative: in healthy operation the
+# runner reports stop AND status reconciles within 1-2 seconds, so
+# anything past a minute is already pathological. 3 min gives ops a
+# cushion for transient network glitches between runner and Gitea
+# without accumulating queue lag for the whole 15-min watchdog cycle.
+STOPPED_THRESHOLD_MIN="${STOPPED_THRESHOLD_MIN:-3}"
 
 # Threshold for status=2, stopped=0 (truly stuck — runner never even
 # reported a stop). 60 min is well above the 3h job timeout in
