@@ -6,7 +6,7 @@ title: >-
 status: In Progress
 assignee: []
 created_date: '2026-04-29 22:58'
-updated_date: '2026-05-02 00:23'
+updated_date: '2026-05-08 13:59'
 labels:
   - forge
   - morpheus
@@ -55,8 +55,8 @@ png, jpg, webp, heic, avif, tiff, bmp, gif (single-frame), svg, ico, raw → all
 - [x] #3 `POST /convert` round-trip tests pass for: png↔jpg, png↔webp, jpg↔heic, jpg↔avif, svg→png, gif→webp (animated preserved)
 - [x] #4 `GET /formats` returns JSON catalog matching doc-forge shape
 - [x] #5 `GET /health` returns engine availability per-engine
-- [ ] #6 MCP server tested with Claude Code (`claude mcp add image-forge ...`)
-- [ ] #7 Deployed to `images.jeffemmett.com`; Traefik routing live; Cloudflare tunnel green
+- [x] #6 MCP server tested with Claude Code (`claude mcp add image-forge ...`)
+- [x] #7 Deployed to `images.jeffemmett.com`; Traefik routing live; Cloudflare tunnel green
 - [x] #8 Infisical secrets wired (no hardcoded creds in compose)
 - [ ] #9 Documented in dev-ops README + Uptime Kuma monitor added
 
@@ -165,4 +165,27 @@ gif → webp   ✓ 256 B
   - **30-second dashboard fix** — Cloudflare Dashboard → Zero Trust → Networks → Tunnels → `netcup-local` → Public Hostname tab → Add `images.jeffemmett.com → service: http://localhost:80`.
   - **Or generate a new token** with `Account:Cloudflare Tunnel:Edit` scope, save as `CLOUDFLARE_TUNNEL_API_TOKEN` in `~/.cloudflare-credentials.env`, and the existing API PUT in dev-ops/security/ tooling can land it programmatically.
 - AC#9: Uptime Kuma push monitor + dev-ops README entry. The probe pattern is established (see `/opt/scripts/uptime-kuma-engine-pool-probe.sh`) and can be adapted in 15 min once the monitor is created in the Kuma UI to get its push token. Best done after AC#7 since that's when 'public health' becomes meaningful.
+
+**2026-05-08 — closed AC#6 + AC#7. AC#9 spec committed (UI step pending).**
+
+**AC#7 — public endpoint live.** `https://images.jeffemmett.com/health` returns 200 with all 5 engines green (libvips, imagemagick, pillow-heif, pillow-avif, rsvg). Round-trip png→webp via the public URL: HTTP 200, X-Image-Forge-Engine: libvips, valid 294-byte WebP. Container has been Up 6 days healthy, Cloudflare tunnel public-hostname allowlist now includes the host.
+
+**AC#6 — MCP server registered + verified.** Added at user scope:
+```bash
+claude mcp add image-forge -s user -e IMAGEFORGE_URL=https://images.jeffemmett.com -- python /home/jeffe/Github/image-forge/mcp_server.py
+```
+`claude mcp list` reports ✓ Connected. Tools exposed: `convert_image`, `list_formats`, `health`. Underlying HTTP path verified end-to-end (PNG→WebP smoke test above).
+
+**AC#9 — Uptime Kuma monitor.** Spec committed at `dev-ops/netcup/uptime-kuma/image-forge-monitor.md`, added to `dev-ops/netcup/uptime-kuma/README.md` index. Same pattern as payment-forge (spec committed → manual UI add). 30-second add at https://status.jeffemmett.com → Add Monitor → fields per the spec doc. Once added, the AC is fully closed.
+
+**State now**
+- AC#1 ✓
+- AC#2 ✓ (950 MB)
+- AC#3 ✓ (9/9 round-trips)
+- AC#4 ✓
+- AC#5 ✓
+- AC#6 ✓
+- AC#7 ✓
+- AC#8 ✓
+- AC#9 spec committed; awaiting one-click Kuma UI add
 <!-- SECTION:NOTES:END -->

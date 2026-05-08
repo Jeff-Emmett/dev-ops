@@ -20,6 +20,7 @@ ssh netcup 'cd /opt/apps/uptime-kuma && docker compose up -d'
 Monitor specs that need a manual UI add (committed for reproducibility):
 
 - `pay.jeffemmett.com` — payment-forge — see `payment-forge-monitor.md`
+- `images.jeffemmett.com` — image-forge — see `image-forge-monitor.md`
 
 ## Internal-network monitor reachability (from `traefik-public`)
 
