@@ -1,0 +1,10 @@
+[Unit]
+Description=Gitea Actions stale-Running watchdog (act_runner v0.3.1 reconciliation bug mitigation)
+Documentation=file:///opt/scripts/watchdog-stale-runs.sh
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/scripts/watchdog-stale-runs.sh
+StandardOutput=journal
+StandardError=journal

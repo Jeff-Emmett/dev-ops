@@ -56,9 +56,57 @@ If build queue backs up, tune in this order:
    itself, writes `./runner-data/.runner`, and ignores the env var from
    then on.
 
+## Stale-Running watchdog (TASK-HIGH.8 + TASK-MEDIUM.11 mitigation)
+
+`act_runner` v0.3.1 has a known reconciliation bug where it reports task completion to the Gitea server but the status update never lands in the `action_run` / `action_run_job` / `action_task` tables. Rows stay at `status=2` (Running) forever even though the runner already stopped the container and wrote the log. The queue jams over time — we hit ~1,800 stale entries before the first manual cleanup on 2026-05-08, and a second jam (408 entries) appeared within an hour of that.
+
+The pattern is recognisable: `status=2 AND stopped > 0` — the runner DID set the `stopped` timestamp when it ended the container, but the status reconciliation never fired. New runs get Skipped because Gitea thinks the runner is busy.
+
+`watchdog-stale-runs.sh` finds those orphaned-terminal rows and marks them `Failure` (status=4). It also cancels `Waiting` (status=1) runs older than 60 min — these are queued behind orphaned ones and would never get picked up.
+
+### Install
+
+```bash
+scp netcup/gitea/watchdog-stale-runs.sh netcup-full:/opt/scripts/watchdog-stale-runs.sh
+ssh netcup-full "chmod +x /opt/scripts/watchdog-stale-runs.sh"
+
+scp netcup/gitea/watchdog-stale-runs.{service,timer} \
+    netcup-full:/etc/systemd/system/
+
+ssh netcup-full "systemctl daemon-reload && \
+                 systemctl enable --now watchdog-stale-runs.timer"
+```
+
+The timer fires every 15 min. After it stabilises, expect `running` to be ≤4 (one per simultaneously-running workflow) and `waiting` to be ≤1.
+
+### Verify
+
+```bash
+ssh netcup-full "/opt/scripts/watchdog-stale-runs.sh"
+ssh netcup-full "systemctl status watchdog-stale-runs.timer"
+ssh netcup-full "journalctl -u watchdog-stale-runs.service --since '1h ago'"
+ssh netcup-full "docker exec gitea-db psql -U gitea -d gitea -tAc \
+  \"SELECT count(*) FILTER (WHERE status=2) AS running, \
+           count(*) FILTER (WHERE status=1) AS waiting FROM action_run;\""
+```
+
+### Tuning
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `STOPPED_THRESHOLD_MIN` | 5 | Minutes since `stopped` timestamp before declaring orphaned-terminal. |
+| `STARTED_THRESHOLD_MIN` | 60 | Minutes since `started` (with no stop signal) before declaring truly stuck. Must be > the longest legitimate workflow duration. |
+
+### Why not upgrade `act_runner`?
+
+That's the eventual fix — Gitea v1.23+ ships a server-side reconciliation watchdog that obsoletes this script. Until that upgrade lands, this is a 1-cron mitigation that doesn't touch any other moving part. The script never modifies legitimately-running rows (`status=2 AND stopped=0` only triggers after `STARTED_THRESHOLD_MIN`, well above the 3h job timeout).
+
 ## History
 
 - 2026-04-16: Initial import into dev-ops. Runner retuned:
   capacity 1 → 2, daemon mem_limit 12g → 512m, cpus 2 → 1, per-job
   swap disabled. Details in the deployment-tracker memory under
   `gitea-runner-retuning-20260416.md`.
+- 2026-05-08: Stale-Running watchdog added after a queue jam of ~1,800
+  entries was traced to act_runner v0.3.1 reconciliation. See
+  TASK-HIGH.8 + TASK-MEDIUM.11.
