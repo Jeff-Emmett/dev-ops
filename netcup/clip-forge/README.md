@@ -45,10 +45,10 @@ ssh netcup-full \
 
 # Wire rspace-online to use the internal hostname:
 ssh netcup-full \
-    "grep -q '^CLIP_FORGE_URL=' /opt/apps/rspace-online/.env || \
-       echo 'CLIP_FORGE_URL=http://clip-forge:8000' >> /opt/apps/rspace-online/.env"
+    "grep -q '^CLIP_FORGE_URL=' /opt/websites/rspace-online/.env || \
+       echo 'CLIP_FORGE_URL=http://clip-forge:8000' >> /opt/websites/rspace-online/.env"
 ssh netcup-full \
-    "cd /opt/apps/rspace-online && docker compose up -d"
+    "cd /opt/websites/rspace-online && docker compose up -d"
 
 # Optional: remove the public Cloudflare route to avoid leaving a
 # dangling DNS record that 502s. Either drop the DNS A/CNAME for
