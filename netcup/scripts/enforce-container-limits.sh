@@ -26,6 +26,8 @@ get_tier() {
         openrouteservice) return 1 ;;
         cyclos|cyclos-db) return 1 ;;
         hcc-api|hcc-mem-staging|db-backup-cron) return 1 ;;
+        cadcad-lab) return 1 ;;
+        cadcad-mcp) return 1 ;;
         infisical) return 1 ;;
         immich_machine_learning|immich_postgres) return 1 ;;
         open-claw-iron-ironclaw-1|open-claw-iron-postgres-1) return 1 ;;
@@ -50,9 +52,15 @@ get_tier() {
     esac
 
     # ── LARGE: 1g / 1-2 CPUs ──
+    # ── XXLARGE: 4g / 2 CPUs (production media server) ──
     case "$name" in
-        gitea|jellyfin|n8n|n8n-cosmolocal|mattermost) echo "1g 2"; return 0 ;;
+        jefflix) echo "4g 2"; return 0 ;;
+    esac
+
+    case "$name" in
+        gitea|n8n|n8n-cosmolocal|mattermost|crowdsec) echo "1g 2"; return 0 ;;
         jeffsi-meet-jvb-1|dko-backend|seafile|rphotos_server) echo "1g 2"; return 0 ;;
+        p2p-blog|p2p-blogfr|p2p-bloggr|p2p-blognl) echo "1g 2"; return 0 ;;
         meeting-intelligence-jibri|receipt-wrangler|rfiles-api|rfiles-celery-worker) echo "1g 1"; return 0 ;;
         clip-forge-backend-1|clip-forge-worker-1|jellyseerr|slskd) echo "1g 1"; return 0 ;;
         rory-os) echo "1g 1"; return 0 ;;
@@ -63,7 +71,7 @@ get_tier() {
         affine_server|ghost-cosmolocal|ghost-crypto-commons|navidrome) echo "512m 1"; return 0 ;;
         docmost|docmost-cl|ccg-website|cca-website|listmonk|uptime-kuma|umami) echo "512m 1"; return 0 ;;
         cloudflared|deploy-webhook|syncthing|headscale) echo "512m 1"; return 0 ;;
-        p2p-blog|p2p-blogfr|p2p-bloggr|p2p-blognl|p2p-web|p2p-wiki|p2pwiki|p2pwikifr) echo "512m 1"; return 0 ;;
+        p2p-web|p2p-wiki|p2pwiki|p2pwikifr) echo "512m 1"; return 0 ;;
         mailcowdockerized-mysql-mailcow-1|mailcowdockerized-clamd-mailcow-1) echo "512m 1"; return 0 ;;
         mailcowdockerized-rspamd-mailcow-1|mailcowdockerized-sogo-mailcow-1) echo "512m 1"; return 0 ;;
         mailcowdockerized-dovecot-mailcow-1|mailcowdockerized-php-fpm-mailcow-1) echo "512m 1"; return 0 ;;
@@ -116,14 +124,18 @@ get_tier() {
         # Explicit micro containers
         canvas-website|canvas-dev|personal-site|personal-dashboard|phomemo-label-tool) echo "128m 0.25"; return 0 ;;
         r2-mount|video-player|video360-splitter|nginx-rtmp|rtube-rtmp) echo "128m 0.25"; return 0 ;;
-        jefflix|jefflix-dns|games-frontend|games-nginx|seafile-memcached) echo "128m 0.25"; return 0 ;;
+        jefflix-dns|games-frontend|games-nginx|seafile-memcached) echo "128m 0.25"; return 0 ;;
         ridentity_landing|rmail_landing|rphotos_landing|rpubs|rsocials|rsocials-online) echo "128m 0.25"; return 0 ;;
         rswag-landing|rspace-widgets|rtasks|fake-license|elle-o-elle|the-last-draw) echo "128m 0.25"; return 0 ;;
         conviction-voting-demo|conviction-voting-prod|cosmolocal-website|mycocivics) echo "128m 0.25"; return 0 ;;
         mycofi-earth-website|mycopunk-prod|mycostack-website|innernet-lol) echo "128m 0.25"; return 0 ;;
         cineasthesia-home|cineasthesia-landing|gaia-ar|decolonize-time) echo "128m 0.25"; return 0 ;;
         cynthia-poetry|lunar-calendar|littlehive-shop|flight-club-lol) echo "128m 0.25"; return 0 ;;
-        fungiflows|worldplay-website|xhivart-mirror|katheryn-frontend) echo "128m 0.25"; return 0 ;;
+        fungiflows|xhivart-mirror|katheryn-frontend) echo "128m 0.25"; return 0 ;;
+    esac
+    # ── SMALL: 256m / 0.5 CPU — bumped from MICRO for traffic capacity ──
+    case "$name" in
+        worldplay-website) echo "256m 0.5"; return 0 ;;
     esac
 
     # Catch compose-generated long names (website-*, online-*)
@@ -144,12 +156,15 @@ for cid in $(docker ps -q 2>/dev/null); do
     mem=$(echo "$info" | awk '{print $2}')
     cpus=$(echo "$info" | awk '{print $3}')
 
-    # Skip only if BOTH memory AND CPU limits are already set
-    [[ "$mem" != "0" && "$cpus" != "0" ]] && continue
-
     tier=$(get_tier "$name") || continue
     target_mem=$(echo "$tier" | awk '{print $1}')
     target_cpus=$(echo "$tier" | awk '{print $2}')
+
+    # Convert target to bytes/nanocpus for comparison; skip if already exactly matching.
+    # This makes the script truly enforce (not merely initialise) without re-applying every cycle.
+    target_mem_bytes=$(numfmt --from=iec "${target_mem^^}" 2>/dev/null || echo 0)
+    target_cpus_nano=$(awk -v c="$target_cpus" 'BEGIN { printf "%d", c * 1e9 }')
+    [[ "$mem" == "$target_mem_bytes" && "$cpus" == "$target_cpus_nano" ]] && continue
 
     if docker update --memory="$target_mem" --memory-swap="$target_mem" --cpus="$target_cpus" "$name" >/dev/null 2>&1; then
         log "ENFORCE $name → ${target_mem} / ${target_cpus} CPUs"

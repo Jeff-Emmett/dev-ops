@@ -18,6 +18,7 @@ TIER0_NAMES=(
   uptime-kuma
   restic
   crowdsec
+  bouncer-traefik
 )
 TIER0_PATTERN='^mailcowdockerized-(postfix|dovecot|mysql|rspamd|sogo|redis|nginx|php-fpm)-mailcow-1$'
 
@@ -34,7 +35,7 @@ TIER1_NAMES=(
   ccg-website ccg-staging
   p2p-forum p2p-db p2p-web
   postiz-p2pf postiz-p2pf-temporal postiz-p2pf-postgres postiz-p2pf-redis
-  jellyfin
+  jefflix
 )
 
 # Tier 3 — sandboxes by name pattern; explicit excludes win (e.g. ccg-staging)
