@@ -66,9 +66,32 @@ environment:
 
 ## Backup
 
-`falkordb-data` Docker volume is auto-discovered by the Netcup backup system
-(`/opt/backup-system/`, restic→R2→Hetzner). RDB snapshots are written via the
-`--save 60 1 --save 300 100` flags configured in the compose file.
+`falkordb_falkordb-data` Docker volume is auto-included by the Netcup backup
+system — `/opt/backup-system/backup-docker.sh` snapshots all of
+`/var/lib/docker/volumes/` wholesale. RDB snapshots are written via the
+`--save 60 1 --save 300 100` flags in `REDIS_ARGS`. No FalkorDB-specific
+backup config required.
+
+## Uptime Kuma probe
+
+Files in this directory:
+- `uptime-kuma-falkordb-probe.sh` → `/opt/scripts/` on Netcup
+- `uptime-kuma-falkordb-probe.{service,timer}` → `/etc/systemd/system/`
+
+To enable monitoring:
+1. Create push monitor in Uptime Kuma UI named "FalkorDB (Netcup)"; copy its token.
+2. Append to `/etc/uptime-kuma-push.env`:
+   ```
+   FALKORDB_PUSH_TOKEN=<token>
+   ```
+3. Enable the timer:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now uptime-kuma-falkordb-probe.timer
+   ```
+
+Probe runs every 5 min: pings FalkorDB, checks auth, samples memory + graph
+count, pushes to Kuma.
 
 ## Use cases
 
