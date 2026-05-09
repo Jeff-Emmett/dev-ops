@@ -34,7 +34,7 @@ TIER1_NAMES=(
   ccg-website ccg-staging
   p2p-forum p2p-db p2p-web
   postiz-p2pf postiz-p2pf-temporal postiz-p2pf-postgres postiz-p2pf-redis
-  jefflix
+  jellyfin
 )
 
 # Tier 3 — sandboxes by name pattern; explicit excludes win (e.g. ccg-staging)
