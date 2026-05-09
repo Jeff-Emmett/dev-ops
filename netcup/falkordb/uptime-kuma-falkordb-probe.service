@@ -1,0 +1,11 @@
+[Unit]
+Description=FalkorDB liveness probe → Uptime Kuma
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/scripts/uptime-kuma-falkordb-probe.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
