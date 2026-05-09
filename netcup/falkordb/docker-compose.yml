@@ -1,0 +1,56 @@
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    container_name: falkordb
+    restart: unless-stopped
+    # FalkorDB's image bakes a startup script (/var/lib/falkordb/bin/run.sh)
+    # that builds the redis-server command from $REDIS_ARGS — docker CMD is
+    # ignored. Pass auth + memory caps via REDIS_ARGS instead.
+    environment:
+      REDIS_ARGS: "--requirepass ${FALKORDB_PASSWORD} --maxmemory 2gb --maxmemory-policy allkeys-lru --save 60 1 --save 300 100"
+      BROWSER: "0"   # disable bundled Next.js browser; we run it as a separate service when needed
+    ports:
+      # Loopback only — internal-only deployment.
+      # SSH tunnel from WSL2: ssh -L 6380:127.0.0.1:6380 netcup
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - falkordb-data:/var/lib/falkordb/data
+    networks:
+      - traefik-public
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${FALKORDB_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional browser UI for debugging — internal loopback only.
+  # Reach by SSH-forwarding 3001 to your WSL2 then opening http://localhost:3001
+  falkordb-browser:
+    image: falkordb/browser:latest
+    container_name: falkordb-browser
+    restart: unless-stopped
+    depends_on:
+      falkordb:
+        condition: service_healthy
+    environment:
+      FALKORDB_HOST: falkordb
+      FALKORDB_PORT: 6379
+      FALKORDB_PASSWORD: ${FALKORDB_PASSWORD}
+    ports:
+      - "127.0.0.1:3001:3000"
+    networks:
+      - traefik-public
+    profiles:
+      - debug
+
+volumes:
+  falkordb-data:
+
+networks:
+  traefik-public:
+    external: true
