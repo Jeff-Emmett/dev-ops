@@ -1,10 +1,10 @@
 ---
 id: TASK-84
 title: Migrate KOI bundle store from in-memory Map to FalkorDB
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-05-09 06:28'
-updated_date: '2026-05-09 06:29'
+updated_date: '2026-05-09 14:32'
 labels:
   - koi
   - falkordb
@@ -48,9 +48,39 @@ priority: medium
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 KoiBundleStore interface preserved (existing call sites in server/koi-routes.ts unchanged)
-- [ ] #2 FalkorDB-backed implementation behind a flag (KOI_STORE=falkordb vs KOI_STORE=memory)
-- [ ] #3 koi-routes.test.ts passes against both implementations
-- [ ] #4 Bundle dedupe logic preserved (re-upserting same RID is idempotent)
-- [ ] #5 Event poll preserves total order across restarts (FalkorDB persistence carries the log)
+- [x] #1 KoiBundleStore interface preserved (existing call sites in server/koi-routes.ts unchanged)
+- [x] #2 FalkorDB-backed implementation behind a flag (KOI_STORE=falkordb vs KOI_STORE=memory)
+- [x] #3 koi-routes.test.ts passes against both implementations
+- [x] #4 Bundle dedupe logic preserved (re-upserting same RID is idempotent)
+- [x] #5 Event poll preserves total order across restarts (FalkorDB persistence carries the log)
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Shipped on branch `feat/koi-falkordb-store` in rspace-online (commit 96982c96).
+
+**What changed:**
+- `shared/koi/store.ts` — extracted `IKoiBundleStore` async interface + shared `filterRidsByTypes` helper. Existing `KoiBundleStore` made async-conforming.
+- `shared/koi/store.falkordb.ts` — new `FalkorDBKoiBundleStore` impl. Schema: `(:Bundle {rid, manifest_json, contents_json, seq})`, `(:Event {seq, rid, event_type, manifest_json?, contents_json?})`, `(:Counter {name:'event_seq', value})`. Total event order via monotonic counter so `pollEvents` preserves ordering across restarts.
+- `shared/koi/store.factory.ts` — `createKoiStore()` reads `KOI_STORE` env (`memory` default | `falkordb`).
+- `shared/koi/store.shared.test.ts` — parameterized conformance suite. Both store impls run identical assertions.
+- `shared/koi/store.falkordb.test.ts` — FalkorDB-specific tests including persistence-across-fresh-instance. Skipped when `FALKORDB_HOST` unset (CI-friendly).
+- `server/koi-routes.ts` — uses `createKoiStore()` factory; awaits all store ops.
+- `server/koi-routes.test.ts` — await additions for now-async store calls.
+
+**Schema choice rationale:** Manifest + contents stored as canonicalized JSON strings rather than decomposed into property graphs. Preserves the hash invariant trivially (canonical-JSON byte equivalence on round-trip) and avoids forcing schema-mapping for every payload type (RTM cell, attestation, future bundle types).
+
+**Test results:**
+- In-memory store conformance: 13/13 pass
+- FalkorDB store conformance: 14/14 pass against Netcup tailnet target (37s — real network)
+- koi-routes (in-memory default): 8/8 pass
+- koi-routes (KOI_STORE=falkordb against tailnet): 8/8 pass
+
+**Connection from rspace-online to FalkorDB on Netcup:**
+- Production (container on Netcup): `FALKORDB_HOST=falkordb` `FALKORDB_PORT=6379` (docker network)
+- WSL2 dev: `FALKORDB_HOST=100.64.0.2` `FALKORDB_PORT=6380` (Tailscale)
+- Password from `/opt/apps/falkordb/.env` on Netcup or `~/.claude/mcp-servers/falkormem/.netcup-falkor-pwd` on WSL2
+
+**Production rollout:** branch is feat-only, not merged. To enable on the deployed rspace-online container, set `KOI_STORE=falkordb` + `FALKORDB_*` env vars on the docker-compose for the rspace-online service. Default behaviour (no env) stays in-memory — zero-risk merge.
+<!-- SECTION:FINAL_SUMMARY:END -->
