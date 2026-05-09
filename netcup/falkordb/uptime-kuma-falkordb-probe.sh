@@ -68,6 +68,11 @@ else
   MSG="ping ok | mem ${MEM:-?} | graphs ${GRAPHS:-0}"
 fi
 
-# Push to Kuma
-PUSH_URL="http://127.0.0.1/api/push/${FALKORDB_PUSH_TOKEN}?status=${STATUS}&msg=$(printf '%s' "$MSG" | sed 's/ /+/g')&ping="
-curl -fsS --max-time 8 -H 'Host: status.jeffemmett.com' "$PUSH_URL" -o /dev/null
+# Push to Kuma. Use --data-urlencode + GET so pipes/spaces in msg don't trip
+# CrowdSec's WAF (which blocks raw `|` as a shell-injection pattern).
+curl -fsS --max-time 8 -H 'Host: status.jeffemmett.com' \
+  -G "http://127.0.0.1/api/push/${FALKORDB_PUSH_TOKEN}" \
+  --data-urlencode "status=${STATUS}" \
+  --data-urlencode "msg=${MSG}" \
+  --data-urlencode "ping=" \
+  -o /dev/null
