@@ -1,0 +1,10 @@
+[Unit]
+Description=Re-apply OOM tiers every 5 minutes (catches new containers + restarts)
+
+[Timer]
+OnBootSec=60s
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
