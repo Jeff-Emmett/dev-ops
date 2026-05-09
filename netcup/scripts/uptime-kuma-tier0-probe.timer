@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Tier 0 saturation probe every 5 minutes
+
+[Timer]
+OnBootSec=120s
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

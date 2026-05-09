@@ -1,0 +1,11 @@
+[Unit]
+Description=Push Tier 0 mem-saturation status to Uptime Kuma
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/uptime-kuma-push.env
+ExecStart=/opt/scripts/uptime-kuma-tier0-probe.sh
+StandardOutput=append:/var/log/uptime-kuma-tier0-probe.log
+StandardError=append:/var/log/uptime-kuma-tier0-probe.log
