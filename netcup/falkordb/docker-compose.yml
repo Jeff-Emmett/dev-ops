@@ -10,9 +10,12 @@ services:
       REDIS_ARGS: "--requirepass ${FALKORDB_PASSWORD} --maxmemory 2gb --maxmemory-policy allkeys-lru --save 60 1 --save 300 100"
       BROWSER: "0"   # disable bundled Next.js browser; we run it as a separate service when needed
     ports:
-      # Loopback only — internal-only deployment.
-      # SSH tunnel from WSL2: ssh -L 6380:127.0.0.1:6380 netcup
+      # Loopback for host tools + Tailscale interface (100.64.0.2) for tailnet
+      # access from authorized devices (zenduo, mobile, asuszenduo). NEVER bind
+      # to 0.0.0.0 — Redis protocol on the public IP would be a 6-figure mistake.
+      # Tailnet has no third-party devices; password remains the auth barrier.
       - "127.0.0.1:6380:6379"
+      - "100.64.0.2:6380:6379"
     volumes:
       - falkordb-data:/var/lib/falkordb/data
     networks:
