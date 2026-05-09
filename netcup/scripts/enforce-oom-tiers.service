@@ -1,0 +1,10 @@
+[Unit]
+Description=Enforce OOM score adjustments per service tier
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/scripts/enforce-oom-tiers.sh
+StandardOutput=append:/var/log/enforce-oom-tiers.log
+StandardError=append:/var/log/enforce-oom-tiers.log
