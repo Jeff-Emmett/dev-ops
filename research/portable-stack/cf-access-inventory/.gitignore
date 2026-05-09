@@ -1,0 +1,7 @@
+# CF Access raw exports contain personal email addresses + identity-source detail.
+# Regenerable via the curl flow documented in access-inventory.md.
+# Keep local for re-running migration scripts; do not commit to repo.
+access-policies-raw.txt
+apps-raw.json
+access-inventory.json
+zones.json
