@@ -1,9 +1,10 @@
 ---
 id: TASK-87
 title: Rotate CrowdSec LAPI bouncer key (exposed in claude session 2026-05-14)
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-05-14 23:17'
+updated_date: '2026-05-14 23:50'
 labels:
   - security
   - crowdsec
@@ -40,8 +41,26 @@ References:
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 New LAPI bouncer registered in CrowdSec; old bouncer entry deleted
-- [ ] #2 /root/traefik/config/crowdsec.yml updated with new key; old value gone
-- [ ] #3 Traefik logs confirm successful auth to LAPI after the change (no 'unable to authenticate' errors)
-- [ ] #4 Bouncer still actively enforcing — verified by hitting Traefik with a known-banned source or by `cscli decisions list` showing live decisions reaching the bouncer
+- [x] #1 New LAPI bouncer registered in CrowdSec; old bouncer entry deleted
+- [x] #2 /root/traefik/config/crowdsec.yml updated with new key; old value gone
+- [x] #3 Traefik logs confirm successful auth to LAPI after the change (no 'unable to authenticate' errors)
+- [x] #4 Bouncer still actively enforcing — verified by hitting Traefik with a known-banned source or by `cscli decisions list` showing live decisions reaching the bouncer
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Rotated 2026-05-14 23:46 UTC.
+
+- New bouncer: `traefik-bouncer-20260514-2346` (registered via `cscli bouncers add`)
+- Old bouncers removed: `traefik-bouncer`, stale `traefik-bouncer@10.0.43.4`, and a transient `traefik-bouncer-20260514-2345` from a first attempt that hit a quoting bug
+- New LAPI key written to `/root/traefik/config/crowdsec.yml` (backup at `.bak-pre-rotate-20260514-234603`)
+- Traefik restarted at 23:49; bouncer's `Last API pull` populated by 23:49:18Z
+- Inventory entry `crowdsec-traefik-lapi-key` (added by TASK-88 scope) marked `last_rotated: 2026-05-14`
+
+Automation: `dev-ops/security/rotate-crowdsec-traefik-lapi-key.sh` (idempotent, `--dry-run` support, calls `inventory_mark_rotated`). Future rotations: just run the script.
+
+Two gotchas surfaced and now in memory:
+- Python heredoc through SSH → mangled by remote zsh; use scp-edit-scp instead
+- Traefik plugin middleware: file-watch reload isn't enough; need `docker restart traefik` for the plugin to rebind config. Script now does this automatically and verifies the post-restart Last API pull.
+<!-- SECTION:NOTES:END -->
