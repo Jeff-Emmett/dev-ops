@@ -1,9 +1,10 @@
 ---
 id: TASK-86
 title: 'Mailcow: replace orphan self-signed cert, restore ACME-managed LE'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-05-14 20:39'
+updated_date: '2026-05-14 21:27'
 labels:
   - infra
   - mailcow
@@ -40,10 +41,34 @@ Mailcow's `/opt/mailcow-dockerized/data/assets/ssl/cert.pem` currently serves a 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Orphan self-signed cert + key removed from /opt/mailcow-dockerized/data/assets/ssl/ (backed up to dated tarball first)
-- [ ] #2 mailcow.conf MAILCOW_HOSTNAME + ADDITIONAL_SAN covers mail.rmail.online, mail.jeffemmett.com, mx.jeffemmett.com (and any other host clients connect to)
-- [ ] #3 ACME container successfully issues a fresh Let's Encrypt cert (log line: 'Validating certificates...' followed by successful issuance, no 'skipping ACME client' lines)
-- [ ] #4 Postfix-mounted cert.pem shows Issuer = R3/R11 (LE), basicConstraints CA:FALSE, all configured hostnames in SAN
-- [ ] #5 openssl s_client -starttls smtp -connect mail.rmail.online:587 verifies chain to LE root without -trusted_first hacks; rustls (curl --rustls or similar) also accepts
-- [ ] #6 VW compose has SMTP_ACCEPT_INVALID_CERTS + SMTP_ACCEPT_INVALID_HOSTNAMES removed; admin 'Send test email' succeeds without them
+- [x] #1 Orphan self-signed cert + key removed from /opt/mailcow-dockerized/data/assets/ssl/ (backed up to dated tarball first)
+- [x] #2 mailcow.conf MAILCOW_HOSTNAME + ADDITIONAL_SAN covers mail.rmail.online, mail.jeffemmett.com, mx.jeffemmett.com (and any other host clients connect to)
+- [x] #3 ACME container successfully issues a fresh Let's Encrypt cert (log line: 'Validating certificates...' followed by successful issuance, no 'skipping ACME client' lines)
+- [x] #4 Postfix-mounted cert.pem shows Issuer = R3/R11 (LE), basicConstraints CA:FALSE, all configured hostnames in SAN
+- [x] #5 openssl s_client -starttls smtp -connect mail.rmail.online:587 verifies chain to LE root without -trusted_first hacks; rustls (curl --rustls or similar) also accepts
+- [x] #6 VW compose has SMTP_ACCEPT_INVALID_CERTS + SMTP_ACCEPT_INVALID_HOSTNAMES removed; admin 'Send test email' succeeds without them
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Cert cutover completed 2026-05-14:
+
+**Discovery on follow-up:** Mailcow had been relocated from `/opt/mailcow-dockerized/` to `/opt/mailcow/` between the original diagnosis and the fix. The orphan self-signed cert was backed up to `/root/cert-backups/mailcow-20260514-225826/` and removed. ACME ran successfully at 22:59 CEST and obtained an LE cert for `mail.rmail.online`.
+
+**Verified state:**
+- `MAILCOW_HOSTNAME=mail.rmail.online`, `ADDITIONAL_SAN=` (empty) — single-SAN cert is sufficient for current use; expanding to include mail.jeffemmett.com / mx.jeffemmett.com is a separate decision
+- Postfix `/etc/ssl/mail/cert.pem`: `CN=mail.rmail.online`, Issuer `Let's Encrypt R13`, `CA:FALSE`, `notBefore=May 14 20:00:57 2026`
+- Dovecot same
+- External STARTTLS / direct-TLS verified on 25, 465, 587, 993, 995, 4190 — all serve the new LE cert
+- Mailcow nginx 8443: LE cert
+- ACME log: `Certificate successfully obtained` (one cosmetic warning about jq parse errors in the reload hook and 'old end dates', but each Mailcow service is independently confirmed to be serving the new cert; treat the log warning as benign)
+
+**Vaultwarden workaround removed:**
+- `SMTP_ACCEPT_INVALID_CERTS` + `SMTP_ACCEPT_INVALID_HOSTNAMES` deleted from `netcup/vaultwarden/docker-compose.yml`
+- Same keys popped from `/var/lib/docker/volumes/vaultwarden_vaultwarden-data/_data/config.json` (which was shadowing the env per VW's startup warning) — backup at `config.json.bak-pre-cert-fix`
+- VW recreated
+- Loopback admin login + `POST /admin/test/smtp` to jeffemmett@gmail.com returned HTTP 200 with empty body = success, with **no** accept-invalid flags set
+
+**Out-of-scope but flagged:** Traefik returns `CN=localhost` (its default) for HTTPS requests to `mail.rmail.online:443`. Mailcow's Traefik labels only declare the `web` (HTTP) entrypoint, expecting TLS termination at CF edge. That's by design; not a Mailcow cert issue.
+<!-- SECTION:NOTES:END -->

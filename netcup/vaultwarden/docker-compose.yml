@@ -25,12 +25,6 @@ services:
       SMTP_FROM_NAME: "Vaultwarden"
       SMTP_USERNAME: "claude@jeffemmett.com"
       SMTP_PASSWORD: "${VW_SMTP_PASSWORD}"
-      # Mailcow's mounted cert is a self-signed leaf with CA:TRUE in basicConstraints
-      # (RFC 5280 violation — rustls/Lettre rejects with "CaUsedAsEndEntity"). It
-      # also lacks mail.rmail.online in its SAN list. Workaround until the cert is
-      # replaced and ACME is allowed to manage it (tracked separately).
-      SMTP_ACCEPT_INVALID_CERTS: "true"
-      SMTP_ACCEPT_INVALID_HOSTNAMES: "true"
     volumes:
       - vaultwarden-data:/data
     extra_hosts:
@@ -76,9 +70,6 @@ services:
   #     SMTP_FROM_NAME: "Commons Hub Vault"
   #     SMTP_USERNAME: "claude@jeffemmett.com"
   #     SMTP_PASSWORD: "${VW_CH_SMTP_PASSWORD}"
-  #     # See main vaultwarden block — drop once Mailcow cert is fixed.
-  #     SMTP_ACCEPT_INVALID_CERTS: "true"
-  #     SMTP_ACCEPT_INVALID_HOSTNAMES: "true"
   #   volumes:
   #     - vaultwarden-ch-data:/data
   #   extra_hosts:
