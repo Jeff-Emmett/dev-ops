@@ -1,0 +1,11 @@
+[Unit]
+Description=Vaultwarden liveness probe → Uptime Kuma
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/scripts/uptime-kuma-vaultwarden-probe.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
