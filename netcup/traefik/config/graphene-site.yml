@@ -1,0 +1,12 @@
+http:
+  routers:
+    graphene-site:
+      rule: "Host(`graphene.jeffemmett.com`)"
+      entryPoints:
+        - web
+      service: graphene-site
+  services:
+    graphene-site:
+      loadBalancer:
+        servers:
+          - url: "http://graphene-site:80"

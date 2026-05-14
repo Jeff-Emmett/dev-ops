@@ -1,0 +1,22 @@
+## p2pwikifr deprecated 2026-05-09 — redirects to main p2p wiki
+## TASK-MEDIUM.14
+## Priority 200 intercepts before docker-label routers; service noop@internal
+## means Traefik never tries to forward upstream — just emits the 301.
+
+http:
+  middlewares:
+    wikifr-to-en-wiki:
+      redirectRegex:
+        regex: '^https?://wikifr\.p2pfoundation\.net(/.*)?$'
+        replacement: 'https://wiki.p2pfoundation.net/'
+        permanent: true
+
+  routers:
+    wikifr-deprecated:
+      rule: 'Host(`wikifr.p2pfoundation.net`)'
+      entrypoints:
+        - web
+      middlewares:
+        - wikifr-to-en-wiki
+      service: noop@internal
+      priority: 200

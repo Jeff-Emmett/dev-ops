@@ -1,0 +1,13 @@
+http:
+  routers:
+    bcrg-diagrams:
+      rule: "Host(`bcrg-diagrams.jeffemmett.com`)"
+      entryPoints:
+        - web
+      service: bcrg-diagrams
+
+  services:
+    bcrg-diagrams:
+      loadBalancer:
+        servers:
+          - url: "http://bcrg-diagrams:80"

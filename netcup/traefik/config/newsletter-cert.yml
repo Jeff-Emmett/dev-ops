@@ -1,0 +1,10 @@
+## Cloudflare Origin Certificate for newsletter.p2pfoundation.net
+## Issued 2026-05-11, valid through 2041-05-07. Bypasses Let's Encrypt
+## rate limits (same pattern as translate.p2pfoundation.net).
+
+tls:
+  certificates:
+    - certFile: /etc/traefik/certs/origin/newsletter.p2pfoundation.net.crt
+      keyFile: /etc/traefik/certs/origin/newsletter.p2pfoundation.net.key
+      stores:
+        - default

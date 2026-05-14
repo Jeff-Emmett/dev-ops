@@ -1,0 +1,49 @@
+## Block the AI-scraper UA hitting wiki + blog with the Chrome-125 spoof.
+## See attack analysis 2026-05-09 — single UA driving 187k req/day on
+## wiki.p2pfoundation.net, exhausting the Apache prefork pool.
+##
+## The fingerprint: literal `Chrome/125.0.0.0` (zero minor/build/patch).
+## Real Chrome User-Agents always include a non-zero build number, e.g.
+## `Chrome/125.0.6422.142`. Browsers never report `0.0.0` so this regex
+## should produce zero false positives among humans.
+##
+## Strategy: ipAllowList with a sentinel range that never matches real
+## traffic = blanket 403 for any request that hits this router. The
+## upstream service (`noop@internal`) is never actually invoked. Same
+## technique used for the dead-blog redirects but with deny semantics.
+##
+## Priority 1000 ensures this router wins over the docker-label routers
+## (default priority ~50 + rule length) for wiki + blog hosts.
+
+http:
+  middlewares:
+    # ipAllowList with a sentinel range that never matches a real client
+    # short-circuits to a 403 before forwarding upstream. Same pattern as
+    # the dead-blog deprecation but with deny semantics.
+    deny-all-clients:
+      ipAllowList:
+        sourceRange:
+          - "255.255.255.255/32"
+
+  routers:
+    block-fake-chrome-125-wiki:
+      rule: "Host(`wiki.p2pfoundation.net`) && HeadersRegexp(`User-Agent`, `Chrome/125\\.0\\.0\\.0`)"
+      entrypoints:
+        - web
+        - websecure
+      priority: 99999
+      middlewares:
+        - deny-all-clients
+      service: noop@internal
+      tls: {}
+
+    block-fake-chrome-125-blog:
+      rule: "Host(`blog.p2pfoundation.net`) && HeadersRegexp(`User-Agent`, `Chrome/125\\.0\\.0\\.0`)"
+      entrypoints:
+        - web
+        - websecure
+      priority: 99999
+      middlewares:
+        - deny-all-clients
+      service: noop@internal
+      tls: {}

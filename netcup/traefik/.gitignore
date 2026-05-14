@@ -1,0 +1,5 @@
+# Traefik file-provider configs that embed live secrets.
+# The .example sibling is committed; the live file stays on the server
+# at /root/traefik/config/ and is excluded here so it can't be added
+# accidentally on a re-sync.
+config/crowdsec.yml

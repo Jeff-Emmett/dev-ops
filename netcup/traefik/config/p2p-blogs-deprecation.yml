@@ -1,0 +1,55 @@
+## p2p blogs FR/GR/NL: native posts imported into blog.p2pfoundation.net
+## under /fr/ /el/ /nl/ prefixes via Polylang (2026-05-10). Old subdomain
+## URLs slug-preservingly redirect so external/CMS links don't 404.
+##
+## Replaces the earlier blanket "everything → /" redirect (2026-05-09).
+## If an imported post kept its original slug (we relied on 0% slug
+## overlap between EN and FR/GR/NL — verified before import), this
+## maps the old subdomain path 1:1 to the new lang-prefixed path.
+
+http:
+  middlewares:
+    blogfr-to-en-blog:
+      redirectRegex:
+        regex: '^https?://blogfr\.p2pfoundation\.net(?:/(.*))?$'
+        replacement: 'https://blog.p2pfoundation.net/fr/${1}'
+        permanent: true
+    bloggr-to-en-blog:
+      redirectRegex:
+        regex: '^https?://bloggr\.p2pfoundation\.net(?:/(.*))?$'
+        replacement: 'https://blog.p2pfoundation.net/el/${1}'
+        permanent: true
+    blognl-to-en-blog:
+      redirectRegex:
+        regex: '^https?://blognl\.p2pfoundation\.net(?:/(.*))?$'
+        replacement: 'https://blog.p2pfoundation.net/nl/${1}'
+        permanent: true
+
+  routers:
+    blogfr-deprecated:
+      rule: 'Host(`blogfr.p2pfoundation.net`)'
+      entrypoints:
+        - web
+        - websecure
+      middlewares:
+        - blogfr-to-en-blog
+      service: noop@internal
+      priority: 200
+    bloggr-deprecated:
+      rule: 'Host(`bloggr.p2pfoundation.net`)'
+      entrypoints:
+        - web
+        - websecure
+      middlewares:
+        - bloggr-to-en-blog
+      service: noop@internal
+      priority: 200
+    blognl-deprecated:
+      rule: 'Host(`blognl.p2pfoundation.net`)'
+      entrypoints:
+        - web
+        - websecure
+      middlewares:
+        - blognl-to-en-blog
+      service: noop@internal
+      priority: 200

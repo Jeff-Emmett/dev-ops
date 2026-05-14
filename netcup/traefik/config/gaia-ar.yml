@@ -1,0 +1,12 @@
+http:
+  routers:
+    gaia-ar:
+      rule: "Host(`gaia-ar.jeffemmett.com`)"
+      service: gaia-ar
+      entryPoints:
+        - web
+  services:
+    gaia-ar:
+      loadBalancer:
+        servers:
+          - url: "http://gaia-ar:80"

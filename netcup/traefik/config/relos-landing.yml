@@ -1,0 +1,12 @@
+http:
+  routers:
+    relos-landing:
+      rule: "Host(`relos.jeffemmett.com`)"
+      entrypoints:
+        - web
+      service: relos-landing
+  services:
+    relos-landing:
+      loadBalancer:
+        servers:
+          - url: "http://relos-landing-v2:80"

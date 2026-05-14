@@ -1,0 +1,7 @@
+http:
+  routers:
+    cadcad-community:
+      rule: "Host(`community.cadcad.org`)"
+      service: discourse@docker
+      entryPoints:
+        - web

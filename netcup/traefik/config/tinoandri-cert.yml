@@ -1,0 +1,11 @@
+## Cloudflare Origin Certificate for tinoandri.ch (+ *.tinoandri.ch).
+## Issued 2026-05-12, valid 15 years. Bypasses Let's Encrypt rate limits
+## (CF Full-Strict trusts CF Origin CA without LE participation).
+## CSR + key generated on-host at /root/traefik/certs/origin/.
+
+tls:
+  certificates:
+    - certFile: /etc/traefik/certs/origin/tinoandri.ch.crt
+      keyFile: /etc/traefik/certs/origin/tinoandri.ch.key
+      stores:
+        - default

@@ -1,0 +1,58 @@
+http:
+  middlewares:
+    sablier-twenty-ch:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000
+          group: twenty-ch
+          sessionDuration: 1h
+          dynamic:
+            displayName: CRM (CH)
+            theme: hacker-terminal
+            refreshFrequency: 5s
+            showDetails: true
+    sablier-twenty-rn:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000
+          group: twenty-rn
+          sessionDuration: 1h
+          dynamic:
+            displayName: CRM (RN)
+            theme: hacker-terminal
+            refreshFrequency: 5s
+            showDetails: true
+  routers:
+    twenty-ch:
+      rule: "Host(`crm.rspace.online`)"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-twenty-ch
+      service: twenty-ch
+      priority: 130
+    twenty-rn:
+      rule: "Host(`rnetwork.online`) && (PathPrefix(`/api`) || PathPrefix(`/metadata`) || PathPrefix(`/graphql`) || PathPrefix(`/rest`) || PathPrefix(`/files`) || PathPrefix(`/healthz`) || PathPrefix(`/verify`) || PathPrefix(`/auth`) || PathPrefix(`/client-config`))"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-twenty-rn
+      service: twenty-rn
+      priority: 120
+    rnetwork-spaces:
+      rule: "HostRegexp(`{space:[a-z0-9-]+}.rnetwork.online`)"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-twenty-rn
+      service: twenty-rn
+      priority: 100
+  services:
+    twenty-ch:
+      loadBalancer:
+        servers:
+          - url: "http://twenty-ch-server:3000"
+    twenty-rn:
+      loadBalancer:
+        servers:
+          - url: "http://twenty-rn-server:3000"

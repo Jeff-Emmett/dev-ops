@@ -1,0 +1,46 @@
+http:
+  middlewares:
+    sablier-wizarr:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000
+          group: wizarr
+          sessionDuration: 15m
+          dynamic:
+            displayName: Wizarr Invites
+            theme: hacker-terminal
+            refreshFrequency: 5s
+            showDetails: true
+    wizarr-headers:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+    wizarr-root-redirect:
+      redirectRegex:
+        regex: "^https?://invite.jefflix.lol/?$"
+        replacement: "https://invite.jefflix.lol/j/RA05YZFRGD"
+        permanent: false
+  routers:
+    wizarr:
+      rule: "Host(`invite.jeffemmett.com`) || Host(`invite.jefflix.lol`)"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-wizarr
+        - wizarr-headers
+      service: wizarr
+      priority: 1
+    wizarr-root:
+      rule: "(Host(`invite.jefflix.lol`) && Path(`/`))"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-wizarr
+        - wizarr-root-redirect
+      service: wizarr
+      priority: 10
+  services:
+    wizarr:
+      loadBalancer:
+        servers:
+          - url: "http://wizarr:5690"

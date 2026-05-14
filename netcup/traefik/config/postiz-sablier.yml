@@ -1,17 +1,5 @@
 http:
   middlewares:
-    sablier-postiz-main:
-      plugin:
-        sablier:
-          sablierUrl: http://sablier:10000
-          group: postiz-main
-          sessionDuration: 30m
-          dynamic:
-            displayName: Postiz - Social Media Scheduler
-            theme: hacker-terminal
-            refreshFrequency: 5s
-            showDetails: true
-
     sablier-postiz-votc:
       plugin:
         sablier:
@@ -23,31 +11,6 @@ http:
             theme: hacker-terminal
             refreshFrequency: 5s
             showDetails: true
-
-    sablier-postiz-bcrg:
-      plugin:
-        sablier:
-          sablierUrl: http://sablier:10000
-          group: postiz-bcrg
-          sessionDuration: 30m
-          dynamic:
-            displayName: Bonding Curve Socials
-            theme: hacker-terminal
-            refreshFrequency: 5s
-            showDetails: true
-
-    sablier-postiz-cc:
-      plugin:
-        sablier:
-          sablierUrl: http://sablier:10000
-          group: postiz-cc
-          sessionDuration: 30m
-          dynamic:
-            displayName: Crypto Commons Socials
-            theme: hacker-terminal
-            refreshFrequency: 5s
-            showDetails: true
-
     sablier-postiz-p2pf:
       plugin:
         sablier:
@@ -59,9 +22,18 @@ http:
             theme: hacker-terminal
             refreshFrequency: 5s
             showDetails: true
-
+    sablier-postiz-cc:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000
+          group: postiz-cc
+          sessionDuration: 30m
+          dynamic:
+            displayName: CC Socials
+            theme: hacker-terminal
+            refreshFrequency: 5s
+            showDetails: true
   routers:
-    # postiz-main removed — demo.rsocials.online handled by Postiz container labels
     postiz-votc:
       rule: "Host(`votc-socials.jeffemmett.com`)"
       entryPoints:
@@ -70,25 +42,6 @@ http:
       middlewares:
         - sablier-postiz-votc
       service: postiz-votc
-
-    postiz-bcrg:
-      rule: "Host(`socials.bondingcurve.tech`)"
-      entryPoints:
-        - web
-        - websecure
-      middlewares:
-        - sablier-postiz-bcrg
-      service: postiz-bcrg
-
-    postiz-cc:
-      rule: "Host(`socials.crypto-commons.org`)"
-      entryPoints:
-        - web
-        - websecure
-      middlewares:
-        - sablier-postiz-cc
-      service: postiz-cc
-
     postiz-p2pf:
       rule: "Host(`socials.p2pfoundation.net`)"
       entryPoints:
@@ -97,29 +50,24 @@ http:
       middlewares:
         - sablier-postiz-p2pf
       service: postiz-p2pf
-
+    postiz-cc:
+      rule: "Host(`socials.crypto-commons.org`) || Host(`socials.valleyofthecommons.com`)"
+      entryPoints:
+        - web
+        - websecure
+      middlewares:
+        - sablier-postiz-cc
+      service: postiz-cc
   services:
-    postiz-main:
-      loadBalancer:
-        servers:
-          - url: "http://postiz:5000"
-
     postiz-votc:
       loadBalancer:
         servers:
           - url: "http://postiz-votc:5000"
-
-    postiz-bcrg:
-      loadBalancer:
-        servers:
-          - url: "http://postiz-bcrg:5000"
-
-    postiz-cc:
-      loadBalancer:
-        servers:
-          - url: "http://postiz-cc:5000"
-
     postiz-p2pf:
       loadBalancer:
         servers:
           - url: "http://postiz-p2pf:5000"
+    postiz-cc:
+      loadBalancer:
+        servers:
+          - url: "http://postiz-cc:5000"

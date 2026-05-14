@@ -1,0 +1,12 @@
+http:
+  routers:
+    xhiva-nl:
+      rule: "Host(`newsletter.xhiva.art`)"
+      entrypoints:
+        - web
+      service: xhiva-nl
+  services:
+    xhiva-nl:
+      loadBalancer:
+        servers:
+          - url: "http://xhiva-listmonk:9000"

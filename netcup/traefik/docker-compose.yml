@@ -18,25 +18,39 @@ services:
       - "--providers.file.watch=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.web.http.middlewares=security-headers@file"
-      - "--entrypoints.websecure.http.middlewares=security-headers@file"
+      - "--entrypoints.web.http.middlewares=crowdsec@file,security-headers@file"
+      - "--entrypoints.websecure.http.middlewares=crowdsec@file,security-headers@file"
       - "--certificatesresolvers.letsencrypt.acme.email=jeff@jeffemmett.com"
       - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt-dns01.acme.email=jeff@jeffemmett.com"
+      - "--certificatesresolvers.letsencrypt-dns01.acme.storage=/etc/traefik/acme-dns01.json"
+      - "--certificatesresolvers.letsencrypt-dns01.acme.dnschallenge=true"
+      - "--certificatesresolvers.letsencrypt-dns01.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.letsencrypt-dns01.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
       - "--log.level=INFO"
       - "--experimental.plugins.sablier.moduleName=github.com/sablierapp/sablier-traefik-plugin"
       - "--experimental.plugins.sablier.version=v1.1.0"
+      - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.moduleName=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+      - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.version=v1.4.4"
     ports:
       - "80:80"
       - "443:443"
+    env_file:
+      - /root/.cloudflare-credentials.env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./config:/etc/traefik/config:ro
       - ./certs:/etc/traefik/certs:ro
+      - /opt/mailcow/data/assets/ssl:/etc/traefik/mailcow-certs:ro
       - ./acme.json:/etc/traefik/acme.json
+      - ./acme-dns01.json:/etc/traefik/acme-dns01.json
     networks:
       - traefik-public
+      - crowdsec_crowdsec-internal
 
 networks:
   traefik-public:
+    external: true
+  crowdsec_crowdsec-internal:
     external: true

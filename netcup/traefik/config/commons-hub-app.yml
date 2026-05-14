@@ -1,0 +1,11 @@
+http:
+  routers:
+    commons-hub-app:
+      rule: "Host(`commons-hub.at`) || Host(`www.commons-hub.at`) || Host(`commons-hub.jeffemmett.com`)"
+      entrypoints: [web]
+      service: commons-hub-app
+  services:
+    commons-hub-app:
+      loadBalancer:
+        servers:
+          - url: "http://commons-hub-web:3000"
