@@ -1,0 +1,27 @@
+http:
+  middlewares:
+    sablier-cyclos:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000
+          group: cyclos
+          sessionDuration: 1h
+          dynamic:
+            displayName: Cyclos Timebank
+            theme: hacker-terminal
+            refreshFrequency: 10s
+            showDetails: true
+  routers:
+    cyclos:
+      rule: "Host(`timebank.rspace.online`)"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-cyclos
+      service: cyclos
+      priority: 130
+  services:
+    cyclos:
+      loadBalancer:
+        servers:
+          - url: "http://cyclos:8080"

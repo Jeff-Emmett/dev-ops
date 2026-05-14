@@ -1,0 +1,13 @@
+## Cloudflare Origin Certificate for wiki.p2pfoundation.net + wiki.commons-hub.at.
+## Issued 2026-05-12, valid 15 years. Replaces Let's Encrypt to bypass
+## the tls-alpn-01 challenge failure caused by Cloudflare proxy (CF doesn't
+## forward acme-tls/1 ALPN). The failed authorizations accumulated and
+## triggered an account-wide LE pause — see Traefik logs prior to this date.
+## Pairs with removal of `tls.certresolver=letsencrypt` on p2pwiki container.
+
+tls:
+  certificates:
+    - certFile: /etc/traefik/certs/origin/wiki-multi.crt
+      keyFile: /etc/traefik/certs/origin/wiki-multi.key
+      stores:
+        - default

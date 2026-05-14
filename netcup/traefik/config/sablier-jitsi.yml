@@ -1,0 +1,26 @@
+http:
+  middlewares:
+    sablier-jitsi:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000
+          group: jeffsi-meet
+          sessionDuration: 1h
+          dynamic:
+            displayName: Jitsi Meet
+            theme: hacker-terminal
+            refreshFrequency: 5s
+            showDetails: true
+  routers:
+    jitsi:
+      rule: "Host(`meet.jeffemmett.com`)"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-jitsi
+      service: jitsi
+  services:
+    jitsi:
+      loadBalancer:
+        servers:
+          - url: "http://jeffsi-meet-web-1:80"

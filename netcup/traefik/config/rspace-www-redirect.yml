@@ -1,0 +1,166 @@
+## www → apex redirects for all r*.online domains
+## Deployed to /root/traefik/config/rspace-www-redirect.yml
+##
+## Uses file-provider routers with priority 200 to intercept www.* requests
+## before the Docker-label routers (default priority ~100) serve them.
+## Redirects are 301 (permanent) to signal search engines and browsers.
+
+http:
+  middlewares:
+    www-to-apex:
+      redirectRegex:
+        regex: "^https?://www\\.([a-z]+\\.online)(.*)"
+        replacement: "https://${1}${2}"
+        permanent: true
+
+  routers:
+    # rSpace
+    www-rspace:
+      rule: "Host(`www.rspace.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rVote
+    www-rvote:
+      rule: "Host(`www.rvote.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rNotes
+    www-rnotes:
+      rule: "Host(`www.rnotes.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rMaps
+    www-rmaps:
+      rule: "Host(`www.rmaps.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rCal
+    www-rcal:
+      rule: "Host(`www.rcal.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rTrips
+    www-rtrips:
+      rule: "Host(`www.rtrips.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rWallet
+    www-rwallet:
+      rule: "Host(`www.rwallet.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rFiles
+    www-rfiles:
+      rule: "Host(`www.rfiles.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rTube
+    www-rtube:
+      rule: "Host(`www.rtube.online`)"
+      entrypoints:
+        - web
+        - websecure
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rNetwork
+    www-rnetwork:
+      rule: "Host(`www.rnetwork.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rFunds
+    www-rfunds:
+      rule: "Host(`www.rfunds.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rCart
+    www-rcart:
+      rule: "Host(`www.rcart.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rInbox
+    www-rinbox:
+      rule: "Host(`www.rinbox.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rMail (alias for rInbox)
+    www-rmail:
+      rule: "Host(`www.rmail.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200
+
+    # rStack
+    www-rstack:
+      rule: "Host(`www.rstack.online`)"
+      entrypoints:
+        - web
+      middlewares:
+        - www-to-apex
+      service: noop@internal
+      priority: 200

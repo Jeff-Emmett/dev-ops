@@ -1,0 +1,16 @@
+## zk.rspace.online → rspace-zk-staging
+## Highest-priority router for staging to beat space-gateway + rspace-canvas.
+## File-provider: restart not required, Traefik hot-reloads.
+http:
+  routers:
+    zk-rspace-staging-file:
+      rule: "Host(`zk.rspace.online`)"
+      entrypoints:
+        - web
+      service: rspace-zk-staging-svc
+      priority: 300
+  services:
+    rspace-zk-staging-svc:
+      loadBalancer:
+        servers:
+          - url: "http://rspace-zk-staging:3000"
