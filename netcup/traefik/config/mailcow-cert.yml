@@ -1,0 +1,26 @@
+## Mailcow LE cert for mail.rmail.online — exposes the cert that
+## Mailcow's own ACME container manages so Traefik can terminate TLS on
+## :443 for the same hostname (instead of returning the default
+## CN=localhost cert).
+##
+## Pairs with:
+##   - bind-mount in /root/traefik/docker-compose.yml:
+##       /opt/mailcow/data/assets/ssl:/etc/traefik/mailcow-certs:ro
+##     (NOT under /etc/traefik/certs because that path is already mounted
+##     read-only from ./certs and Docker can't create the subdir-mountpoint.)
+##   - websecure router label on the mailcowdockerized-nginx-mailcow-1
+##     service (see /opt/mailcow/docker-compose.override.yml).
+##
+## Cert refresh: Mailcow's acme-mailcow renews ~30 days before expiry and
+## writes to the same file paths atomically. Traefik file-provider watches
+## the config dir but NOT the certs dir; it does, however, re-read certs
+## on the cert-provider TLS store reload triggered by config changes. In
+## practice the cert is fetched fresh on each TLS handshake, so renewals
+## propagate without a Traefik reload.
+
+tls:
+  certificates:
+    - certFile: /etc/traefik/mailcow-certs/cert.pem
+      keyFile: /etc/traefik/mailcow-certs/key.pem
+      stores:
+        - default
