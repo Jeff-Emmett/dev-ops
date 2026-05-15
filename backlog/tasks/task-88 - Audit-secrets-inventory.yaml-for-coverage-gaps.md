@@ -4,7 +4,7 @@ title: Audit secrets-inventory.yaml for coverage gaps
 status: In Progress
 assignee: []
 created_date: '2026-05-14 23:22'
-updated_date: '2026-05-15 00:17'
+updated_date: '2026-05-15 11:57'
 labels:
   - security
   - rotation
@@ -49,10 +49,10 @@ The weekly rotation digest (`rotation-digest.timer`, fires Mondays 09:00 UTC) is
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Every sensitive value in ~/.secrets/private/, in /opt/apps/*/.env on Netcup, and in Infisical has either an inventory entry or a documented reason for exclusion (e.g. 'single-use install token')
-- [ ] #2 CrowdSec LAPI key inventory entry exists and links to TASK-87 / a rotate-crowdsec-traefik-lapi-key.sh or runbook
+- [x] #1 Every sensitive value in ~/.secrets/private/, in /opt/apps/*/.env on Netcup, and in Infisical has either an inventory entry or a documented reason for exclusion (e.g. 'single-use install token')
+- [x] #2 CrowdSec LAPI key inventory entry exists and links to TASK-87 / a rotate-crowdsec-traefik-lapi-key.sh or runbook
 - [x] #3 Vaultwarden ADMIN_TOKEN + plaintext passphrase, Kuma admin password, Kuma API key, FalkorDB password are all inventoried (or explicitly waived in this task's final notes)
-- [ ] #4 Running `./security/check-rotation-due.sh --dry-run` (or the manual equivalent) lists no inventory-format errors and matches the entries to consumers correctly
+- [x] #4 Running `./security/check-rotation-due.sh --dry-run` (or the manual equivalent) lists no inventory-format errors and matches the entries to consumers correctly
 - [ ] #5 Next weekly digest email contains the expected new entries (verify the Monday following the inventory update)
 <!-- AC:END -->
 
@@ -148,4 +148,20 @@ Phase 2 complete 2026-05-14:
 **Stubs needed** (~20 runbook-*.md files referenced but not yet written). Each is a 10-line write-it-when-first-rotated runbook. Not blocking; the digest can flag and a human follow.
 
 AC #1 progress: ~/.secrets/private/ side covered (inventory or WAIVED for every file). Still pending: /opt/apps/*/.env on Netcup (Phase 3), Infisical projects (Phase 4).
+
+Phase 3-5 complete 2026-05-15.
+
+**Phase 3a — /opt/secrets/ central stash:** 10 entries (cloudflare-tokens-bundle, stripe-crypto-commons, fal-api-key, google-oauth-credentials, katheryn-website-secrets, mailcow-smtp-stash, pocketid-api-key, resend-api-key, rnotes-database, worldplay-admin). Skipped empty files (gemini, r2-backup).
+
+**Phase 3b — high-impact service envs:** 13 entries covering rspace-online-secrets, payment-infra-secrets, pentagi-secrets, postiz-multi-tenant-secrets, twenty-multi-tenant-secrets, commons-hub-directus-app-secrets, mattermost-postgres, n8n-postgres, affine-secrets, cyclos-postgres, listmonk-postgres, plus a meta-entry `infisical-service-tokens-multi-service` covering the long tail.
+
+**Phase 3 long-tail handling:** rather than 60+ individual entries, added `netcup-service-envs.md` index (one row per .env on Netcup with key names + Infisical-vs-plain classification). Single meta-entry `netcup-service-envs` triggers a quarterly review. Regenerator script: `dev-ops/security/dump-netcup-envs.sh`.
+
+**Phase 4 — Infisical projects:** existing `dev-ops/infisical/inventory.yaml` already tracks 63 projects (33 migrated, 29 pending, 1 skip). Added one meta-entry `infisical-projects-audit` pointing at it with 90d cadence. Individual secrets-in-Infisical are managed by Infisical itself; only force-multipliers like KUMA_PASSWORD get individual entries here.
+
+**Phase 5 — digest verification (dry):** ran the digest Python locally against the live inventory. Output: 26 OVERDUE + 0 due-soon + 32 OK = 58 tracked. Subject (post-fix) will read `[secrets] 26 secret(s) need rotation attention`. 1970-01-01-forced entries dominate the OVERDUE list — that's the desired behavior; the digest will surface them so the human can either rotate or backdate `last_rotated` to a known good value.
+
+**Inventory totals:** 8 → 58 entries across phases 1–4 (~7× coverage).
+
+**AC #5 deferred:** the actual Monday digest hasn't fired yet (next 2026-05-18 11:00 CEST). Will pass through the unchecked-AC gate; mark #5 after the email arrives Monday.
 <!-- SECTION:NOTES:END -->
