@@ -33,6 +33,16 @@ secret was rotated on 2026-04-21 (`last_rotated` on inventory entry
 `claude-jeffemmett-mailcow`). Backup retained for emergency rollback;
 should be deleted when no longer needed. Not under rotation cadence.
 
+### `github_token`, `syncthing_local_api_key`, `syncthing_netcup_api_key` (removed)
+These were `~/.secrets/private/` *cache copies* of values whose canonical
+source lives elsewhere — `github_token` shadowed the gh-managed OAuth
+token (`~/.config/gh/hosts.yml`); the two `syncthing_*` files shadowed
+the `<gui><apikey>` element in each instance's `config.xml`. All three
+were removed once their rotations made the caches stale (2026-05-15);
+timestamped `.bak-*` copies retained. The inventory entries
+(`github-pat`, `syncthing-{local,netcup}-api-key`) now point at the real
+source. Don't recreate the cache files — they only cause drift.
+
 ---
 
 ## Dated rotation-snapshot files
