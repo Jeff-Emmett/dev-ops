@@ -1,9 +1,10 @@
 ---
 id: TASK-88
 title: Audit secrets-inventory.yaml for coverage gaps
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-05-14 23:22'
+updated_date: '2026-05-15 00:00'
 labels:
   - security
   - rotation
@@ -54,3 +55,54 @@ The weekly rotation digest (`rotation-digest.timer`, fires Mondays 09:00 UTC) is
 - [ ] #4 Running `./security/check-rotation-due.sh --dry-run` (or the manual equivalent) lists no inventory-format errors and matches the entries to consumers correctly
 - [ ] #5 Next weekly digest email contains the expected new entries (verify the Monday following the inventory update)
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+## Phased sweep plan
+
+Each phase is independent — stop at any point and the digest gets stricter for what's already in.
+
+### Phase 0 — Discover (1 hr)
+- `ls ~/.secrets/private/` — every file is a candidate
+- `find /opt/apps -maxdepth 3 -name .env` on Netcup — every service's env
+- List Infisical projects (`infisical projects list` or via web UI) — every secret per project
+- Audit `~/.cloudflare-credentials.env`, KeePass vault headers (just titles), and Mailcow admin / database password
+- Produce a working CSV: secret-name | location | consumers (best guess) | suggested cadence | rotation difficulty (auto/manual)
+
+### Phase 1 — Easy wins (this turn)
+Persistent gate-secrets where a single inventory entry buys real coverage. Five obvious adds:
+1. **vaultwarden-admin-token** — manual; `/opt/apps/vaultwarden/.env` (Argon2) + `~/.secrets/private/vaultwarden_admin_passphrase_jeff.txt` (plaintext); cadence 365d
+2. **kuma-admin-password** — manual; Infisical (kuma-alert-agent project); cadence 365d
+3. **kuma-api-key** — manual; `~/.secrets/private/kuma_api_key`; cadence 365d
+4. **falkordb-password** — auto candidate; `/opt/apps/falkordb/.env`; cadence 180d
+5. **vw-smtp-password** — already covered indirectly via `claude-jeffemmett-mailcow` (same value); add cross-reference note rather than a new entry
+
+### Phase 2 — ~/.secrets/private/ walk (1-2 hr)
+30 files in there per `ls` earlier. For each:
+- If still in use → inventory with best-known `last_rotated`
+- If obsolete → mark in a `WAIVED.md` adjacent to the inventory with rationale
+- Specific ones expected to make the cut: `runpod_api_key`, `vastai_api_key`, `moonshot_api_key`, `erpnext_api_key`, `r2_vastai_credentials`, `gitea_github_mirror_token`, `gitea_token`, `github_token`, `infisical_funion_sidecar_client_secret`, `relos-release.keystore`, `ironclaw_basic_auth_password`, `rmail_team_password`, `rmail_noreply_password`, `forum-replies_p2pfoundation_password`, `directus_fritsch_password`, `commons_hub_admin_password`, `commons_hub_directus_password`, `syncthing_*_api_key`, `vaultwarden_admin_passphrase_commons-hub.txt` (deferred VW instance)
+
+### Phase 3 — Netcup per-service .env sweep (2-3 hr)
+For each `/opt/apps/<svc>/.env` and `/opt/services/<svc>/.env`, identify the values that aren't Infisical client_id/secret (those are bootstrap, ~waivable):
+- Postgres / MariaDB passwords for stateful services
+- Service-specific API tokens (Directus, ERPNext, Listmonk, n8n, Outline, Postiz, RSocials Postgres, etc.)
+- Decide per-service whether master rotation is feasible
+
+### Phase 4 — Infisical project audit (1-2 hr)
+- `infisical secrets list --projectSlug=<each>` for every project
+- Cross-reference against inventory; everything in Infisical that gates real access → inventory entry pointing to the Infisical project/path
+- Infisical client_id/secret pairs themselves are bootstrap creds — they should be in inventory with a separate "rotate via Infisical service-token UI" runbook
+
+### Phase 5 — Verify digest fires correctly
+- Run `./security/check-rotation-due.sh --dry-run` (or eyeball the script's logic against the inventory)
+- Force a "due now" entry temporarily; confirm the email digest contains it
+- Watch next Monday's actual digest for unexpected gaps
+
+### Conventions to keep
+- `last_rotated: 1970-01-01` = "never rotated, flag immediately" (forces next-Monday digest)
+- Entry without a rotation script = `mode: manual` + a runbook (even if the runbook is just a stub for the first version)
+- Secrets whose rotation involves downtime get a `notes:` line spelling out the blast radius
+- Secrets that live in multiple places (e.g. plaintext + hash) get a single `name` with `location.type: multi-file` and all paths listed, like `engine-pool-auth-token` already does
+<!-- SECTION:PLAN:END -->
