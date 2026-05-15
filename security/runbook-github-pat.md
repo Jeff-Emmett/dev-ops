@@ -8,9 +8,46 @@ rotation does NOT touch it — that one is rotated under its own runbook
 because it gates ~50+ repo mirrors and the rotation touches each repo
 config individually.
 
-**Current token state (as of 2026-05-15):** classic PAT (prefix `gho_…`)
-with scopes `admin:repo_hook, gist, read:org, repo`. You have two
-options at rotation time:
+> **PROVEN PATH (set 2026-05-15):** This was migrated to the gh
+> device-flow OAuth token. The old `~/.secrets/private/github_token`
+> shadow file was deleted (gh now manages the token natively in
+> `~/.config/gh/hosts.yml`). **Future rotations: just run the
+> device-flow block below — skip the manual-PAT sections entirely
+> unless you have a specific reason to mint a classic PAT.**
+>
+> ```bash
+> # Pre-state + backup (the shadow file no longer exists, so this is
+> # informational only after the 2026-05-15 migration):
+> gh auth status
+>
+> # The one human step (~30s): open the printed URL, enter the code:
+> gh auth logout --hostname github.com
+> gh auth login --hostname github.com --git-protocol ssh \
+>   --scopes 'repo,admin:repo_hook,read:org,gist' --web
+>
+> # Verify + smoke test:
+> gh auth status
+> gh api user --jq .login
+> gh repo list <your-gh-account> --limit 3
+> gh api user/orgs --jq '.[].login' | head -3
+>
+> # Record:
+> cd ~/Github/dev-ops && ./security/mark-rotated.sh github-pat
+> git add security/secrets-inventory.yaml && git commit -m \
+>   "security: rotate github-pat (mark inventory)"
+> ```
+>
+> Note: device flow adds `admin:public_key` to the scope set (for SSH
+> key management) — that's an expected, acceptable superset.
+
+---
+
+The manual-PAT material below is retained for the rare case you need a
+classic or fine-grained PAT specifically (e.g. a token for a CI system
+that can't do device flow).
+
+**Historical token state (pre-2026-05-15):** classic PAT (prefix `gho_…`)
+with scopes `admin:repo_hook, gist, read:org, repo`. Two options were:
 - **Same shape (classic):** click "Regenerate token" on the existing
   one — fastest, identical scope, identical behaviour.
 - **Migrate to fine-grained:** create a new fine-grained PAT, set
