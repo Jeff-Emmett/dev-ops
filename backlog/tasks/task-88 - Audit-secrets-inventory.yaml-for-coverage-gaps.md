@@ -4,7 +4,7 @@ title: Audit secrets-inventory.yaml for coverage gaps
 status: In Progress
 assignee: []
 created_date: '2026-05-14 23:22'
-updated_date: '2026-05-15 00:05'
+updated_date: '2026-05-15 00:17'
 labels:
   - security
   - rotation
@@ -125,4 +125,27 @@ Verified `/opt/dev-ops/security/secrets-inventory.yaml` shows 13 entries after `
 **Phase 1 AC #3 (this task): ✓ done.**
 
 Next phases (per plan): ~/.secrets/private/ walk (Phase 2), /opt/apps/*/.env sweep (Phase 3), Infisical audit (Phase 4). Stop point reasonable.
+
+Phase 2 complete 2026-05-14:
+
+**~/.secrets/private/ walked (31 files).**
+
+- **21 new inventory entries** added (TASK-88 Phase 2 block in secrets-inventory.yaml). cadence_days default 180d for service passwords, 90d for paid LLM APIs (moonshot), 365d for things that genuinely don't rotate often (Syncthing, mirror PATs, Infisical service tokens).
+- **1 existing entry updated** to multi-file: `gitea-api-token` now covers both Netcup + local copies.
+- **3 already covered** in earlier phases: claude_jeffemmett_password, kuma_api_key, vaultwarden_admin_passphrase_jeff.txt.
+- **6 waived** with rationale in `security/WAIVED.md`:
+  - `netcup_ip` (IP, not a secret)
+  - `syncthing_netcup_device_id` (public peer ID, not a credential)
+  - `claude_jeffemmett_password.bak-20260421-1140` (stale backup)
+  - `rspace-env-secrets-2026-05-05.txt` (dated snapshot of a rotation)
+  - `rspace-rapp-keys-2026-05-05` (same)
+  - `relos-release.keystore` (Android release-signing key — rotating breaks installed-app upgrade path; once-per-incident only)
+
+**Inventory total now 34 entries** (was 13 at start of TASK-88).
+
+**Forcing-flag entries** (last_rotated=1970-01-01) so next Monday's digest will surface them: kuma-admin-password, kuma-api-key, erpnext-api-key. 
+
+**Stubs needed** (~20 runbook-*.md files referenced but not yet written). Each is a 10-line write-it-when-first-rotated runbook. Not blocking; the digest can flag and a human follow.
+
+AC #1 progress: ~/.secrets/private/ side covered (inventory or WAIVED for every file). Still pending: /opt/apps/*/.env on Netcup (Phase 3), Infisical projects (Phase 4).
 <!-- SECTION:NOTES:END -->
