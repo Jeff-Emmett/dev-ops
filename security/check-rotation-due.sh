@@ -79,8 +79,14 @@ if [[ "$BODY" == "NO_ACTION_NEEDED" ]]; then
   exit 0
 fi
 
-OVERDUE_COUNT=$(printf '%s\n' "$BODY" | grep -c '^  - ' || true)
-SUBJECT="[secrets] ${OVERDUE_COUNT} secret(s) need rotation attention"
+# Count only entries in OVERDUE + "Due within Nd" sections (everything
+# before the "All other secrets" heading), not the full inventory listing.
+ACTION_COUNT=$(printf '%s\n' "$BODY" | awk '
+  /^## All other secrets/ { exit }
+  /^  - / { n++ }
+  END { print n+0 }
+')
+SUBJECT="[secrets] ${ACTION_COUNT} secret(s) need rotation attention"
 
 # Send via the postfix sendmail in mailcow (same path as backlog notifications)
 {
