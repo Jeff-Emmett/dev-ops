@@ -4,7 +4,7 @@ title: Audit secrets-inventory.yaml for coverage gaps
 status: In Progress
 assignee: []
 created_date: '2026-05-14 23:22'
-updated_date: '2026-05-15 00:00'
+updated_date: '2026-05-15 00:05'
 labels:
   - security
   - rotation
@@ -51,7 +51,7 @@ The weekly rotation digest (`rotation-digest.timer`, fires Mondays 09:00 UTC) is
 <!-- AC:BEGIN -->
 - [ ] #1 Every sensitive value in ~/.secrets/private/, in /opt/apps/*/.env on Netcup, and in Infisical has either an inventory entry or a documented reason for exclusion (e.g. 'single-use install token')
 - [ ] #2 CrowdSec LAPI key inventory entry exists and links to TASK-87 / a rotate-crowdsec-traefik-lapi-key.sh or runbook
-- [ ] #3 Vaultwarden ADMIN_TOKEN + plaintext passphrase, Kuma admin password, Kuma API key, FalkorDB password are all inventoried (or explicitly waived in this task's final notes)
+- [x] #3 Vaultwarden ADMIN_TOKEN + plaintext passphrase, Kuma admin password, Kuma API key, FalkorDB password are all inventoried (or explicitly waived in this task's final notes)
 - [ ] #4 Running `./security/check-rotation-due.sh --dry-run` (or the manual equivalent) lists no inventory-format errors and matches the entries to consumers correctly
 - [ ] #5 Next weekly digest email contains the expected new entries (verify the Monday following the inventory update)
 <!-- AC:END -->
@@ -106,3 +106,23 @@ For each `/opt/apps/<svc>/.env` and `/opt/services/<svc>/.env`, identify the val
 - Secrets whose rotation involves downtime get a `notes:` line spelling out the blast radius
 - Secrets that live in multiple places (e.g. plaintext + hash) get a single `name` with `location.type: multi-file` and all paths listed, like `engine-pool-auth-token` already does
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Phase 1 complete 2026-05-14:
+
+**Added to inventory** (all gate-secrets):
+- `vaultwarden-admin-token` (multi-file plaintext + Argon2)
+- `kuma-admin-password` (Infisical-backed)
+- `kuma-api-key`
+- `falkordb-password`
+
+Verified `/opt/dev-ops/security/secrets-inventory.yaml` shows 13 entries after `git pull origin main` on Netcup as root (sudo -u deploy needed gitea SSH keys it doesn't have).
+
+**Side effect:** `check-rotation-due.sh` has no --dry-run flag and always sends. Triggering it for verification fired an actual digest email at 2026-05-14 ~18:04 CEST. Subject `'[secrets] 13 secret(s) need rotation attention'` was misleading — only the two `1970-01-01` kuma entries are genuinely overdue; the count picked up the 'All other secrets' section. Fixed `check-rotation-due.sh` to count only OVERDUE + 'Due within Nd' sections; next Monday's digest will be accurate.
+
+**Phase 1 AC #3 (this task): ✓ done.**
+
+Next phases (per plan): ~/.secrets/private/ walk (Phase 2), /opt/apps/*/.env sweep (Phase 3), Infisical audit (Phase 4). Stop point reasonable.
+<!-- SECTION:NOTES:END -->
