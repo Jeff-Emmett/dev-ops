@@ -1,0 +1,10 @@
+[Unit]
+Description=Prune stale rotation-backup artifacts (TASK-89 retention policy)
+After=network-online.target
+
+[Service]
+Type=oneshot
+# --apply enforces the policy (keep newest 2/stem, drop >RETAIN_DAYS).
+# Drop --apply to make the monthly run a dry-run audit instead.
+ExecStart=%h/Github/dev-ops/security/prune-rotation-backups.sh --apply
+Nice=15
