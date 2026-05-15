@@ -4,7 +4,7 @@ title: Audit secrets-inventory.yaml for coverage gaps
 status: In Progress
 assignee: []
 created_date: '2026-05-14 23:22'
-updated_date: '2026-05-15 11:57'
+updated_date: '2026-05-15 16:53'
 labels:
   - security
   - rotation
@@ -164,4 +164,17 @@ Phase 3-5 complete 2026-05-15.
 **Inventory totals:** 8 → 58 entries across phases 1–4 (~7× coverage).
 
 **AC #5 deferred:** the actual Monday digest hasn't fired yet (next 2026-05-18 11:00 CEST). Will pass through the unchecked-AC gate; mark #5 after the email arrives Monday.
+
+Rotation automation added 2026-05-15:
+
+**Three new scripts**, all idempotent w/ --dry-run + inventory_mark_rotated on success:
+- `rotate-vaultwarden-admin-token.sh` — passphrase → argon2id (via container's `vaultwarden hash`) → env swap w/ `$` → `$$` escaping → compose up → login-test via loopback
+- `rotate-falkordb-password.sh` — Redis CONFIG SET requirepass while authed w/ OLD pw, then .env swap + recreate. Logs reminder for downstream clients (KOI store + 2 MCPs) which the script does NOT auto-update
+- `rotate-postgres-password.sh <profile>` — generic for any Dockerized Postgres consumer; per-service profile in `security/postgres-profiles/`. Currently `n8n.sh` exists; mattermost/cyclos/affine/listmonk-postgres profiles deferred until those compose stacks are running.
+
+**Inventory entries flipped to `mode: auto`:** vaultwarden-admin-token, falkordb-password, n8n-postgres. Plus the existing 3 (gitea-webhook-secret, engine-pool-auth-token, crowdsec-traefik-lapi-key). Total 6 of 58 entries are now scripted.
+
+**Not automated, by design:** external-provider keys (Anthropic, Stripe, Cloudflare, RunPod, fal, Moonshot, Google OAuth, PocketID, Resend, Worldplay) require portal interaction — runbook-only.
+
+**Pattern to extend:** new postgres-using service → drop a profile in `postgres-profiles/` matching the n8n template, flip the inventory entry to `mode: auto` + `script: rotate-postgres-password.sh <profile>`. No new bash needed.
 <!-- SECTION:NOTES:END -->
