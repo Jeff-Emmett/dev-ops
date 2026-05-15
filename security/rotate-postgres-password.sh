@@ -142,7 +142,7 @@ else
   log "consumer restart: $RESTART_CMD"
 fi
 
-# Step 6: smoke-test with the new password.
+# Step 6a: DB-side smoke — the new password authenticates against Postgres.
 if (( DRY_RUN )); then
   log "DRY-RUN: would psql -U $PG_USER with new password"
 else
@@ -150,7 +150,33 @@ else
   if [[ "$CHECK" != "1" ]]; then
     die "post-rotation psql smoke test failed: '$CHECK' — backups exist at ${ENV_PATH}.bak-pre-rotate-${TS}"
   fi
-  log "smoke test: psql SELECT 1 returned $CHECK ✓"
+  log "DB smoke test: psql SELECT 1 returned $CHECK ✓"
+fi
+
+# Step 6b: CONSUMER-side verification. CRITICAL — a DB-only smoke test is a
+# FALSE PASS for services whose app reads its DB password from a config
+# separate from the env var we rotated (e.g. listmonk: LISTMONK_DB_PASSWORD
+# feeds only the postgres container, the app uses its own config.toml).
+# Learned the hard way 2026-05-15 (listmonk outage). A profile SHOULD set
+# CONSUMER_CONTAINER (+ optional CONSUMER_AUTH_ERROR_RE) so we can confirm
+# the app actually reconnected with the new credential.
+if (( DRY_RUN )); then
+  log "DRY-RUN: would scan consumer logs for auth failures post-restart"
+elif [[ -n "${CONSUMER_CONTAINER:-}" ]]; then
+  ERR_RE="${CONSUMER_AUTH_ERROR_RE:-password authentication failed|auth.*failed|FATAL.*password|could not connect}"
+  sleep 6  # let the consumer attempt a reconnect cycle
+  HITS=$(ssh "$SSH_TARGET" "docker logs --since 30s '$CONSUMER_CONTAINER' 2>&1 | grep -iE '$ERR_RE' | tail -3" 2>/dev/null | tr -d '\r' || true)
+  if [[ -n "$HITS" ]]; then
+    log "CONSUMER VERIFICATION FAILED — '$CONSUMER_CONTAINER' still logging auth errors:"
+    echo "$HITS" >&2
+    die "Consumer did not reconnect with the new password. The DB pw was changed but the app config wasn't. REVERT: restore ${ENV_PATH}.bak-pre-rotate-${TS}, ALTER USER back to OLD (from the .bak), recreate. This service likely needs a manual runbook (split DB/app password config)."
+  fi
+  log "consumer smoke test: no auth errors in '$CONSUMER_CONTAINER' logs ✓"
+else
+  log "WARNING: profile defines no CONSUMER_CONTAINER — consumer reconnect NOT verified."
+  log "         The DB accepts the new pw, but if the app sources its DB"
+  log "         password from a separate config it may now be broken."
+  log "         Add CONSUMER_CONTAINER to the profile to close this gap."
 fi
 
 # Step 7: bump inventory.
