@@ -32,34 +32,48 @@ fi
 VW_HOST="passwords.jeffemmett.com"
 URL="http://127.0.0.1/alive"
 
-STATUS="up"
+# Retry before declaring DOWN. The host runs ~389 containers with swap
+# pinned at 100%; periodic thrash spikes can stall a single request past
+# an 8s timeout even though Vaultwarden itself is healthy and real clients
+# (browser/CF retries, longer timeouts) never notice. A single-shot probe
+# turned those micro-stalls into alert-email spam. Requiring all attempts
+# to fail means a genuine outage (>~25s unreachable) still alerts within
+# the 5-min cycle, but a transient blip recovers on retry and stays UP.
+MAX_ATTEMPTS=3
+PER_TIMEOUT=5
+RETRY_GAP=4
+
+STATUS="down"
 MSG=""
+PING_MS=0
 
-# Measure latency in ms (curl -w writes elapsed seconds).
-RAW=$(curl -fsS --max-time 8 \
-        -H "Host: ${VW_HOST}" \
-        -o /tmp/.vw-probe.out \
-        -w "%{http_code} %{time_total}" \
-        "${URL}" 2>/dev/null) || RAW="000 0"
+for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+  RAW=$(curl -fsS --max-time "$PER_TIMEOUT" \
+          -H "Host: ${VW_HOST}" \
+          -o /tmp/.vw-probe.out \
+          -w "%{http_code} %{time_total}" \
+          "${URL}" 2>/dev/null) || RAW="000 0"
 
-HTTP_CODE=${RAW%% *}
-TIME_TOTAL=${RAW#* }
-PING_MS=$(awk -v t="$TIME_TOTAL" 'BEGIN { printf "%d", t*1000 }')
+  HTTP_CODE=${RAW%% *}
+  TIME_TOTAL=${RAW#* }
+  PING_MS=$(awk -v t="$TIME_TOTAL" 'BEGIN { printf "%d", t*1000 }')
 
-if [[ "$HTTP_CODE" != "200" ]]; then
-  STATUS="down"
-  MSG="alive http=${HTTP_CODE}"
-else
-  # /alive returns a JSON-quoted ISO 8601 timestamp like "2026-05-14T20:42:00Z".
-  # Don't try to parse — just confirm it looks like a timestamp.
-  BODY=$(head -c 80 /tmp/.vw-probe.out 2>/dev/null)
-  if [[ "$BODY" == *"T"*"Z"* ]]; then
-    MSG="alive ok ${PING_MS}ms"
+  if [[ "$HTTP_CODE" == "200" ]]; then
+    # /alive returns a JSON-quoted ISO 8601 timestamp like "2026-05-14T20:42:00Z".
+    # Don't parse — just confirm it looks like a timestamp.
+    BODY=$(head -c 80 /tmp/.vw-probe.out 2>/dev/null)
+    if [[ "$BODY" == *"T"*"Z"* ]]; then
+      STATUS="up"
+      MSG="alive ok ${PING_MS}ms (try ${attempt}/${MAX_ATTEMPTS})"
+      break
+    fi
+    MSG="alive bad body: ${BODY:0:30} (try ${attempt}/${MAX_ATTEMPTS})"
   else
-    STATUS="down"
-    MSG="alive bad body: ${BODY:0:30}"
+    MSG="alive http=${HTTP_CODE} (try ${attempt}/${MAX_ATTEMPTS})"
   fi
-fi
+
+  [[ "$attempt" -lt "$MAX_ATTEMPTS" ]] && sleep "$RETRY_GAP"
+done
 
 rm -f /tmp/.vw-probe.out
 
