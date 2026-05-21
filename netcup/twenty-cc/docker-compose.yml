@@ -2,11 +2,12 @@ services:
   twenty-cc-server:
     image: twentycrm/twenty:${TAG:-latest}
     container_name: twenty-cc-server
-    mem_limit: 768m
+    mem_limit: 1536m
     volumes:
       - twenty-cc-local-data:/app/packages/twenty-server/.local-storage
     environment:
       NODE_PORT: 3000
+      NODE_OPTIONS: "--max-old-space-size=1024"
       PG_DATABASE_URL: postgres://postgres:${PG_DATABASE_PASSWORD:?PG_DATABASE_PASSWORD must be set}@twenty-cc-db:5432/default
       SERVER_URL: ${SERVER_URL}
       REDIS_URL: redis://twenty-cc-redis:6379
@@ -53,7 +54,7 @@ services:
   twenty-cc-worker:
     image: twentycrm/twenty:${TAG:-latest}
     container_name: twenty-cc-worker
-    mem_limit: 768m
+    mem_limit: 1024m
     volumes:
       - twenty-cc-local-data:/app/packages/twenty-server/.local-storage
     command: ["yarn", "worker:prod"]

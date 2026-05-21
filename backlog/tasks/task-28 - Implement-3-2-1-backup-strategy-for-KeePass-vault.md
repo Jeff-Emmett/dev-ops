@@ -1,16 +1,22 @@
 ---
-id: task-28
+id: TASK-28
 title: Implement 3-2-1 backup strategy for KeePass vault
-status: To Do
-assignee: ''
+status: Done
+assignee: []
 created_date: '2026-02-13 22:00'
-labels: [security, keepass, backup]
+updated_date: '2026-05-09 06:11'
+labels:
+  - security
+  - keepass
+  - backup
+dependencies:
+  - task-23
 priority: high
-dependencies: [task-23]
 ---
 
 ## Description
 
+<!-- SECTION:DESCRIPTION:BEGIN -->
 Implement a robust 3-2-1 backup strategy for the KeePass vault and key file, ensuring no single point of failure can cause total credential loss.
 
 ## 3-2-1 Rule
@@ -54,16 +60,40 @@ Implement a robust 3-2-1 backup strategy for the KeePass vault and key file, ens
 - Cron job to verify vault integrity: `keepassxc-cli ls vault.kdbx` (weekly)
 - Syncthing monitoring: alert if sync fails for > 24 hours
 - Restic backup verification: `restic check` (monthly)
+<!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 Vault syncing to at least 3 locations
+- [ ] #2 Key file stored in at least 2 separate secure locations
+- [x] #3 Restic backup includes KeePass directory
+- [ ] #4 Vault integrity check cron job set up
+- [ ] #5 Emergency recovery procedure documented and tested
+- [ ] #6 QR code of key file printed and stored securely
+- [ ] #7 Recovery test performed successfully from backup
+<!-- AC:END -->
 
-- [ ] Vault syncing to at least 3 locations
-- [ ] Key file stored in at least 2 separate secure locations
-- [ ] Restic backup includes KeePass directory
-- [ ] Vault integrity check cron job set up
-- [ ] Emergency recovery procedure documented and tested
-- [ ] QR code of key file printed and stored securely
-- [ ] Recovery test performed successfully from backup
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## 2026-05-09 — Closure with TASK-66 supersession
+
+Per established memory entry ("TASK-66 supersedes TASK-15, TASK-28, TASK-MEDIUM.9"), this task is being closed in favor of TASK-66 (Local AI Server + NAS) which absorbs the full 3-2-1 backup story including KeePass.
+
+**What landed today:**
+- AC #3 fixed: KeePass directories added to restic CONFIG_DIRS in `/opt/backup-system/backup-docker.sh`. Tomorrow's 03:00 restic snapshot will include `/root/KeePass/`, `/root/Sync/KeePass/`, `/root/.config/keepassxc/`. Pre-change backup at `/opt/backup-system/backup-docker.sh.bak.pre-keepass-2026-05-09`.
+- Discovered: infra-wide 3-2-1 backup is already operational (restic→R2 + Hetzner Storage Box sync, daily). KeePass now rides that pipeline.
+
+**Still pending under TASK-66:**
+- AC #1, #2, #6 — physical/key-file separation procedures
+- AC #4 — vault integrity check cron
+- AC #5 — emergency recovery doc
+- AC #7 — recovery test
+
+These belong to the local-NAS hardware build (TASK-66, BOM ready) where the KeePass key file gets a separate physical home + the recovery test cycle is set up.
+
+<!-- AC_WAIVED -->
+<!-- SECTION:NOTES:END -->
 
 ## Notes
 

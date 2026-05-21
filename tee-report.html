@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TEE Integration Opportunities — r*Stack & EncryptID</title>
+<style>
+  @page {
+    size: A4;
+    margin: 2cm 2.2cm;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9px;
+      color: #888;
+    }
+  }
+  body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.55;
+    color: #1a1a1a;
+  }
+  h1 {
+    font-size: 22pt;
+    color: #0f172a;
+    border-bottom: 3px solid #6366f1;
+    padding-bottom: 8px;
+    margin-top: 0;
+  }
+  h2 {
+    font-size: 15pt;
+    color: #1e293b;
+    border-bottom: 1.5px solid #cbd5e1;
+    padding-bottom: 4px;
+    margin-top: 28px;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 12pt;
+    color: #334155;
+    margin-top: 18px;
+    page-break-after: avoid;
+  }
+  p, li { orphans: 3; widows: 3; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 18px 0;
+    font-size: 10pt;
+    page-break-inside: avoid;
+  }
+  th {
+    background: #6366f1;
+    color: white;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+  }
+  td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .subtitle {
+    font-size: 12pt;
+    color: #64748b;
+    margin-top: -10px;
+    margin-bottom: 24px;
+  }
+  .date {
+    font-size: 10pt;
+    color: #94a3b8;
+    margin-bottom: 30px;
+  }
+  .highlight-box {
+    background: #f0f0ff;
+    border-left: 4px solid #6366f1;
+    padding: 12px 16px;
+    margin: 16px 0;
+    border-radius: 0 6px 6px 0;
+    page-break-inside: avoid;
+  }
+  .highlight-box p { margin: 4px 0; }
+  .warn-box {
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    padding: 12px 16px;
+    margin: 16px 0;
+    border-radius: 0 6px 6px 0;
+    page-break-inside: avoid;
+  }
+  .diagram {
+    font-family: 'Courier New', monospace;
+    font-size: 9.5pt;
+    background: #f1f5f9;
+    padding: 14px 18px;
+    border-radius: 6px;
+    white-space: pre;
+    line-height: 1.4;
+    margin: 12px 0;
+    page-break-inside: avoid;
+  }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  .phase-label {
+    display: inline-block;
+    background: #6366f1;
+    color: white;
+    font-size: 9pt;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-right: 6px;
+  }
+  .impact-high { color: #dc2626; font-weight: 600; }
+  .impact-med { color: #d97706; font-weight: 600; }
+  .cover-page {
+    text-align: center;
+    padding-top: 120px;
+    page-break-after: always;
+  }
+  .cover-page h1 {
+    font-size: 30pt;
+    border: none;
+    padding-bottom: 0;
+  }
+  .cover-page .subtitle {
+    font-size: 16pt;
+    margin-top: 8px;
+  }
+  .toc { page-break-after: always; }
+  .toc a { color: #1a1a1a; text-decoration: none; }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li { padding: 5px 0; border-bottom: 1px dotted #cbd5e1; }
+  .section-num { color: #6366f1; font-weight: 700; margin-right: 6px; }
+</style>
+</head>
+<body>
+
+<!-- Cover Page -->
+<div class="cover-page">
+  <h1>Trusted Execution Environments</h1>
+  <p class="subtitle">Integration Opportunities for r*Stack &amp; EncryptID</p>
+  <p class="date">Prepared February 15, 2026</p>
+  <p style="margin-top: 60px; font-size: 10pt; color: #94a3b8;">Confidential &mdash; Internal Use</p>
+</div>
+
+<!-- Table of Contents -->
+<div class="toc">
+  <h2 style="border-bottom: 3px solid #6366f1;">Contents</h2>
+  <ul>
+    <li><span class="section-num">1</span> Executive Summary</li>
+    <li><span class="section-num">2</span> What Are TEEs?</li>
+    <li><span class="section-num">3</span> Top Contender Platforms</li>
+    <li style="padding-left: 24px;">3.1 &nbsp;Phala Network</li>
+    <li style="padding-left: 24px;">3.2 &nbsp;Marlin Oyster</li>
+    <li style="padding-left: 24px;">3.3 &nbsp;Oasis Sapphire</li>
+    <li style="padding-left: 24px;">3.4 &nbsp;AWS Nitro Enclaves</li>
+    <li style="padding-left: 24px;">3.5 &nbsp;Gramine (Intel SGX)</li>
+    <li style="padding-left: 24px;">3.6 &nbsp;Platform Comparison Matrix</li>
+    <li><span class="section-num">4</span> Application to r*Stack &amp; EncryptID</li>
+    <li style="padding-left: 24px;">4.1 &nbsp;EncryptID — Guardian Recovery Enclave</li>
+    <li style="padding-left: 24px;">4.2 &nbsp;rVote — Confidential Tallying</li>
+    <li style="padding-left: 24px;">4.3 &nbsp;rSpace — Confidential CRDT Merge</li>
+    <li style="padding-left: 24px;">4.4 &nbsp;rFiles — Searchable Encryption</li>
+    <li style="padding-left: 24px;">4.5 &nbsp;rWallet — Policy Enforcement</li>
+    <li><span class="section-num">5</span> Recommended Roadmap</li>
+    <li><span class="section-num">6</span> Infrastructure Considerations</li>
+    <li><span class="section-num">7</span> Risks &amp; Mitigations</li>
+  </ul>
+</div>
+
+<!-- Section 1 -->
+<h2><span class="section-num">1</span> Executive Summary</h2>
+
+<p>Trusted Execution Environments (TEEs) allow sensitive computation to run on hardware that even the server operator cannot inspect. They are the missing piece for making the r*Stack's "zero-trust server" promise cryptographically enforceable rather than policy-based.</p>
+
+<div class="highlight-box">
+  <p><strong>Key finding:</strong> The highest-ROI integration point is <strong>EncryptID's guardian recovery flow</strong>, where TEEs ensure that a reconstructed master key is never visible to the server. This single change strengthens the security story for every r*Stack application that depends on EncryptID.</p>
+</div>
+
+<p>Five TEE platforms were evaluated. <strong>Phala Network</strong> and <strong>Marlin Oyster</strong> emerge as the top contenders for the r*Stack because they accept standard Docker containers, offer JavaScript/TypeScript SDKs, and provide on-chain attestation — aligning with the existing Bun/Node.js + EVM stack without requiring a rewrite.</p>
+
+<!-- Section 2 -->
+<h2><span class="section-num">2</span> What Are TEEs?</h2>
+
+<p>A TEE is a hardware-isolated region of a processor where code and data are protected from all other software on the machine — including the operating system, hypervisor, and anyone with physical access to the server. TEEs provide three guarantees:</p>
+
+<table>
+  <tr><th>Guarantee</th><th>What It Means</th></tr>
+  <tr><td><strong>Confidentiality</strong></td><td>Memory inside the TEE is encrypted; even a root user or hypervisor cannot read it.</td></tr>
+  <tr><td><strong>Integrity</strong></td><td>Code inside the TEE cannot be tampered with. If modified, the TEE refuses to run.</td></tr>
+  <tr><td><strong>Attestation</strong></td><td>A remote party can cryptographically verify <em>exactly which code</em> is running inside the TEE, and that it is running on genuine hardware.</td></tr>
+</table>
+
+<div class="diagram">Hardware TEE Isolation Model
+
+┌────────────────────────────────────────────────┐
+│  Server Hardware (CPU + Encrypted Memory)       │
+│  ┌──────────────────────────────────────────┐  │
+│  │  TEE Enclave                             │  │
+│  │  ┌────────────────┐  ┌───────────────┐   │  │
+│  │  │  App Code       │  │  Sealed Keys  │   │  │
+│  │  │  (verified hash)│  │  (encrypted)  │   │  │
+│  │  └────────────────┘  └───────────────┘   │  │
+│  │         ▲ No access from outside ▲        │  │
+│  └──────────────────────────────────────────┘  │
+│                                                │
+│  OS / Hypervisor / Server Admin   ← UNTRUSTED  │
+└────────────────────────────────────────────────┘</div>
+
+<p>The practical impact: you can run a server that processes sensitive data (private keys, votes, documents) while proving to users that <em>you yourself cannot read their data</em>. This is the core value proposition for EncryptID and the r*Stack.</p>
+
+<!-- Section 3 -->
+<h2><span class="section-num">3</span> Top Contender Platforms</h2>
+
+<h3>3.1 &nbsp;Phala Network</h3>
+
+<table>
+  <tr><th style="width:30%">Attribute</th><th>Details</th></tr>
+  <tr><td>TEE Hardware</td><td>Intel SGX (current), Intel TDX (roadmap)</td></tr>
+  <tr><td>Deployment Model</td><td>Decentralized network of TEE workers; deploy Docker images</td></tr>
+  <tr><td>SDK / Language</td><td><strong>JavaScript/TypeScript SDK</strong>, Rust (Phat Contracts)</td></tr>
+  <tr><td>Attestation</td><td>On-chain attestation on Phala (Substrate) + cross-chain bridges</td></tr>
+  <tr><td>Blockchain</td><td>Polkadot ecosystem, EVM-compatible via bridges</td></tr>
+  <tr><td>Maturity</td><td>Production since 2022; 30,000+ TEE workers in the network</td></tr>
+  <tr><td>Cost Model</td><td>Pay per compute (PHA token); competitive with serverless</td></tr>
+  <tr><td>Key Feature</td><td><strong>Phat Contracts</strong> — off-chain confidential computation callable from any EVM chain</td></tr>
+</table>
+
+<div class="highlight-box">
+  <p><strong>Why it fits:</strong> Phala's JS/TS SDK and Docker support mean you can wrap existing EncryptID or rSpace services as Phat Contracts with minimal changes. On-chain attestation lets smart contracts verify the TEE output trustlessly.</p>
+</div>
+
+<h3>3.2 &nbsp;Marlin Oyster</h3>
+
+<table>
+  <tr><th style="width:30%">Attribute</th><th>Details</th></tr>
+  <tr><td>TEE Hardware</td><td>AWS Nitro Enclaves (current), Intel TDX (expanding)</td></tr>
+  <tr><td>Deployment Model</td><td>Decentralized TEE-as-a-service; deploy standard Docker images</td></tr>
+  <tr><td>SDK / Language</td><td>Any language — runs unmodified Docker containers</td></tr>
+  <tr><td>Attestation</td><td>On-chain attestation verification (Ethereum, Arbitrum, etc.)</td></tr>
+  <tr><td>Blockchain</td><td>Chain-agnostic; EVM-native attestation contracts</td></tr>
+  <tr><td>Maturity</td><td>Production; used by Kalypso (ZK proving) and other protocols</td></tr>
+  <tr><td>Cost Model</td><td>POND/MPOND token staking; competitive hourly rates</td></tr>
+  <tr><td>Key Feature</td><td><strong>HTTP Gateway</strong> — TEE services accessible via standard HTTP, easy to integrate</td></tr>
+</table>
+
+<div class="highlight-box">
+  <p><strong>Why it fits:</strong> Lowest friction path. Dockerize your existing Node.js/Bun service, deploy to Oyster, and it runs in a TEE. The HTTP gateway means your frontend makes normal API calls — no TEE-specific client code needed.</p>
+</div>
+
+<h3>3.3 &nbsp;Oasis Sapphire</h3>
+
+<table>
+  <tr><th style="width:30%">Attribute</th><th>Details</th></tr>
+  <tr><td>TEE Hardware</td><td>Intel SGX</td></tr>
+  <tr><td>Deployment Model</td><td>Confidential EVM chain — deploy Solidity contracts with encrypted state</td></tr>
+  <tr><td>SDK / Language</td><td>Solidity + <strong>ethers.js/viem-compatible</strong></td></tr>
+  <tr><td>Attestation</td><td>Built into the chain's consensus; transparent to developers</td></tr>
+  <tr><td>Blockchain</td><td>EVM-compatible L1 (Oasis Network)</td></tr>
+  <tr><td>Maturity</td><td>Production mainnet since 2022</td></tr>
+  <tr><td>Cost Model</td><td>ROSE token for gas; low fees</td></tr>
+  <tr><td>Key Feature</td><td><strong>Confidential EVM</strong> — standard Solidity, but contract state is encrypted</td></tr>
+</table>
+
+<div class="highlight-box">
+  <p><strong>Why it fits:</strong> If rWallet or rVote needs on-chain confidential logic (private votes, hidden transaction amounts), Sapphire lets you write standard Solidity where the contract state is automatically encrypted. Works with existing ethers.js/viem tooling.</p>
+</div>
+
+<h3>3.4 &nbsp;AWS Nitro Enclaves</h3>
+
+<table>
+  <tr><th style="width:30%">Attribute</th><th>Details</th></tr>
+  <tr><td>TEE Hardware</td><td>Custom Nitro hardware isolation</td></tr>
+  <tr><td>Deployment Model</td><td>Enclave inside an EC2 instance; communicates via vsock</td></tr>
+  <tr><td>SDK / Language</td><td>C SDK (primary); Rust, Python wrappers; Node.js via REST bridge</td></tr>
+  <tr><td>Attestation</td><td>Nitro Attestation Document (integrates with AWS KMS)</td></tr>
+  <tr><td>Blockchain</td><td>N/A (centralized cloud)</td></tr>
+  <tr><td>Maturity</td><td>Production GA since 2020; battle-tested</td></tr>
+  <tr><td>Cost Model</td><td>No extra cost beyond EC2 instance price</td></tr>
+  <tr><td>Key Feature</td><td><strong>KMS integration</strong> — KMS only releases keys after verifying enclave attestation</td></tr>
+</table>
+
+<div class="warn-box">
+  <p><strong>Trade-off:</strong> Most mature and battle-tested, but centralized (AWS). Good for bootstrapping TEE capabilities quickly; can migrate to decentralized platforms later. No on-chain attestation without a bridge.</p>
+</div>
+
+<h3>3.5 &nbsp;Gramine (Intel SGX LibOS)</h3>
+
+<table>
+  <tr><th style="width:30%">Attribute</th><th>Details</th></tr>
+  <tr><td>TEE Hardware</td><td>Intel SGX</td></tr>
+  <tr><td>Deployment Model</td><td>Self-hosted; wraps unmodified Linux apps in SGX enclaves</td></tr>
+  <tr><td>SDK / Language</td><td>Any language — runs Node.js, Python, Go, etc. unmodified</td></tr>
+  <tr><td>Attestation</td><td>Intel DCAP (self-hosted attestation infrastructure)</td></tr>
+  <tr><td>Blockchain</td><td>N/A (bring your own)</td></tr>
+  <tr><td>Maturity</td><td>Production; used by Signal for contact discovery</td></tr>
+  <tr><td>Cost Model</td><td>Free / open-source; requires SGX-capable hardware</td></tr>
+  <tr><td>Key Feature</td><td><strong>Zero code changes</strong> — write a manifest file, your existing app runs in SGX</td></tr>
+</table>
+
+<div class="warn-box">
+  <p><strong>Trade-off:</strong> Maximum control and zero cloud dependency, but requires SGX-capable hardware. Best for self-hosted infrastructure if TEE hardware is available on Netcup RS 8000.</p>
+</div>
+
+<h3>3.6 &nbsp;Platform Comparison Matrix</h3>
+
+<table>
+  <tr>
+    <th>Criteria</th>
+    <th>Phala</th>
+    <th>Marlin</th>
+    <th>Oasis</th>
+    <th>Nitro</th>
+    <th>Gramine</th>
+  </tr>
+  <tr>
+    <td>JS/TS Support</td>
+    <td>Native SDK</td>
+    <td>Via Docker</td>
+    <td>ethers.js</td>
+    <td>Via bridge</td>
+    <td>Via LibOS</td>
+  </tr>
+  <tr>
+    <td>Docker Deploy</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>N/A</td>
+    <td>EIF images</td>
+    <td>GSC tool</td>
+  </tr>
+  <tr>
+    <td>On-Chain Attestation</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Built-in</td>
+    <td>No</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td>EVM Compatible</td>
+    <td>Via bridge</td>
+    <td>Native</td>
+    <td>Native</td>
+    <td>N/A</td>
+    <td>N/A</td>
+  </tr>
+  <tr>
+    <td>Decentralized</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No (AWS)</td>
+    <td>Self-hosted</td>
+  </tr>
+  <tr>
+    <td>Integration Effort</td>
+    <td>Low-Med</td>
+    <td>Low</td>
+    <td>Low-Med</td>
+    <td>Medium</td>
+    <td>Medium</td>
+  </tr>
+  <tr>
+    <td>Best For</td>
+    <td>Off-chain compute</td>
+    <td>Backend services</td>
+    <td>On-chain privacy</td>
+    <td>Key mgmt</td>
+    <td>Self-hosted</td>
+  </tr>
+</table>
+
+<!-- Section 4 -->
+<h2><span class="section-num">4</span> Application to r*Stack &amp; EncryptID</h2>
+
+<h3>4.1 &nbsp;EncryptID — Guardian Recovery Enclave &nbsp;<span class="impact-high">[HIGH IMPACT]</span></h3>
+
+<p><strong>The problem:</strong> When 3-of-5 guardians submit recovery shares, the master key must be reconstructed <em>somewhere</em>. Today, that reconstruction happens on a server, meaning the server operator momentarily has access to the user's master key.</p>
+
+<p><strong>TEE solution:</strong> Run the Shamir secret sharing reconstruction inside a TEE enclave. The key is reconstructed, used to re-encrypt to the new passkey, and immediately discarded — all inside hardware the server operator cannot inspect.</p>
+
+<div class="diagram">Guardian Recovery with TEE
+
+Guardian A ──share──┐
+Guardian B ──share──┤──→  TEE Enclave
+Guardian C ──share──┘     │
+                          ├─ Reconstruct master key (in-enclave only)
+                          ├─ Re-encrypt to new passkey
+                          ├─ Destroy plaintext key
+                          └─ Return encrypted blob + attestation proof
+                                │
+                          User verifies attestation
+                          before accepting new key</div>
+
+<p><strong>Recommended platform:</strong> Marlin Oyster (Dockerize existing recovery service) or Phala (Phat Contract callable from EVM).</p>
+
+<p><strong>Additional EncryptID TEE uses:</strong></p>
+<ul>
+  <li><strong>SSO JWT signing key</strong> — sealed inside TEE; even a compromised server can't extract it</li>
+  <li><strong>Turnkey attestation chain</strong> — verify that Turnkey's passkey signing genuinely runs in a TEE</li>
+  <li><strong>Session token validation</strong> — cross-app SSO broker runs in TEE for zero-trust identity</li>
+</ul>
+
+<h3>4.2 &nbsp;rVote — Confidential Tallying &nbsp;<span class="impact-high">[HIGH IMPACT]</span></h3>
+
+<p><strong>The problem:</strong> Vote secrecy requires that individual ballots are never visible to the server. Currently, either votes are visible to the backend during tallying, or complex homomorphic encryption is needed.</p>
+
+<p><strong>TEE solution:</strong> Encrypted ballots are submitted to a TEE, which decrypts, tallies, and publishes only the aggregate result along with an attestation proof. Nobody — not even the server admin — sees individual votes.</p>
+
+<div class="diagram">Confidential Vote Tallying
+
+Voter 1 ──encrypted ballot──┐
+Voter 2 ──encrypted ballot──┤──→  TEE Enclave
+Voter 3 ──encrypted ballot──┘     │
+                                  ├─ Decrypt all ballots
+                                  ├─ Tally votes
+                                  ├─ Optionally: verifiable shuffle
+                                  ├─ Destroy individual ballots
+                                  └─ Publish: { result, attestation_proof }
+                                       │
+                                  Anyone can verify the TEE was genuine
+                                  and the tally code was unmodified</div>
+
+<p><strong>Recommended platform:</strong> Oasis Sapphire for on-chain governance (confidential Solidity), or Marlin Oyster for off-chain tallying with on-chain attestation.</p>
+
+<h3>4.3 &nbsp;rSpace — Confidential CRDT Merge &nbsp;<span class="impact-med">[MEDIUM-HIGH IMPACT]</span></h3>
+
+<p><strong>The problem:</strong> The collaboration server needs to merge Automerge CRDTs, which means it processes document content. Users must trust the server operator not to read their documents.</p>
+
+<p><strong>TEE solution:</strong> The sync server runs inside a TEE. Documents are encrypted client-side, decrypted inside the TEE for merging, and re-encrypted before being sent to other participants. The server processes documents it literally cannot read.</p>
+
+<div class="diagram">Confidential Collaboration
+
+Client A (encrypted doc) ──→  TEE Enclave (sync server)  ──→ Client B
+                               │
+                          Decrypt → Automerge merge → Re-encrypt
+                          Server operator sees only ciphertext</div>
+
+<p><strong>Recommended platform:</strong> Marlin Oyster (Docker container) or Gramine (if self-hosted with SGX hardware).</p>
+
+<h3>4.4 &nbsp;rFiles — Searchable Encryption &nbsp;<span class="impact-med">[MEDIUM IMPACT]</span></h3>
+
+<p><strong>The problem:</strong> Files are encrypted client-side (AES-256-GCM), but users cannot search across encrypted files without downloading and decrypting everything locally.</p>
+
+<p><strong>TEE solution:</strong> A TEE-based indexing service decrypts files inside the enclave, builds a search index, and responds to encrypted queries — all without the server seeing file contents.</p>
+
+<p><strong>Additional use:</strong> Proxy re-encryption for file sharing — the re-encryption key is generated inside a TEE, so the server never holds a key capable of decrypting the file.</p>
+
+<p><strong>Recommended platform:</strong> Phala (Phat Contract for search computation) or Marlin Oyster.</p>
+
+<h3>4.5 &nbsp;rWallet — Policy Enforcement &nbsp;<span class="impact-med">[MEDIUM IMPACT]</span></h3>
+
+<p><strong>The problem:</strong> Spending limits and transaction policies are enforced by the server. A compromised server could bypass these limits.</p>
+
+<p><strong>TEE solution:</strong> The policy engine (spending limits, whitelists, rate limits) runs inside a TEE. The paymaster signing key is sealed to the enclave. Even if the server is compromised, an attacker cannot bypass spending policies or extract the paymaster key.</p>
+
+<p><strong>Recommended platform:</strong> Oasis Sapphire (on-chain policy as confidential contract) or Marlin Oyster (off-chain policy engine).</p>
+
+<!-- Section 5 -->
+<h2><span class="section-num">5</span> Recommended Roadmap</h2>
+
+<table>
+  <tr>
+    <th>Phase</th>
+    <th>Scope</th>
+    <th>Platform</th>
+    <th>Effort</th>
+    <th>Impact</th>
+  </tr>
+  <tr>
+    <td><span class="phase-label">PHASE 1</span></td>
+    <td><strong>EncryptID Recovery Enclave</strong><br>Guardian key reconstruction + SSO signing key in TEE</td>
+    <td>Marlin Oyster or Phala</td>
+    <td>2–4 weeks</td>
+    <td class="impact-high">High — secures the foundation for all r*apps</td>
+  </tr>
+  <tr>
+    <td><span class="phase-label">PHASE 2</span></td>
+    <td><strong>rVote Confidential Tallying</strong><br>Encrypted ballots → TEE tally → attested results</td>
+    <td>Oasis Sapphire or Marlin</td>
+    <td>3–5 weeks</td>
+    <td class="impact-high">High — strong differentiator for governance</td>
+  </tr>
+  <tr>
+    <td><span class="phase-label">PHASE 3</span></td>
+    <td><strong>rSpace Confidential Sync</strong><br>CRDT merge inside TEE with remote attestation</td>
+    <td>Marlin Oyster</td>
+    <td>4–6 weeks</td>
+    <td class="impact-med">Medium-High — zero-trust collaboration</td>
+  </tr>
+  <tr>
+    <td><span class="phase-label">PHASE 4</span></td>
+    <td><strong>rFiles Searchable Encryption + rWallet Policy Engine</strong><br>TEE-based search index and sealed policy enforcement</td>
+    <td>Phala / Marlin</td>
+    <td>4–6 weeks each</td>
+    <td class="impact-med">Medium — defense-in-depth</td>
+  </tr>
+</table>
+
+<div class="highlight-box">
+  <p><strong>Phase 1 is the lynchpin.</strong> Since every r*Stack app authenticates through EncryptID, hardening the identity layer with TEEs automatically raises the security floor for rSpace, rVote, rFiles, rWallet, and all future apps.</p>
+</div>
+
+<!-- Section 6 -->
+<h2><span class="section-num">6</span> Infrastructure Considerations</h2>
+
+<h3>Netcup RS 8000 — Hardware TEE Availability</h3>
+
+<p>The Netcup RS 8000 G12 Pro server should be checked for TEE support. Most hosting providers do not expose TEE features (SGX/SEV) in their firmware configuration. Run the following to verify:</p>
+
+<table>
+  <tr><th>Check</th><th>Command</th></tr>
+  <tr><td>SGX support</td><td><code>grep -i sgx /proc/cpuinfo</code></td></tr>
+  <tr><td>AMD SEV support</td><td><code>dmesg | grep -i sev</code></td></tr>
+  <tr><td>CPU model</td><td><code>lscpu | head -20</code></td></tr>
+</table>
+
+<p><strong>If hardware TEE is unavailable</strong> (likely), use Marlin Oyster or Phala Network for TEE workloads. These are decentralized TEE networks — you deploy Docker containers to their infrastructure, which runs on verified TEE hardware. This avoids needing your own TEE-capable server.</p>
+
+<h3>Hybrid Architecture</h3>
+
+<div class="diagram">Proposed Hybrid Architecture
+
+┌──────────────────────────────────────────────────────┐
+│  Netcup RS 8000 (existing)                           │
+│  ├── Traefik → All web services (unchanged)          │
+│  ├── Application servers (Node.js/Bun)               │
+│  └── Non-sensitive computation                       │
+└──────────────────────┬───────────────────────────────┘
+                       │ API calls for sensitive ops
+                       ▼
+┌──────────────────────────────────────────────────────┐
+│  TEE Layer (Marlin Oyster / Phala Network)            │
+│  ├── EncryptID recovery enclave                       │
+│  ├── rVote tallying enclave                           │
+│  ├── rSpace sync enclave                              │
+│  └── Key management enclave                           │
+│                                                      │
+│  Attestation proofs returned to client or on-chain   │
+└──────────────────────────────────────────────────────┘</div>
+
+<h3>Netcup vGPU + NVIDIA Confidential Computing</h3>
+
+<p>The Netcup vGPU servers (RS 2000/4000 vGPU with NVIDIA H200) support NVIDIA Confidential Computing. If a vGPU is acquired, it could serve double duty: GPU inference <em>and</em> confidential AI computation. This is relevant if the r*Stack incorporates AI features that process sensitive user data.</p>
+
+<!-- Section 7 -->
+<h2><span class="section-num">7</span> Risks &amp; Mitigations</h2>
+
+<table>
+  <tr><th>Risk</th><th>Severity</th><th>Mitigation</th></tr>
+  <tr>
+    <td><strong>Side-channel attacks on SGX</strong><br>(cache timing, speculative execution)</td>
+    <td>Medium</td>
+    <td>Use platforms with latest microcode patches. Prefer TDX/SEV-SNP (smaller attack surface) where available. Defense-in-depth with application-layer encryption.</td>
+  </tr>
+  <tr>
+    <td><strong>Platform lock-in</strong><br>(dependency on Phala/Marlin)</td>
+    <td>Medium</td>
+    <td>Design TEE services as standard Docker containers with a thin attestation wrapper. Switching platforms = redeploying the same container + updating attestation verification.</td>
+  </tr>
+  <tr>
+    <td><strong>Availability of decentralized TEE networks</strong></td>
+    <td>Low-Med</td>
+    <td>Fallback to AWS Nitro Enclaves as a centralized backup. Design recovery flow to degrade gracefully if TEE is temporarily unavailable.</td>
+  </tr>
+  <tr>
+    <td><strong>Development complexity</strong></td>
+    <td>Low</td>
+    <td>Both Marlin and Phala accept standard Docker images. The enclave code is the same code you'd write without TEEs — the platform handles hardware isolation transparently.</td>
+  </tr>
+  <tr>
+    <td><strong>Token economics</strong><br>(PHA, POND/MPOND for usage)</td>
+    <td>Low</td>
+    <td>Budget for token acquisition. Costs are competitive with traditional cloud. Evaluate stablecoin payment options as platforms mature.</td>
+  </tr>
+  <tr>
+    <td><strong>Performance overhead</strong><br>(enclave transitions, memory encryption)</td>
+    <td>Low</td>
+    <td>2–10% overhead for VM-level TEEs (TDX/SEV-SNP). Batch sensitive operations to minimize enclave transitions. Benchmark early in Phase 1.</td>
+  </tr>
+</table>
+
+<div class="highlight-box">
+  <p><strong>Bottom line:</strong> TEEs are the most practical path to making r*Stack's privacy claims <em>verifiable</em>. Start with EncryptID (Phase 1), prove the pattern, and extend to the rest of the stack. Phala and Marlin make this achievable without new hardware or a major rewrite.</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local AI Server + NAS + Failover - Bill of Materials</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.6; padding: 20px; max-width: 900px; margin: 0 auto; }
+  h1 { color: #58a6ff; font-size: 28px; margin-bottom: 8px; }
+  h2 { color: #58a6ff; font-size: 22px; margin: 32px 0 16px; border-bottom: 1px solid #21262d; padding-bottom: 8px; }
+  h3 { color: #f0f6fc; font-size: 18px; margin: 24px 0 12px; }
+  p { margin: 8px 0; color: #8b949e; }
+  a { color: #58a6ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .subtitle { color: #8b949e; font-size: 16px; margin-bottom: 24px; }
+  .date { color: #484f58; font-size: 13px; }
+
+  /* Product Cards */
+  .product-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0;
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  .product-card.highlight { border-color: #a371f7; border-width: 2px; }
+  .product-card img {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #fff;
+    flex-shrink: 0;
+  }
+  .product-info { flex: 1; }
+  .product-name { color: #f0f6fc; font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .product-subtitle { color: #8b949e; font-size: 13px; margin-bottom: 12px; }
+  .product-specs { margin: 12px 0; }
+  .product-specs li { color: #c9d1d9; margin: 4px 0; font-size: 14px; list-style: none; padding-left: 0; }
+  .product-specs li::before { content: ""; display: inline-block; width: 6px; height: 6px; background: #388bfd; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+  .price { color: #3fb950; font-size: 24px; font-weight: 700; margin: 12px 0 8px; }
+  .price-note { color: #8b949e; font-size: 12px; }
+  .qty { color: #d29922; font-size: 14px; font-weight: 600; margin: 4px 0; }
+  .buy-links { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .buy-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    background: #21262d;
+    transition: all 0.15s;
+  }
+  .buy-btn:hover { background: #30363d; text-decoration: none; }
+  .buy-btn.primary { background: #238636; border-color: #238636; color: #fff; }
+  .buy-btn.primary:hover { background: #2ea043; }
+
+  /* Option Tiers */
+  .tier { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px; margin: 12px 0; }
+  .tier.recommended { border-color: #238636; }
+  .tier-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .tier-name { font-size: 16px; font-weight: 600; color: #f0f6fc; }
+  .tier-price { font-size: 20px; font-weight: 700; color: #3fb950; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 8px; }
+  .badge-green { background: #238636; color: #fff; }
+  .badge-blue { background: #1f6feb; color: #fff; }
+  .badge-yellow { background: #9e6a03; color: #fff; }
+  .badge-purple { background: #8957e5; color: #fff; }
+
+  /* Summary Table */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #21262d; font-size: 14px; }
+  th { color: #8b949e; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+  td { color: #c9d1d9; }
+  .text-green { color: #3fb950; }
+  .text-yellow { color: #d29922; }
+  .text-red { color: #f85149; }
+  .text-purple { color: #a371f7; }
+
+  /* Architecture Diagram */
+  .diagram {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 20px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    overflow-x: auto;
+    white-space: pre;
+    color: #8b949e;
+    margin: 16px 0;
+  }
+
+  /* Timeline */
+  .timeline { margin: 16px 0; }
+  .timeline-item { padding: 12px 0 12px 24px; border-left: 2px solid #30363d; position: relative; }
+  .timeline-item::before { content: ""; position: absolute; left: -5px; top: 16px; width: 8px; height: 8px; background: #388bfd; border-radius: 50%; }
+  .timeline-item.done::before { background: #3fb950; }
+  .timeline-phase { color: #58a6ff; font-weight: 600; font-size: 14px; }
+  .timeline-detail { color: #8b949e; font-size: 13px; }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .product-card { flex-direction: column; }
+    .product-card img { width: 100%; height: auto; max-height: 200px; }
+  }
+
+  /* Savings highlight */
+  .savings-box {
+    background: linear-gradient(135deg, #0d2818, #0d1117);
+    border: 1px solid #238636;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+  }
+  .savings-amount { font-size: 36px; font-weight: 700; color: #3fb950; }
+  .savings-label { color: #8b949e; font-size: 14px; }
+
+  /* AI highlight box */
+  .ai-box {
+    background: linear-gradient(135deg, #1a0d2e, #0d1117);
+    border: 1px solid #8957e5;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+  }
+  .ai-box h3 { color: #a371f7; margin-top: 0; }
+
+  /* Benchmark table */
+  .bench-table td:nth-child(4), .bench-table td:nth-child(5) { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>Local AI Server + NAS + Failover</h1>
+<p class="subtitle">Minisforum MS-S1 Max &mdash; Complete bill of materials for local-everything infrastructure</p>
+<p class="date">Updated 2026-04-02 | Prices verified April 2026</p>
+
+<!-- ========================================== -->
+<h2>What We're Building</h2>
+<p>A <strong>Strix Halo AI workstation + NAS</strong> that runs 70B+ LLMs locally, replaces Hetzner Storage Box, adds live failover for all critical services, serves movies locally, and connects to Netcup via Tailscale mesh VPN.</p>
+
+<table>
+  <tr><th>Capability</th><th>Current</th><th>After</th></tr>
+  <tr><td>Local LLM inference</td><td class="text-red">None (RunPod / cloud only)</td><td class="text-purple"><strong>70B+ models locally</strong> (Llama 3, DeepSeek, Qwen)</td></tr>
+  <tr><td>GPU VRAM</td><td class="text-red">0 GB local</td><td class="text-purple"><strong>96-110 GB unified</strong> (RDNA 3.5, 40 CU)</td></tr>
+  <tr><td>Service failover</td><td class="text-red">None (manual restore)</td><td class="text-green">Automatic DNS failover</td></tr>
+  <tr><td>Database replication</td><td class="text-red">Nightly dumps only</td><td class="text-green">Real-time streaming replica</td></tr>
+  <tr><td>Media storage</td><td class="text-yellow">Hetzner remote (~$55/mo)</td><td class="text-green">Local NAS (20-72TB)</td></tr>
+  <tr><td>Movie streaming</td><td class="text-yellow">Remote transcoding</td><td class="text-green">Local direct play</td></tr>
+  <tr><td>Backup locations</td><td class="text-yellow">Netcup + R2 (2 sites)</td><td class="text-green">Netcup + R2 + Local (3 sites)</td></tr>
+  <tr><td>Recovery time</td><td class="text-red">Hours (manual)</td><td class="text-green">Minutes (automatic)</td></tr>
+</table>
+
+<!-- ========================================== -->
+<h2>Bill of Materials</h2>
+
+<!-- PRODUCT 1: Minisforum MS-S1 Max -->
+<div class="product-card highlight">
+  <img src="https://cdn.minisforum.com/public/MS-S1MAX/MS-S1MAX-(1).webp" alt="Minisforum MS-S1 Max" />
+  <div class="product-info">
+    <div class="product-name">Minisforum MS-S1 Max <span class="badge badge-purple">AI Workstation</span></div>
+    <div class="product-subtitle">AMD Ryzen AI Max+ 395 &bull; 128GB Unified LPDDR5x &bull; 2TB NVMe &bull; Dual 10GbE</div>
+    <ul class="product-specs">
+      <li><strong>CPU:</strong> 16 cores / 32 threads, Zen 5, up to 5.1 GHz, 64MB L3</li>
+      <li><strong>GPU:</strong> Radeon 8060S &mdash; 40 CU RDNA 3.5, up to 2.9 GHz</li>
+      <li><strong>RAM:</strong> 128GB LPDDR5x-8000 unified &mdash; <strong>up to 96GB allocatable as VRAM</strong> (110GB on Linux)</li>
+      <li><strong>Memory bandwidth:</strong> 256 GB/s (3x faster than DDR5-5600)</li>
+      <li><strong>NPU:</strong> 50 TOPS XDNA2 (126 TOPS total system)</li>
+      <li><strong>Storage:</strong> 2TB NVMe included + second M.2 slot</li>
+      <li><strong>Ethernet:</strong> <strong>Dual 10GbE</strong> (RTL8127) &mdash; 20 Gbps aggregate for NAS + replication</li>
+      <li><strong>USB:</strong> 2&times; USB4 V2 (80 Gbps!) + 2&times; USB-C 40Gbps + 3&times; USB-A 10Gbps + 2&times; USB-A 480Mbps</li>
+      <li><strong>Display:</strong> HDMI 2.1 (8K@60Hz) + DisplayPort via USB-C</li>
+      <li><strong>PCIe:</strong> <strong>x16 half-height internal slot</strong> &mdash; can add discrete GPU later</li>
+      <li><strong>WiFi:</strong> WiFi 7 (2&times;2) + Bluetooth 5.4</li>
+      <li><strong>PSU:</strong> 320W internal</li>
+      <li><strong>Rack:</strong> 2U rack-mountable, cluster-ready</li>
+      <li><strong>Size:</strong> 222 &times; 206 &times; 77mm (2.8 kg)</li>
+      <li><strong>RAM is soldered (LPDDR5x)</strong> &mdash; not upgradeable, buy 128GB from day one</li>
+    </ul>
+    <div class="price">$2,959</div>
+    <p class="price-note">Amazon current price | Historical low: $2,299 at launch | MSRP: $2,879</p>
+    <div class="qty">Qty: 1</div>
+    <div class="buy-links">
+      <a href="https://www.amazon.com/MINISFORUM-AMD-Ryzen-Max-395/dp/B0G2VJR4JD" class="buy-btn primary">Amazon ($2,959)</a>
+      <a href="https://store.minisforum.com/products/minisforum-ms-s1-max-mini-pc" class="buy-btn">Minisforum Official</a>
+      <a href="https://minisforumpc.eu/products/minisforum-ms-s1-max-mini-pc" class="buy-btn">Minisforum EU (mid-April ship)</a>
+      <a href="https://www.microcenter.com/product/702314/minisforum-ms-s1-max-next-gen-ai-workstation" class="buy-btn">Micro Center</a>
+    </div>
+    <p class="price-note" style="margin-top:12px">
+      <strong>Why not Framework Desktop?</strong> Same chip for ~$400 less ($2,459 + $100 SSD), but only single 5GbE, PCIe x4 (not x16), USB4 v1 (40Gbps not 80Gbps). The MS-S1 Max's <strong>dual 10GbE + PCIe x16 + USB4 V2</strong> justify the premium for a NAS/server workload.<br>
+      <strong>Why not CI Companion Core?</strong> Same chip for $3,600 &mdash; $641 more for pre-installed software you can replicate with Ollama + Open WebUI for free.
+    </p>
+  </div>
+</div>
+
+<!-- LLM BENCHMARKS -->
+<div class="ai-box">
+  <h3>Local LLM Performance (llama.cpp, Ryzen AI Max+ 395, 128GB)</h3>
+  <p>Real benchmarks from <a href="https://forum.level1techs.com/t/strix-halo-ryzen-ai-max-395-llm-benchmark-results/233796">Level1Techs</a> and <a href="https://community.frame.work/t/amd-strix-halo-ryzen-ai-max-395-gpu-llm-performance-tests/72521">Framework Community</a>:</p>
+  <table class="bench-table">
+    <tr><th>Model</th><th>Params</th><th>Quant</th><th>Generation (tok/s)</th><th>Prompt (tok/s)</th><th>Verdict</th></tr>
+    <tr><td>Qwen 3 30B-A3B (MoE)</td><td>30B (3B active)</td><td>Q4_K_XL</td><td class="text-green"><strong>72.0</strong></td><td>604.8</td><td class="text-green">Excellent</td></tr>
+    <tr><td>Llama 2 7B</td><td>7B</td><td>Q4_K_M</td><td class="text-green"><strong>47.9</strong></td><td>998.0</td><td class="text-green">Blazing</td></tr>
+    <tr><td>Llama 3 8B</td><td>8B</td><td>Q4_K_M</td><td class="text-green"><strong>42.0</strong></td><td>878.2</td><td class="text-green">Blazing</td></tr>
+    <tr><td>GPT-OSS 120B (optimized)</td><td>120B</td><td>MXFP4</td><td class="text-green"><strong>46.1</strong></td><td>775.6</td><td class="text-green">Excellent</td></tr>
+    <tr><td>dots1 (MoE)</td><td>142B (14B active)</td><td>Q4_K_XL</td><td class="text-green"><strong>20.6</strong></td><td>63.1</td><td class="text-green">Good</td></tr>
+    <tr><td>Llama 4 Scout (MoE)</td><td>109B (17B active)</td><td>Q4_K_XL</td><td class="text-green"><strong>19.3</strong></td><td>264.1</td><td class="text-green">Good</td></tr>
+    <tr><td>Hunyuan-A13B (MoE)</td><td>80B (13B active)</td><td>Q6_K_XL</td><td class="text-yellow"><strong>17.1</strong></td><td>270.5</td><td class="text-yellow">Good</td></tr>
+    <tr><td>Mistral Small 3.1</td><td>24B</td><td>Q4_K_XL</td><td class="text-yellow"><strong>14.3</strong></td><td>316.9</td><td class="text-yellow">Good</td></tr>
+    <tr><td>Qwen 3 32B</td><td>32B</td><td>Q8_0</td><td class="text-yellow">~10-12</td><td>226.1</td><td class="text-yellow">Usable</td></tr>
+    <tr><td><strong>Llama 3 70B</strong></td><td><strong>70B</strong></td><td><strong>Q4_K_M</strong></td><td class="text-yellow"><strong>5.0</strong></td><td><strong>94.7</strong></td><td class="text-yellow">Think mode</td></tr>
+  </table>
+  <p style="margin-top:12px; font-size:13px;">
+    <strong>Key insight:</strong> MoE models (Qwen 3 30B-A3B, Llama 4 Scout) are the sweet spot at 19-72 tok/s &mdash; only a fraction of parameters are active per token.
+    Dense 70B at ~5 tok/s is usable for reasoning/code tasks but not snappy chat. ROCm drivers are improving ~50% every 3 months.
+    <br><strong>Cluster potential:</strong> Two MS-S1 Max units via USB4 V2 RPC can run 235B Q4 models at ~11 tok/s.
+  </p>
+</div>
+
+<!-- PRODUCT 2: NAS Enclosure -->
+<div class="product-card">
+  <img src="https://cdn.mos.cms.futurecdn.net/H43sEfcZEukzsMA6VjYXYQ-1920-80.jpg" alt="TerraMaster D4-320 4-Bay DAS Enclosure" />
+  <div class="product-info">
+    <div class="product-name">TerraMaster D4-320</div>
+    <div class="product-subtitle">4-Bay USB 3.2 Gen2 (10 Gbps) DAS Enclosure</div>
+    <ul class="product-specs">
+      <li>4 hot-swap 3.5" SATA bays (also supports 2.5")</li>
+      <li>USB 3.2 Gen2 Type-C &mdash; 10 Gbps throughput</li>
+      <li>Up to 120TB total (4 &times; 30TB)</li>
+      <li>Read/write up to 1,016 MB/s with SSDs, ~500 MB/s with HDDs</li>
+      <li>Compatible: USB 3.0/3.1/3.2, Thunderbolt 3/4</li>
+      <li>Plug-and-play on Linux, macOS, Windows</li>
+      <li>Low-noise fan, aluminum chassis</li>
+    </ul>
+    <div class="price">$152</div>
+    <p class="price-note">Upgraded model of D4-300 (was USB 3.1 5Gbps, now 10Gbps)</p>
+    <div class="qty">Qty: 1</div>
+    <div class="buy-links">
+      <a href="https://www.amazon.com/TERRAMASTER-D4-320-External-Drive-Enclosure/dp/B0CTTL9R7Z" class="buy-btn primary">Amazon ($152)</a>
+      <a href="https://www.terra-master.com/products/d4-320" class="buy-btn">TerraMaster Official</a>
+      <a href="https://www.newegg.com/p/0VN-00AD-00032" class="buy-btn">Newegg</a>
+      <a href="https://www.bhphotovideo.com/c/product/1834179-REG/terramaster_d4_320_4_bay_usb_3_2_gen2.html" class="buy-btn">B&amp;H Photo</a>
+    </div>
+  </div>
+</div>
+
+<!-- PRODUCT 3: Hard Drives -->
+<div class="product-card">
+  <img src="https://www.seagate.com/content/dam/seagate/assets/products/enterprise-drives/exos/exos-pdp/exos-pdp-row1-config1-640x640.png" alt="Seagate Exos Enterprise Hard Drive" />
+  <div class="product-info">
+    <div class="product-name">Hard Drives &mdash; Choose Your Tier</div>
+    <div class="product-subtitle">Enterprise NAS/datacenter drives for 24/7 operation</div>
+
+    <div class="tier recommended">
+      <div class="tier-header">
+        <span class="tier-name">Best Value: WD Ultrastar HC560 20TB (Renewed) <span class="badge badge-green">Recommended</span></span>
+        <span class="tier-price">~$328/ea</span>
+      </div>
+      <ul class="product-specs">
+        <li>20TB, 7200 RPM, SATA 6Gb/s, 512e</li>
+        <li>Enterprise-grade (originally $470+ new)</li>
+        <li>Lowest failure rates per Backblaze data</li>
+        <li>Amazon Renewed = inspected &amp; tested</li>
+        <li><strong>2&times; drives in RAID1 = 20TB usable = $656 total</strong></li>
+      </ul>
+      <div class="buy-links">
+        <a href="https://www.amazon.com/Western-Digital-Ultrastar-HC560-WUH722020ALE604/dp/B0CV64ZQ38" class="buy-btn primary">Amazon Renewed</a>
+        <a href="https://serverpartdeals.com/products/western-digital-ultrastar-dc-hc560-wuh722020ble6l4-0f38785-20tb-7-2k-rpm-sata-6gb-s-512e-3-5-recertified-hard-drive" class="buy-btn">ServerPartDeals (Recertified)</a>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-header">
+        <span class="tier-name">Budget: Seagate Expansion 20TB External (Shuckable) <span class="badge badge-yellow">Cheapest</span></span>
+        <span class="tier-price">~$215/ea</span>
+      </div>
+      <ul class="product-specs">
+        <li>External USB drive &mdash; can "shuck" (remove from enclosure) for SATA</li>
+        <li>May contain Exos or Barracuda inside (varies by batch)</li>
+        <li>Voids warranty when shucked</li>
+        <li>OR use as-is via USB (simpler, no shucking needed)</li>
+        <li><strong>2&times; drives = $430 total &mdash; cheapest 40TB option</strong></li>
+      </ul>
+      <div class="buy-links">
+        <a href="https://www.amazon.com/Seagate-Expansion-External-Services-STKP20000400/dp/B0B2PZWD81" class="buy-btn primary">Amazon ($410 retail)</a>
+        <a href="https://www.bestbuy.com/product/seagate-expansion-20tb-external-usb-3-0-desktop-hard-drive-with-rescue-data-recovery-services-black/J37C5H5XXK" class="buy-btn">Best Buy</a>
+      </div>
+      <p class="price-note" style="margin-top:8px">Watch for sales &mdash; frequently drop to $215-220 at Walmart/Best Buy. The 28TB model hits $329.</p>
+    </div>
+
+    <div class="tier">
+      <div class="tier-header">
+        <span class="tier-name">Max Capacity: Seagate Exos X18 18TB (Recertified) <span class="badge badge-blue">Most Storage</span></span>
+        <span class="tier-price">~$165-245/ea</span>
+      </div>
+      <ul class="product-specs">
+        <li>18TB, 7200 RPM, SATA 6Gb/s, 256MB cache</li>
+        <li>Manufacturer recertified &mdash; same factory testing as new</li>
+        <li>550 TB/year workload rating, 2.5M hour MTBF</li>
+        <li>2-year limited warranty from ServerPartDeals</li>
+        <li><strong>4&times; in RAID10 = 36TB usable, or RAID5 = 54TB usable = ~$660-980 total</strong></li>
+      </ul>
+      <div class="buy-links">
+        <a href="https://serverpartdeals.com/products/seagate-exos-x18-st18000nm000j-18tb-7-2k-rpm-sata-6gb-s-512e-4kn-256mb-3-5-manufacturer-recertified-hdd" class="buy-btn primary">ServerPartDeals (Recertified)</a>
+        <a href="https://www.amazon.com/Seagate-ST18000NM000J-Internal-Drive-7200RPM/dp/B08L5GQR5V" class="buy-btn">Amazon (Recertified)</a>
+      </div>
+    </div>
+
+    <div class="qty">Qty: 2 minimum (RAID1) &mdash; 4 for RAID10/RAID5</div>
+  </div>
+</div>
+
+<!-- PRODUCT 4: UPS -->
+<div class="product-card">
+  <img src="https://www.cyberpowersystems.com/wp-content/uploads/2026/03/cp1500avrlcd3-front-vertical-photo-1.jpg" alt="CyberPower CP1500AVRLCD3 UPS" />
+  <div class="product-info">
+    <div class="product-name">CyberPower CP1500AVRLCD3</div>
+    <div class="product-subtitle">1500VA / 900W Intelligent LCD UPS with AVR</div>
+    <ul class="product-specs">
+      <li>1500VA / 900W &mdash; powers MS-S1 Max + NAS for ~20-30 min under load</li>
+      <li>12 outlets (6 battery + surge, 6 surge only)</li>
+      <li>2 USB charging ports (Type-A + Type-C)</li>
+      <li>Automatic Voltage Regulation (AVR) &mdash; stabilizes power without battery drain</li>
+      <li>LCD display shows load, battery %, runtime, voltage</li>
+      <li>USB data port for NUT/apcupsd monitoring &mdash; clean auto-shutdown</li>
+      <li>$500,000 connected equipment guarantee</li>
+    </ul>
+    <div class="price">$220</div>
+    <p class="price-note">MSRP $219.95 | Updated model of the popular CP1500AVRLCD</p>
+    <div class="qty">Qty: 1</div>
+    <div class="buy-links">
+      <a href="https://www.amazon.com/CyberPower-CP1500AVRLCD3-Intelligent-System-Outlets/dp/B0BCMLLSHL" class="buy-btn primary">Amazon</a>
+      <a href="https://www.cyberpowersystems.com/product/ups/intelligent-lcd/cp1500avrlcd3/" class="buy-btn">CyberPower Official</a>
+      <a href="https://www.bestbuy.com/product/cyberpower-intelligent-lcd-1500va-ups-black/JX8P9JFVPK" class="buy-btn">Best Buy</a>
+      <a href="https://www.walmart.com/ip/CyberPower-Intelligent-LCD-UPS-Series-CP1500AVRLCD3-900-Watt-12-Outlet-Battery-Backup-with-Automatic-Voltage-Regulation-6-Ft-Cord-CP1500AVRLCD3/1747118865" class="buy-btn">Walmart</a>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<h2>Total Cost</h2>
+
+<h3>Recommended Build <span class="badge badge-green">Best Balance</span></h3>
+<table>
+  <tr><th>Item</th><th>Price</th></tr>
+  <tr><td><strong>Minisforum MS-S1 Max</strong> (128GB / 2TB NVMe)</td><td>$2,959</td></tr>
+  <tr><td>TerraMaster D4-320 (4-bay USB 3.2)</td><td>$152</td></tr>
+  <tr><td>2&times; WD Ultrastar HC560 20TB (Renewed)</td><td>$656</td></tr>
+  <tr><td>CyberPower CP1500AVRLCD3</td><td>$220</td></tr>
+  <tr><td>Cat6a cable (10GbE) + misc</td><td>$30</td></tr>
+  <tr><td><strong>Total</strong></td><td class="text-green"><strong>$4,017</strong></td></tr>
+</table>
+
+<h3>Budget Variant (shucked external drives)</h3>
+<table>
+  <tr><th>Item</th><th>Price</th></tr>
+  <tr><td><strong>Minisforum MS-S1 Max</strong> (128GB / 2TB NVMe)</td><td>$2,959</td></tr>
+  <tr><td>2&times; Seagate Expansion 20TB External (USB, no shuck)</td><td>$430</td></tr>
+  <tr><td>CyberPower CP1500AVRLCD3</td><td>$220</td></tr>
+  <tr><td>Cat6a cable + misc</td><td>$30</td></tr>
+  <tr><td><strong>Total</strong></td><td class="text-green"><strong>$3,639</strong></td></tr>
+</table>
+<p>Skips the NAS enclosure &mdash; drives connected via USB directly. Simpler but no hot-swap or RAID controller.</p>
+
+<!-- ========================================== -->
+<h2>Why This Over Alternatives</h2>
+
+<table>
+  <tr><th>Feature</th><th>MS-S1 Max ($2,959)</th><th>Framework Desktop ($2,559)</th><th>CI Core ($3,600)</th><th>GMKtec K8 Plus ($399)</th></tr>
+  <tr><td>CPU</td><td>Ryzen AI Max+ 395 (16C)</td><td>Ryzen AI Max+ 395 (16C)</td><td>Ryzen AI Max+ 395 (16C)</td><td>Ryzen 7 8845HS (8C)</td></tr>
+  <tr><td>RAM</td><td>128GB unified</td><td>128GB unified</td><td>128GB unified</td><td>32GB DDR5</td></tr>
+  <tr><td>GPU VRAM</td><td class="text-green">96-110GB</td><td class="text-green">96-110GB</td><td class="text-green">96-110GB</td><td class="text-red">~8GB shared</td></tr>
+  <tr><td>Ethernet</td><td class="text-green"><strong>Dual 10GbE</strong></td><td>Single 5GbE</td><td>Single 5GbE</td><td>Dual 2.5GbE</td></tr>
+  <tr><td>USB4</td><td class="text-green"><strong>V2 (80 Gbps)</strong></td><td>V1 (40 Gbps)</td><td>V1 (40 Gbps)</td><td>V1 (40 Gbps)</td></tr>
+  <tr><td>PCIe slot</td><td class="text-green"><strong>x16</strong></td><td>x4</td><td>None</td><td>OCuLink x4</td></tr>
+  <tr><td>SSD included</td><td class="text-green">2TB</td><td class="text-red">BYO ($100)</td><td class="text-green">2TB</td><td class="text-green">1TB</td></tr>
+  <tr><td>Rack mount</td><td class="text-green">2U</td><td class="text-red">No</td><td class="text-red">No</td><td class="text-red">No</td></tr>
+  <tr><td>Local 70B LLM</td><td class="text-green">Yes (5 tok/s)</td><td class="text-green">Yes (5 tok/s)</td><td class="text-green">Yes (5 tok/s)</td><td class="text-red">No</td></tr>
+  <tr><td>Cluster-ready</td><td class="text-green">Yes</td><td>Limited</td><td>USB4 only</td><td class="text-red">No</td></tr>
+</table>
+
+<!-- ========================================== -->
+<h2>Monthly Savings &amp; ROI</h2>
+
+<div class="savings-box">
+  <div class="savings-amount">~$35/month saved + local AI</div>
+  <div class="savings-label">Replaces Hetzner Storage Box + reduces RunPod dependency</div>
+  <p style="margin-top:8px; color:#8b949e; font-size:13px">
+    Hetzner Storage Box: &minus;$55/mo | RunPod savings: ~$20-50/mo (variable) | Electricity: +$30/mo<br>
+    <strong>Net savings: $45-75/month</strong> &mdash; hardware pays for itself in ~4.5-7.5 years on savings alone<br>
+    Real value: capabilities that didn't exist before (local 70B inference, automatic failover, 10GbE NAS)
+  </p>
+</div>
+
+<table>
+  <tr><th></th><th>Current Monthly</th><th>After Monthly</th><th>Change</th></tr>
+  <tr><td>Netcup RS 8000</td><td>~$100</td><td>~$100</td><td>&mdash;</td></tr>
+  <tr><td>Hetzner Storage Box</td><td>~$55</td><td class="text-green">$0 (cancelled)</td><td class="text-green">&minus;$55</td></tr>
+  <tr><td>RunPod GPU (variable)</td><td>~$20-50</td><td class="text-green">~$0-10 (overflow only)</td><td class="text-green">&minus;$20-40</td></tr>
+  <tr><td>Cloudflare R2</td><td>~$8</td><td>~$8</td><td>&mdash;</td></tr>
+  <tr><td>Local server electricity</td><td>$0</td><td>~$30</td><td class="text-yellow">+$30</td></tr>
+  <tr><td><strong>Total</strong></td><td><strong>~$183-213</strong></td><td><strong>~$138-148</strong></td><td class="text-green"><strong>&minus;$45-75</strong></td></tr>
+</table>
+
+<!-- ========================================== -->
+<h2>Architecture</h2>
+
+<div class="diagram">                       ┌─────────────────────┐
+                       │    Cloudflare DNS    │
+                       │  + Health Checks     │
+                       └────┬────────────┬────┘
+                            │            │
+                 Primary    │            │  Failover (auto)
+                            ▼            ▼
+              ┌───────────────┐   ┌──────────────────────────┐
+              │ Netcup RS8000 │   │  MS-S1 Max (Home)        │
+              │  (Frankfurt)  │   │  Tailscale + CF Tunnel    │
+              │               │   │                          │
+              │ Traefik    ───┼──▶│ Traefik (standby)        │
+              │ rSpace+DB  ───┼──▶│ rSpace+DB replica        │
+              │ EncryptID  ───┼──▶│ EncryptID replica        │
+              │ rInbox     ───┼──▶│ rInbox replica           │
+              │ Infisical     │   │                          │
+              │ LiteLLM    ───┼──▶│ Ollama (local inference) │
+              │ 40+ services  │   │ Jellyfin (active!)       │
+              └──────┬────────┘   │ *arr stack (active)      │
+                     │            │ NAS: 20TB+ RAID1         │
+                     ▼            │ [Dual 10GbE + USB4 V2]   │
+              ┌───────────────┐   └────────────┬─────────────┘
+              │ Cloudflare R2 │◀───────────────┘
+              │  (backups)    │   Restic backups
+              └───────────────┘   from both locations</div>
+
+<!-- ========================================== -->
+<h2>Multi-Location Support</h2>
+
+<p>This setup is designed to be <strong>deployable at any physical location</strong>. Each node joins the Headscale mesh network and automatically becomes a failover target.</p>
+
+<table>
+  <tr><th>Location</th><th>Role</th><th>Requirements</th></tr>
+  <tr><td>Home (primary local)</td><td>AI inference + NAS + media + warm standby</td><td>Stable internet, 50+ Mbps upload, 10GbE LAN</td></tr>
+  <tr><td>Friend/family</td><td>Offsite backup node</td><td>Any internet, always-on power</td></tr>
+  <tr><td>Coworking space</td><td>Additional failover</td><td>Ethernet port, power outlet</td></tr>
+</table>
+
+<p>To deploy at a new location:</p>
+<ol style="margin:12px 0; padding-left:24px;">
+  <li style="margin:4px 0; color:#c9d1d9;">Assemble same hardware (or a subset &mdash; even a Raspberry Pi works as backup-only node)</li>
+  <li style="margin:4px 0; color:#c9d1d9;">Run <code>./setup/01-base-install.sh</code> &mdash; installs OS, Docker, joins Tailscale mesh</li>
+  <li style="margin:4px 0; color:#c9d1d9;">Run <code>./setup/03-backup-target.sh</code> &mdash; configures as Restic + PostgreSQL replication target</li>
+  <li style="margin:4px 0; color:#c9d1d9;">Optionally run <code>./setup/05-warm-standby.sh</code> for full failover capability</li>
+</ol>
+
+<!-- ========================================== -->
+<h2>Implementation Timeline</h2>
+
+<div class="timeline">
+  <div class="timeline-item done">
+    <div class="timeline-phase">Already Done: Backup Infrastructure</div>
+    <div class="timeline-detail">Restic &rarr; R2 (daily 3AM), DB auto-dumps, Hetzner sync, health checks, restore tools, Ansible playbook</div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-phase">Phase 1: Hardware Setup (Day 1-2)</div>
+    <div class="timeline-detail">Install Ubuntu Server 24.04, Docker, Tailscale, ROCm drivers. Configure UPS monitoring (NUT). Test 10GbE connectivity.</div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-phase">Phase 2: Local AI Stack (Day 2-3)</div>
+    <div class="timeline-detail">Deploy Ollama with ROCm. Pull models: qwen2.5-coder:32b, llama3.1:70b, deepseek-r1:70b, qwen3-30b-a3b. Connect to LiteLLM on Netcup. Benchmark.</div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-phase">Phase 3: NAS + Media Migration (Day 3-5)</div>
+    <div class="timeline-detail">Configure RAID1, rsync media from Hetzner &rarr; local NAS. Deploy Jellyfin + *arr stack locally. Reconfigure Netcup rclone mount.</div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-phase">Phase 4: Backup Consolidation (Day 6-7)</div>
+    <div class="timeline-detail">Add local NAS as Restic target. KeePass 3-2-1 (TASK-28). PostgreSQL basebackup + WAL shipping from Netcup.</div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-phase">Phase 5: Warm Standby (Week 2)</div>
+    <div class="timeline-detail">Deploy standby containers (Traefik, rSpace, EncryptID, rInbox). PostgreSQL streaming replication. Dormant Cloudflare Tunnel.</div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-phase">Phase 6: Automatic Failover (Week 3)</div>
+    <div class="timeline-detail">Cloudflare health checks + DNS failover. Test by stopping Netcup Traefik. Alert on failover events.</div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-phase">Phase 7: Optimize + Expand (Month 2)</div>
+    <div class="timeline-detail">Cancel Hetzner. Evaluate dAppNode on same hardware (TASK-60). Deploy additional nodes at other locations. Consider adding discrete GPU via PCIe x16.</div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<h2>Tasks This Satisfies</h2>
+
+<table>
+  <tr><th>Task</th><th>Status</th><th>How</th></tr>
+  <tr><td>TASK-MEDIUM.9: Deploy Strix Halo as LLM inference node</td><td class="text-green">Fully covered</td><td>MS-S1 Max IS the Strix Halo deployment</td></tr>
+  <tr><td>TASK-15: NAS storage expansion with Tailscale</td><td class="text-green">Fully covered</td><td>20-72TB local NAS via Tailscale mesh</td></tr>
+  <tr><td>TASK-28: KeePass 3-2-1 backup strategy</td><td class="text-green">Fully covered</td><td>Third backup location (local NAS)</td></tr>
+  <tr><td>TASK-60: HoloPort / dAppNode / ETH staking</td><td class="text-yellow">Partially</td><td>Can run dAppNode on same hardware (16C, 128GB, NVMe)</td></tr>
+</table>
+
+<!-- ========================================== -->
+<h2>What's Already Running (No Action Needed)</h2>
+
+<table>
+  <tr><th>Component</th><th>Status</th><th>Details</th></tr>
+  <tr><td>Restic &rarr; Cloudflare R2</td><td class="text-green">Running</td><td>Daily 3AM, ~522GB compressed, ~$8/mo</td></tr>
+  <tr><td>Hetzner Storage Box sync</td><td class="text-green">Running</td><td>Secondary offsite via rclone</td></tr>
+  <tr><td>Database auto-dumps</td><td class="text-green">Running</td><td>PostgreSQL + MariaDB auto-detected</td></tr>
+  <tr><td>Health checks + email alerts</td><td class="text-green">Running</td><td>Daily 6AM, alerts to jeff@</td></tr>
+  <tr><td>Immich DB backup</td><td class="text-green">Running</td><td>Daily 2AM, 7-day retention</td></tr>
+  <tr><td>Restore tools</td><td class="text-green">Ready</td><td>Full restore scripts + snapshot browsing</td></tr>
+  <tr><td>Ansible playbook</td><td class="text-green">Deployed</td><td>One-command server reprovisioning</td></tr>
+  <tr><td>Jellyfin + *arr stack</td><td class="text-green">Running</td><td>On Netcup via Hetzner mount (migrating to local)</td></tr>
+  <tr><td>LiteLLM config</td><td class="text-green">Ready</td><td>Strix Halo entries pre-configured, commented out</td></tr>
+</table>
+
+<!-- ========================================== -->
+<h2>Quick Reference Links</h2>
+
+<h3>Setup Guides</h3>
+<ul style="padding-left:20px;">
+  <li style="margin:6px 0;"><a href="https://rocm.docs.amd.com/en/latest/">ROCm Documentation</a> &mdash; AMD GPU compute drivers for LLM inference</li>
+  <li style="margin:6px 0;"><a href="https://github.com/ollama/ollama">Ollama</a> &mdash; local LLM server (supports ROCm)</li>
+  <li style="margin:6px 0;"><a href="https://tailscale.com/kb/1017/install">Tailscale Install Guide</a></li>
+  <li style="margin:6px 0;"><a href="https://docs.docker.com/engine/install/ubuntu/">Docker Engine Install (Ubuntu)</a></li>
+  <li style="margin:6px 0;"><a href="https://restic.readthedocs.io/en/stable/">Restic Documentation</a></li>
+  <li style="margin:6px 0;"><a href="https://jellyfin.org/docs/general/installation/container">Jellyfin Docker Setup</a></li>
+  <li style="margin:6px 0;"><a href="https://www.postgresql.org/docs/16/warm-standby.html">PostgreSQL Streaming Replication</a></li>
+  <li style="margin:6px 0;"><a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/">Cloudflare Tunnel Docs</a></li>
+  <li style="margin:6px 0;"><a href="https://networkupstools.org/">NUT (Network UPS Tools)</a></li>
+</ul>
+
+<h3>Reviews &amp; Benchmarks</h3>
+<ul style="padding-left:20px;">
+  <li style="margin:6px 0;"><a href="https://www.servethehome.com/minisforum-ms-s1-max-review-the-best-ryzen-ai-max-mini-pc-yet/">MS-S1 Max Review (ServeTheHome)</a></li>
+  <li style="margin:6px 0;"><a href="https://forum.level1techs.com/t/strix-halo-ryzen-ai-max-395-llm-benchmark-results/233796">Strix Halo LLM Benchmarks (Level1Techs)</a></li>
+  <li style="margin:6px 0;"><a href="https://community.frame.work/t/amd-strix-halo-ryzen-ai-max-395-gpu-llm-performance-tests/72521">Framework GPU LLM Tests</a></li>
+  <li style="margin:6px 0;"><a href="https://www.techradar.com/computing/minisforum-ms-s1-max-mini-pc-review">MS-S1 Max Review (TechRadar, 4.75/5)</a></li>
+</ul>
+
+<h3>Price Tracking</h3>
+<ul style="padding-left:20px;">
+  <li style="margin:6px 0;"><a href="https://pricehistory.app/p/minisforum-ms-s1-max-mini-ai-workstation-mlpGYA2h">MS-S1 Max Price History</a></li>
+  <li style="margin:6px 0;"><a href="https://diskprices.com/?locale=us&condition=any&capacity=16-&disk_types=internal_hdd">DiskPrices.com</a> &mdash; real-time HDD price comparison ($/TB)</li>
+  <li style="margin:6px 0;"><a href="https://serverpartdeals.com/collections/recertified-seagate-exos">ServerPartDeals</a> &mdash; recertified enterprise drives</li>
+  <li style="margin:6px 0;"><a href="https://camelcamelcamel.com">CamelCamelCamel</a> &mdash; Amazon price history tracker</li>
+</ul>
+
+<!-- ========================================== -->
+<p style="text-align:center; margin-top:40px; padding-top:20px; border-top:1px solid #21262d; color:#484f58; font-size:12px;">
+  Generated by Claude &bull; dev-ops/backup-NAS/BOM.html &bull; 2026-04-02
+</p>
+
+</body>
+</html>

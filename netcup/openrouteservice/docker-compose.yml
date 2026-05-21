@@ -1,0 +1,35 @@
+services:
+  openrouteservice:
+    image: openrouteservice/openrouteservice:latest
+    container_name: openrouteservice
+    restart: unless-stopped
+    mem_limit: 20g
+    cpus: 8
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./ors-docker:/home/ors
+    environment:
+      - ORS_CONFIG_LOCATION=/home/ors/config/ors-config.yml
+      - JAVA_OPTS=-Djava.awt.headless=true -server -XX:TargetSurvivorRatio=75 -XX:SurvivorRatio=64 -XX:MaxTenuringThreshold=3 -XX:+UseConcMarkSweepGC -Xms12g -Xmx16g
+      - CATALINA_OPTS=-Dcom.sun.jndi.ldap.object.trustURLCodebase=false
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/ors/v2/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 7200s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openrouteservice.rule=Host(`routing.jeffemmett.com`)"
+      - "traefik.http.services.openrouteservice.loadbalancer.server.port=8082"
+      - "traefik.http.routers.openrouteservice.entrypoints=websecure"
+      - "traefik.http.routers.openrouteservice.tls.certresolver=letsencrypt"
+    networks:
+      - traefik-public
+
+networks:
+  traefik-public:
+    external: true
