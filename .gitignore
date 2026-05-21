@@ -1,0 +1,15 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment files — secrets never belong in git (Infisical policy).
+# .env.example is intentionally tracked.
+.env
+.env.local
+*.env
+!.env.example
+
+# Local-only: secrets-inventory / KeePass sync script. Maps every secret
+# location in the infra — must not enter a (public-mirrored) repo.
+scripts/sync-secrets-to-keepass.sh
