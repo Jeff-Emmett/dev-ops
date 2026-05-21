@@ -1,0 +1,6 @@
+# Secrets and local-only artifacts — never commit
+litellm/.env
+benchmark/endpoints.json
+benchmark/results/
+ansible/inventory.ini
+ansible/*.vault

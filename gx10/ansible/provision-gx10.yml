@@ -1,0 +1,159 @@
+---
+# ============================================================
+# provision-gx10.yml — bring up the ASUS Ascent GX10 as the
+# primary heavy-compute tier (Tailscale + Ollama + LiteLLM).
+#
+# Run on first boot, after DGX OS setup is complete:
+#   ansible-playbook -i inventory.ini provision-gx10.yml \
+#       --extra-vars "tailscale_auth_key=tskey-auth-XXXX"
+#
+# DGX OS is Ubuntu-based aarch64 and ships Docker + Ollama
+# preloaded. This playbook is UNTESTED until the GX10 exists —
+# treat it as a draft to validate on first boot (TASK-91 / TASK-66).
+# ============================================================
+- name: Provision ASUS Ascent GX10
+  hosts: gx10
+  become: true
+
+  vars:
+    litellm_dir: /opt/gx10-litellm
+    ollama_models:
+      - qwen3-vl:32b        # TODO: pin exact tags (TASK-91 AC#6)
+      - qwen3-coder:30b
+      - qwen3:4b
+      - nomic-embed-text
+    # tailscale_auth_key: passed via --extra-vars or a vault file, never committed.
+
+  tasks:
+    - name: Assert this is an aarch64 host
+      ansible.builtin.assert:
+        that: ansible_architecture == "aarch64"
+        fail_msg: "Expected aarch64 (DGX OS on GB10); got {{ ansible_architecture }}"
+
+    # ---------- Tailscale ----------
+    - name: Install Tailscale
+      ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
+      args:
+        creates: /usr/bin/tailscale
+
+    - name: Bring up Tailscale (hostname gx10, tagged)
+      ansible.builtin.command: >
+        tailscale up
+        --auth-key={{ tailscale_auth_key }}
+        --hostname=gx10
+        --advertise-tags=tag:ai-node
+        --ssh
+      register: ts_up
+      changed_when: "'Success' in ts_up.stdout or ts_up.rc == 0"
+      no_log: true   # keep the auth key out of logs
+
+    - name: Read the GX10 tailnet IP
+      ansible.builtin.command: tailscale ip -4
+      register: ts_ip
+      changed_when: false
+
+    - name: Show the GX10 tailnet IP
+      ansible.builtin.debug:
+        msg: "GX10 Tailscale IP = {{ ts_ip.stdout }} — put this in opencode.json and benchmark/endpoints.json"
+
+    # ---------- Ollama (preloaded on DGX OS) ----------
+    - name: Verify Ollama is installed
+      ansible.builtin.command: ollama --version
+      register: ollama_ver
+      changed_when: false
+
+    - name: Configure Ollama to listen on all interfaces (LiteLLM container reaches it)
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/ollama.service.d/override.conf
+        content: |
+          [Service]
+          Environment="OLLAMA_HOST=0.0.0.0:11434"
+          Environment="OLLAMA_KEEP_ALIVE=10m"
+        mode: "0644"
+      notify: restart ollama
+
+    - name: Flush handlers so Ollama restarts before model pulls
+      ansible.builtin.meta: flush_handlers
+
+    - name: Pull Ollama models
+      ansible.builtin.command: "ollama pull {{ item }}"
+      loop: "{{ ollama_models }}"
+      register: pull
+      changed_when: "'pulling' in pull.stdout or 'success' in pull.stdout"
+
+    # ---------- LiteLLM router ----------
+    - name: Create the LiteLLM directory
+      ansible.builtin.file:
+        path: "{{ litellm_dir }}"
+        state: directory
+        mode: "0750"
+
+    - name: Copy LiteLLM config and compose
+      ansible.builtin.copy:
+        src: "../litellm/{{ item }}"
+        dest: "{{ litellm_dir }}/{{ item }}"
+        mode: "0640"
+      loop:
+        - config.yaml
+        - docker-compose.yml
+
+    - name: Check for the LiteLLM .env
+      ansible.builtin.stat:
+        path: "{{ litellm_dir }}/.env"
+      register: litellm_env
+
+    - name: Fail if the LiteLLM .env is missing
+      ansible.builtin.fail:
+        msg: >
+          Create {{ litellm_dir }}/.env from gx10/litellm/.env.example
+          (LITELLM_MASTER_KEY etc.) before running, or wire the Infisical
+          entrypoint-wrapper per dev-ops convention.
+      when: not litellm_env.stat.exists
+
+    - name: Start the LiteLLM router
+      community.docker.docker_compose_v2:
+        project_src: "{{ litellm_dir }}"
+        state: present
+
+    # ---------- Firewall ----------
+    - name: UFW — default deny incoming
+      community.general.ufw:
+        direction: incoming
+        policy: deny
+
+    - name: UFW — allow SSH
+      community.general.ufw:
+        rule: allow
+        name: OpenSSH
+
+    - name: UFW — allow all ingress on the tailscale interface only
+      community.general.ufw:
+        rule: allow
+        direction: in
+        interface: tailscale0
+
+    - name: UFW — enable
+      community.general.ufw:
+        state: enabled
+
+    # ---------- Health checks ----------
+    - name: Health — Ollama
+      ansible.builtin.uri:
+        url: http://127.0.0.1:11434/api/tags
+        status_code: 200
+
+    - name: Health — LiteLLM
+      ansible.builtin.uri:
+        url: http://127.0.0.1:4000/health/liveliness
+        status_code: 200
+      retries: 5
+      delay: 6
+      register: litellm_health
+      until: litellm_health.status == 200
+
+  handlers:
+    - name: restart ollama
+      ansible.builtin.systemd:
+        name: ollama
+        state: restarted
+        daemon_reload: true

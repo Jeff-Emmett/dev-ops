@@ -1,0 +1,111 @@
+# ============================================================
+# GX10 LiteLLM router  —  runs ON the ASUS Ascent GX10
+# (GB10 Grace Blackwell, 128 GB unified, DGX OS / ARM64)
+#
+# The GX10 is the PRIMARY heavy-compute tier. Tailnet clients
+# (OpenCode, aider, funion-run, MCP) route here directly.
+# Netcup's LiteLLM stays up as a separate fallback router.
+#
+# Tier order:  GX10 local  →  RunPod burst  →  Netcup CPU  →  cloud
+#
+# NOTE: Ollama model tags below are best-guess for May 2026 —
+#       pin the exact tags during TASK-91 (AC #6) before relying on them.
+# ============================================================
+
+model_list:
+  # ---------- TIER 0 — GX10 local (primary, owned, free) ----------
+  - model_name: gx10-vl                 # Qwen3-VL multimodal — the headline
+    litellm_params:
+      model: ollama/qwen3-vl:32b        # TODO: pin exact tag (TASK-91 AC#6)
+      api_base: http://host.docker.internal:11434
+      timeout: 600
+      stream: true
+
+  - model_name: gx10-coder              # primary coding model
+    litellm_params:
+      model: ollama/qwen3-coder:30b     # TODO: pin exact tag
+      api_base: http://host.docker.internal:11434
+      timeout: 600
+      stream: true
+
+  - model_name: gx10-fast               # small, low-latency tasks
+    litellm_params:
+      model: ollama/qwen3:4b            # TODO: pin exact tag
+      api_base: http://host.docker.internal:11434
+      timeout: 120
+      stream: true
+
+  - model_name: gx10-embed
+    litellm_params:
+      model: ollama/nomic-embed-text
+      api_base: http://host.docker.internal:11434
+      timeout: 60
+
+  # ---------- Backward-compat aliases ----------
+  # Existing clients use these names — now GX10-primary, with a
+  # same-group fallback entry (LiteLLM cooldown failover).
+  - model_name: qwen3-coder
+    litellm_params:
+      model: ollama/qwen3-coder:30b
+      api_base: http://host.docker.internal:11434
+      timeout: 600
+  - model_name: qwen3-coder             # fallback → RunPod burst
+    litellm_params:
+      model: openai/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+      api_base: os.environ/RUNPOD_VLLM_BASE_URL
+      api_key: os.environ/RUNPOD_VLLM_BEARER
+      timeout: 300
+
+  - model_name: llama3                  # generic small alias
+    litellm_params:
+      model: ollama/qwen3:4b
+      api_base: http://host.docker.internal:11434
+      timeout: 120
+  - model_name: llama3                  # fallback → Netcup CPU Ollama (Tailscale)
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://100.64.0.2:11434
+      timeout: 300
+
+  # ---------- TIER 1 — RunPod GPU burst (DEMOTED: overflow only) ----------
+  - model_name: runpod-coder
+    litellm_params:
+      model: openai/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+      api_base: os.environ/RUNPOD_VLLM_BASE_URL
+      api_key: os.environ/RUNPOD_VLLM_BEARER
+      timeout: 300
+
+  # ---------- TIER 2 — Netcup CPU Ollama (always-on tiny, over Tailscale) ----------
+  - model_name: netcup-small
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://100.64.0.2:11434
+      timeout: 300
+
+  # ---------- TIER 3 — cloud paid fallback ----------
+  - model_name: claude-sonnet
+    litellm_params:
+      model: anthropic/claude-sonnet-4-6   # verify current model ID at deploy time
+      api_key: os.environ/ANTHROPIC_API_KEY
+      max_tokens: 8192
+      timeout: 300
+  - model_name: gemini-flash
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 300
+
+litellm_settings:
+  drop_params: true
+  request_timeout: 600
+  # Cross-group fallbacks: if a GX10 model errors, walk down the tiers.
+  fallbacks:
+    - gx10-coder: ["runpod-coder", "netcup-small", "claude-sonnet"]
+    - gx10-vl: ["claude-sonnet", "gemini-flash"]   # vision-capable cloud fallback
+    - gx10-fast: ["netcup-small"]
+  context_window_fallbacks:
+    - gx10-coder: ["claude-sonnet"]
+
+general_settings:
+  # All /v1/* calls require  Authorization: Bearer <LITELLM_MASTER_KEY>
+  master_key: os.environ/LITELLM_MASTER_KEY

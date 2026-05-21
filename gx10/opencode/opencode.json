@@ -1,0 +1,49 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "_comment": "Apply to ~/.config/opencode/opencode.json once the GX10 is live. Replace GX10_TAILSCALE_IP with the GX10's tailnet address, and export GX10_LITELLM_KEY (= LITELLM_MASTER_KEY) in your shell. The 'ollama' provider (Netcup direct) is kept as a manual fallback. Inside a Docker SBX microVM this must be the project-level opencode.json — SBX does not read host ~/.config.",
+  "model": "gx10/gx10-coder",
+  "provider": {
+    "gx10": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://GX10_TAILSCALE_IP:4000/v1",
+        "apiKey": "{env:GX10_LITELLM_KEY}"
+      },
+      "models": {
+        "gx10-coder": {
+          "name": "GX10 Qwen3-Coder 30B",
+          "tools": true,
+          "options": { "num_ctx": 131072 }
+        },
+        "gx10-vl": {
+          "name": "GX10 Qwen3-VL 32B (multimodal — accepts images)",
+          "tools": true,
+          "options": { "num_ctx": 131072 }
+        },
+        "gx10-fast": {
+          "name": "GX10 Qwen3 4B (fast)",
+          "tools": true,
+          "options": { "num_ctx": 32768 }
+        }
+      }
+    },
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://100.64.0.2:11434/v1"
+      },
+      "models": {
+        "qwen2.5:14b": {
+          "name": "Netcup Qwen 2.5 14B (manual fallback)",
+          "tools": true,
+          "options": { "num_ctx": 32768 }
+        },
+        "llama3.2:3b": {
+          "name": "Netcup Llama 3.2 3B (manual fallback)",
+          "tools": true,
+          "options": { "num_ctx": 32768 }
+        }
+      }
+    }
+  }
+}

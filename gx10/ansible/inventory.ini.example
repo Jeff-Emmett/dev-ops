@@ -1,0 +1,9 @@
+# Copy to inventory.ini and fill in. inventory.ini is gitignored.
+#
+# Before first run the GX10 is reachable on its LAN IP; after the playbook
+# joins it to Tailscale, switch ansible_host to the tailnet IP.
+[gx10]
+ascent-gx10 ansible_host=192.168.1.NNN ansible_user=YOUR_DGX_USER
+
+[gx10:vars]
+ansible_python_interpreter=/usr/bin/python3

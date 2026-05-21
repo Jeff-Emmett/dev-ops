@@ -1,0 +1,34 @@
+# GX10 LiteLLM router — docker compose.
+#
+# Port 4000 is bound on all interfaces; UFW (see ansible/provision-gx10.yml)
+# restricts ingress to the tailscale0 interface only. Defense in depth:
+# the master key still gates every request.
+#
+# NOTE: verify the litellm image publishes an arm64 variant. If not, build
+#       locally on the GX10 (DGX OS is aarch64).
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    container_name: gx10-litellm
+    restart: unless-stopped
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    env_file:
+      - .env
+    extra_hosts:
+      # lets the container reach the GX10 host's Ollama at :11434
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4000/health/liveliness || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

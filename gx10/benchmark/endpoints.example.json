@@ -1,0 +1,20 @@
+[
+  {
+    "label": "gx10",
+    "base_url": "http://GX10_TAILSCALE_IP:4000/v1",
+    "model": "gx10-coder",
+    "api_key": "LITELLM_MASTER_KEY"
+  },
+  {
+    "label": "gx10-vl",
+    "base_url": "http://GX10_TAILSCALE_IP:4000/v1",
+    "model": "gx10-vl",
+    "api_key": "LITELLM_MASTER_KEY"
+  },
+  {
+    "label": "netcup-runpod",
+    "base_url": "http://100.64.0.2/v1",
+    "model": "qwen3-coder",
+    "api_key": "NETCUP_LITELLM_KEY"
+  }
+]
