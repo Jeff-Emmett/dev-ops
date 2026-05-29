@@ -79,17 +79,30 @@ jobs:
           "
 
       - name: Smoke test
+        # Poll HTTP health up to 90s. A single sleep-then-curl pattern
+        # races app cold start. Only roll back when there's a previous
+        # tag to fall back to — on first deploy '.rollback-tag' is
+        # empty and 'IMAGE_TAG= docker compose up' would be destructive.
         run: |
-          sleep 15
-          HTTP_CODE=$(curl -sSL -o /dev/null -w "%{http_code}" --max-time 30 __HEALTH_URL__ 2>/dev/null || echo "000")
-          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 400 ]; then
-            echo "Smoke test failed (HTTP $HTTP_CODE) — rolling back"
-            ROLLBACK_TAG=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key root@${{ secrets.DEPLOY_HOST }} "cat __DEPLOY_PATH__/.rollback-tag 2>/dev/null")
-            if [ -n "$ROLLBACK_TAG" ]; then
-              ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key root@${{ secrets.DEPLOY_HOST }} \
-                "cd __DEPLOY_PATH__ && IMAGE_TAG=$ROLLBACK_TAG docker compose up -d --no-build"
-              echo "Rolled back to $ROLLBACK_TAG"
+          HTTP_CODE="000"
+          for i in $(seq 1 18); do
+            sleep 5
+            HTTP_CODE=$(curl -sSL -o /dev/null -w "%{http_code}" --max-time 15 __HEALTH_URL__ 2>/dev/null || echo "000")
+            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 400 ]; then
+              echo "Smoke test passed after ${i} poll(s) (HTTP $HTTP_CODE)"
+              exit 0
             fi
-            exit 1
+            echo "  [poll ${i}/18] HTTP $HTTP_CODE"
+          done
+
+          echo "::error::Smoke test failed after 90s (last HTTP $HTTP_CODE)"
+          ROLLBACK_TAG=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key root@${{ secrets.DEPLOY_HOST }} "cat __DEPLOY_PATH__/.rollback-tag 2>/dev/null" || echo "")
+          if [ -n "$ROLLBACK_TAG" ]; then
+            echo "Rolling back to $ROLLBACK_TAG"
+            ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key root@${{ secrets.DEPLOY_HOST }} \
+              "cd __DEPLOY_PATH__ && IMAGE_TAG=$ROLLBACK_TAG docker compose up -d --no-build"
+            echo "Rolled back to $ROLLBACK_TAG"
+          else
+            echo "No rollback tag available (first deploy?). Leaving current container in place."
           fi
-          echo "Smoke test passed (HTTP $HTTP_CODE)"
+          exit 1
