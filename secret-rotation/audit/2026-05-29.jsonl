@@ -1,0 +1,59 @@
+{"ts":"2026-05-29T14:11:12.789Z","secret":"GITEA_WEBHOOK_SECRET","result":"dry-run","rotator":"gitea"}
+{"ts":"2026-05-29T14:11:12.790Z","secret":"GITLAB_WEBHOOK_TOKEN","result":"dry-run","rotator":"gitlab"}
+{"ts":"2026-05-29T14:11:12.791Z","secret":"GITHUB_WEBHOOK_SECRET","result":"dry-run","rotator":"github"}
+{"ts":"2026-05-29T14:11:12.791Z","secret":"LINEAR_WEBHOOK_SECRET","result":"dry-run","rotator":"linear"}
+{"ts":"2026-05-29T14:11:12.791Z","secret":"CALCOM_WEBHOOK_SECRET","result":"dry-run","rotator":"calcom"}
+{"ts":"2026-05-29T14:11:12.791Z","secret":"SENTRY_WEBHOOK_SECRET","result":"dry-run","rotator":"sentry"}
+{"ts":"2026-05-29T14:11:12.791Z","secret":"TELEGRAM_BOT_SECRET","result":"dry-run","rotator":"telegram"}
+{"ts":"2026-05-29T14:11:12.791Z","secret":"POSTHOG_WEBHOOK_SECRET","result":"dry-run","rotator":"posthog"}
+{"ts":"2026-05-29T14:11:12.791Z","secret":"MATTERMOST_WEBHOOK_TOKEN","result":"dry-run","rotator":"mattermost"}
+{"ts":"2026-05-29T14:11:12.791Z","secret":"DISCORD_RELAY_SECRET","result":"dry-run","rotator":"internal"}
+{"ts":"2026-05-29T14:11:12.791Z","secret":"INBOX_ADMIN_TOKEN","result":"dry-run","rotator":"internal"}
+{"ts":"2026-05-29T14:11:12.791Z","secret":"POSTGRES_PASSWORD","result":"dry-run","rotator":"postgres"}
+{"ts":"2026-05-29T14:11:12.791Z","secret":"ENCRYPTID_DB_PASSWORD","result":"dry-run","rotator":"postgres"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"STRIPE_WEBHOOK_SECRET","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=365d, where=dashboard.stripe.com → Developers → Webhooks → Roll secret)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"SLACK_SIGNING_SECRET","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=365d, where=api.slack.com/apps → Basic Information → Regenerate Signing Secret)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"NOTION_INTEGRATION_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=notion.so/profile/integrations → revoke + create new)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"ZOTERO_API_KEY","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=zotero.org/settings/keys → delete + create new)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"READWISE_API_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=readwise.io/access_token → regenerate)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"OURA_PAT","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=cloud.ouraring.com/personal-access-tokens)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"FIGMA_API_KEY","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=figma.com/settings → Personal access tokens)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"MIRO_ACCESS_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=miro.com/app/settings/user-profile/apps)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"DROPBOX_ACCESS_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=dropbox.com/developers/apps → Generated access token)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"MSGRAPH_CLIENT_SECRET","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=90d, where=portal.azure.com → App registrations → Certificates & secrets)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"PLAID_SECRET","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=365d, where=dashboard.plaid.com → Team Settings → Keys)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"SPOTIFY_REFRESH_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=9999d, where=user re-authorization flow only)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"STRAVA_REFRESH_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=9999d, where=user re-authorization flow only)"}
+{"ts":"2026-05-29T14:11:12.792Z","secret":"FITBIT_REFRESH_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=9999d, where=user re-authorization flow only)"}
+{"ts":"2026-05-29T14:11:12.793Z","secret":"GDRIVE_REFRESH_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=9999d, where=user re-authorization flow only)"}
+{"ts":"2026-05-29T14:11:12.793Z","secret":"YOUTUBE_REFRESH_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=9999d, where=user re-authorization flow only)"}
+{"ts":"2026-05-29T14:11:12.793Z","secret":"MATRIX_ACCESS_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=365d, where=Element → Settings → Help & About → Advanced)"}
+{"ts":"2026-05-29T14:11:12.793Z","secret":"MAILCOW_API_KEY","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=mail.rmail.online → System → API → Regenerate)"}
+{"ts":"2026-05-29T14:11:56.019Z","secret":"GITEA_WEBHOOK_SECRET","result":"dry-run","rotator":"gitea"}
+{"ts":"2026-05-29T14:11:56.019Z","secret":"GITLAB_WEBHOOK_TOKEN","result":"dry-run","rotator":"gitlab"}
+{"ts":"2026-05-29T14:11:56.019Z","secret":"GITHUB_WEBHOOK_SECRET","result":"dry-run","rotator":"github"}
+{"ts":"2026-05-29T14:11:56.019Z","secret":"LINEAR_WEBHOOK_SECRET","result":"dry-run","rotator":"linear"}
+{"ts":"2026-05-29T14:11:56.019Z","secret":"CALCOM_WEBHOOK_SECRET","result":"dry-run","rotator":"calcom"}
+{"ts":"2026-05-29T14:11:56.019Z","secret":"SENTRY_WEBHOOK_SECRET","result":"dry-run","rotator":"sentry"}
+{"ts":"2026-05-29T14:11:56.019Z","secret":"TELEGRAM_BOT_SECRET","result":"dry-run","rotator":"telegram"}
+{"ts":"2026-05-29T14:11:56.019Z","secret":"POSTHOG_WEBHOOK_SECRET","result":"dry-run","rotator":"posthog"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"MATTERMOST_WEBHOOK_TOKEN","result":"dry-run","rotator":"mattermost"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"DISCORD_RELAY_SECRET","result":"dry-run","rotator":"internal"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"INBOX_ADMIN_TOKEN","result":"dry-run","rotator":"internal"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"POSTGRES_PASSWORD","result":"dry-run","rotator":"postgres"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"ENCRYPTID_DB_PASSWORD","result":"dry-run","rotator":"postgres"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"STRIPE_WEBHOOK_SECRET","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=365d, where=dashboard.stripe.com → Developers → Webhooks → Roll secret)"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"SLACK_SIGNING_SECRET","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=365d, where=api.slack.com/apps → Basic Information → Regenerate Signing Secret)"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"NOTION_INTEGRATION_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=notion.so/profile/integrations → revoke + create new)"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"ZOTERO_API_KEY","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=zotero.org/settings/keys → delete + create new)"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"READWISE_API_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=readwise.io/access_token → regenerate)"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"OURA_PAT","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=cloud.ouraring.com/personal-access-tokens)"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"FIGMA_API_KEY","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=figma.com/settings → Personal access tokens)"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"MIRO_ACCESS_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=miro.com/app/settings/user-profile/apps)"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"DROPBOX_ACCESS_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=dropbox.com/developers/apps → Generated access token)"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"MSGRAPH_CLIENT_SECRET","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=90d, where=portal.azure.com → App registrations → Certificates & secrets)"}
+{"ts":"2026-05-29T14:11:56.020Z","secret":"PLAID_SECRET","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=365d, where=dashboard.plaid.com → Team Settings → Keys)"}
+{"ts":"2026-05-29T14:11:56.021Z","secret":"MATRIX_ACCESS_TOKEN","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=365d, where=Element → Settings → Help & About → Advanced)"}
+{"ts":"2026-05-29T14:11:56.021Z","secret":"MAILCOW_API_KEY","result":"skipped","rotator":"manual","error":"MANUAL ROTATION DUE (last=never, cadence=180d, where=mail.rmail.online → System → API → Regenerate)"}
+{"ts":"2026-05-29T14:13:04.575Z","secret":"DISCORD_RELAY_SECRET","result":"failed","rotator":"internal","error":"upstream OK but Infisical write FAILED — manual sync needed: ENOENT: no such file or directory, open '/home/jeffe/snap/bun-js/87/.secrets/infisical_admin_client_id'","upstreamApplied":[]}
+{"ts":"2026-05-29T14:15:50.717Z","secret":"DISCORD_RELAY_SECRET","result":"rotated","rotator":"internal","upstreamApplied":[]}

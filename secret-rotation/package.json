@@ -1,0 +1,13 @@
+{
+  "name": "secret-rotation",
+  "version": "0.1.0",
+  "description": "Custom secret-rotation cron for the rspace/prod Infisical project (works around free-tier rotation plan restriction).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "rotate": "bun run rotate.ts",
+    "dry-run": "bun run rotate.ts --dry-run",
+    "force": "bun run rotate.ts --secret",
+    "install-cron": "bash scripts/install-cron.sh"
+  }
+}

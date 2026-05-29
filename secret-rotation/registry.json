@@ -1,0 +1,147 @@
+{
+  "_comment": "Each entry: secret name in Infisical → rotator + cadence. cadenceDays controls minimum gap between rotations. rotator names map to rotators/<name>.ts. config is passed verbatim to the rotator. set rotator='manual' for secrets we can't rotate from our side.",
+
+  "secrets": [
+    {
+      "name": "GITEA_WEBHOOK_SECRET",
+      "rotator": "gitea",
+      "cadenceDays": 30,
+      "config": {
+        "_doc": "List the repos that have webhooks pointing at rspace. We update every one. Hook id discovery happens at rotation time via GET /repos/{owner}/{repo}/hooks (filter by URL).",
+        "host": "https://gitea.jeffemmett.com",
+        "rspaceWebhookUrlPattern": "rspace.online/api/bridges/gitea/webhook",
+        "repos": []
+      }
+    },
+    {
+      "name": "GITLAB_WEBHOOK_TOKEN",
+      "rotator": "gitlab",
+      "cadenceDays": 30,
+      "config": {
+        "host": "https://gitlab.com",
+        "rspaceWebhookUrlPattern": "rspace.online/api/bridges/gitlab/webhook",
+        "projectIds": []
+      }
+    },
+    {
+      "name": "GITHUB_WEBHOOK_SECRET",
+      "rotator": "github",
+      "cadenceDays": 30,
+      "config": {
+        "rspaceWebhookUrlPattern": "rspace.online/api/bridges/github/webhook",
+        "repos": []
+      }
+    },
+    {
+      "name": "LINEAR_WEBHOOK_SECRET",
+      "rotator": "linear",
+      "cadenceDays": 30,
+      "config": {
+        "rspaceWebhookUrlPattern": "rspace.online/api/bridges/linear/webhook"
+      }
+    },
+    {
+      "name": "CALCOM_WEBHOOK_SECRET",
+      "rotator": "calcom",
+      "cadenceDays": 30,
+      "config": {
+        "host": "https://api.cal.com",
+        "rspaceWebhookUrlPattern": "rspace.online/api/bridges/calcom/webhook"
+      }
+    },
+    {
+      "name": "SENTRY_WEBHOOK_SECRET",
+      "rotator": "sentry",
+      "cadenceDays": 30,
+      "config": {
+        "rspaceWebhookUrlPattern": "rspace.online/api/bridges/sentry/webhook"
+      }
+    },
+    {
+      "name": "TELEGRAM_BOT_SECRET",
+      "rotator": "telegram",
+      "cadenceDays": 30,
+      "config": {
+        "_doc": "TELEGRAM_BOT_TOKEN is the bot itself (long-lived from BotFather, not rotated here). This secret is the URL-secret embedded in the webhook URL. We call setWebhook with the new URL on each rotation."
+      }
+    },
+    {
+      "name": "POSTHOG_WEBHOOK_SECRET",
+      "rotator": "posthog",
+      "cadenceDays": 30,
+      "config": {
+        "host": "https://us.posthog.com",
+        "destinationId": ""
+      }
+    },
+    {
+      "name": "MATTERMOST_WEBHOOK_TOKEN",
+      "rotator": "mattermost",
+      "cadenceDays": 30,
+      "config": {
+        "host": "",
+        "webhookId": ""
+      }
+    },
+    {
+      "name": "DISCORD_RELAY_SECRET",
+      "rotator": "internal",
+      "cadenceDays": 30,
+      "config": {
+        "_doc": "Internal HMAC shared with a Discord relay we control. Rotation = Infisical write only; relay reads from Infisical on its next deploy."
+      }
+    },
+    {
+      "name": "INBOX_ADMIN_TOKEN",
+      "rotator": "internal",
+      "cadenceDays": 7,
+      "config": {
+        "_doc": "Internal admin token for the inbox journal endpoints. Pure-internal — rotate to Infisical only, then redeploy rspace."
+      }
+    },
+    {
+      "name": "POSTGRES_PASSWORD",
+      "rotator": "postgres",
+      "cadenceDays": 90,
+      "config": {
+        "_doc": "rspace-db. ALTER USER + Infisical + coordinated redeploy. Requires zero in-flight transactions; runs during the low-traffic maintenance window only.",
+        "container": "rspace-db",
+        "dbUser": "rspace",
+        "dbName": "rspace"
+      }
+    },
+    {
+      "name": "ENCRYPTID_DB_PASSWORD",
+      "rotator": "postgres",
+      "cadenceDays": 90,
+      "config": {
+        "container": "encryptid-db",
+        "dbUser": "encryptid",
+        "dbName": "encryptid"
+      }
+    },
+
+    {
+      "_comment_manual": "Below are not rotatable from our side. Tracked here so the audit log can flag them past expiry threshold.",
+      "name": "STRIPE_WEBHOOK_SECRET",            "rotator": "manual", "cadenceDays": 365,
+      "config": { "rotateAt": "dashboard.stripe.com → Developers → Webhooks → Roll secret" }
+    },
+    { "name": "SLACK_SIGNING_SECRET",     "rotator": "manual", "cadenceDays": 365, "config": { "rotateAt": "api.slack.com/apps → Basic Information → Regenerate Signing Secret" } },
+    { "name": "NOTION_INTEGRATION_TOKEN", "rotator": "manual", "cadenceDays": 180, "config": { "rotateAt": "notion.so/profile/integrations → revoke + create new" } },
+    { "name": "ZOTERO_API_KEY",           "rotator": "manual", "cadenceDays": 180, "config": { "rotateAt": "zotero.org/settings/keys → delete + create new" } },
+    { "name": "READWISE_API_TOKEN",       "rotator": "manual", "cadenceDays": 180, "config": { "rotateAt": "readwise.io/access_token → regenerate" } },
+    { "name": "OURA_PAT",                 "rotator": "manual", "cadenceDays": 180, "config": { "rotateAt": "cloud.ouraring.com/personal-access-tokens" } },
+    { "name": "FIGMA_API_KEY",            "rotator": "manual", "cadenceDays": 180, "config": { "rotateAt": "figma.com/settings → Personal access tokens" } },
+    { "name": "MIRO_ACCESS_TOKEN",        "rotator": "manual", "cadenceDays": 180, "config": { "rotateAt": "miro.com/app/settings/user-profile/apps" } },
+    { "name": "DROPBOX_ACCESS_TOKEN",     "rotator": "manual", "cadenceDays": 180, "config": { "rotateAt": "dropbox.com/developers/apps → Generated access token" } },
+    { "name": "MSGRAPH_CLIENT_SECRET",    "rotator": "manual", "cadenceDays": 90,  "config": { "rotateAt": "portal.azure.com → App registrations → Certificates & secrets" } },
+    { "name": "PLAID_SECRET",             "rotator": "manual", "cadenceDays": 365, "config": { "rotateAt": "dashboard.plaid.com → Team Settings → Keys" } },
+    { "name": "SPOTIFY_REFRESH_TOKEN",    "rotator": "noop", "cadenceDays": 0, "config": { "_doc": "Auto-extends on every refresh exchange; only rotates if user revokes app." } },
+    { "name": "STRAVA_REFRESH_TOKEN",     "rotator": "noop", "cadenceDays": 0, "config": { "_doc": "Auto-extends on every refresh exchange." } },
+    { "name": "FITBIT_REFRESH_TOKEN",     "rotator": "noop", "cadenceDays": 0, "config": { "_doc": "Fitbit rotates refresh_token on every refresh — the bridge would need to capture+store the new one. Tracked as future work." } },
+    { "name": "GDRIVE_REFRESH_TOKEN",     "rotator": "noop", "cadenceDays": 0, "config": { "_doc": "Google refresh tokens don't expire unless user revokes." } },
+    { "name": "YOUTUBE_REFRESH_TOKEN",    "rotator": "noop", "cadenceDays": 0, "config": { "_doc": "Google refresh tokens don't expire unless user revokes." } },
+    { "name": "MATRIX_ACCESS_TOKEN",      "rotator": "manual", "cadenceDays": 365, "config": { "rotateAt": "Element → Settings → Help & About → Advanced" } },
+    { "name": "MAILCOW_API_KEY",          "rotator": "manual", "cadenceDays": 180, "config": { "rotateAt": "mail.rmail.online → System → API → Regenerate" } }
+  ]
+}
