@@ -31,6 +31,9 @@ services:
     - traefik.http.routers.gitea.entrypoints=web
     - traefik.http.services.gitea.loadbalancer.server.port=3000
     - traefik.docker.network=traefik-public
+    # Keep the git host out of search engines (noindex on every response)
+    - traefik.http.middlewares.gitea-noindex.headers.customresponseheaders.X-Robots-Tag=noindex, nofollow, noarchive, nosnippet
+    - traefik.http.routers.gitea.middlewares=gitea-noindex@docker
 
   db:
     image: postgres:14
