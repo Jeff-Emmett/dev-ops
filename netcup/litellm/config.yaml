@@ -201,6 +201,22 @@ model_list:
       api_base: http://100.64.0.5:11434
       timeout: 60
 
+  - model_name: whisper-large-v3
+    litellm_params:
+      model: openai/whisper-large-v3
+      api_base: http://100.64.0.5:8990/v1
+      api_key: sk-parakeet-local
+    model_info:
+      mode: audio_transcription
+
+  - model_name: parakeet
+    litellm_params:
+      model: openai/parakeet
+      api_base: http://100.64.0.5:8990/v1
+      api_key: sk-parakeet-local
+    model_info:
+      mode: audio_transcription
+
 litellm_settings:
   drop_params: true
   request_timeout: 600
