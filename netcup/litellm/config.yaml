@@ -1,154 +1,233 @@
 model_list:
   # ===========================================================
-  # TIER 1 — Self-hosted local (Netcup CPU, Ollama)
-  # Only tiny models run usefully here; bigger ones thrash swap.
+  # TIER 0 — Local GPU flagship (ASUS GX10 / NVIDIA GB10)
+  # 128GB unified, mesh 100.64.0.5. PRIMARY local compute.
+  # gpt-oss:120b ~38 tok/s, coder:32b ~13, 70b ~5, qwen7b ~51.
   # ===========================================================
-  - model_name: llama3-small     # llama3.2:1b, fastest local tier
+  - model_name: local-flagship       # gpt-oss:120b (Apache-2.0 MoE)
     litellm_params:
-      model: ollama/llama3.2:1b
-      api_base: http://10.0.45.1:11434
-      timeout: 120
-      stream: true
-
-  - model_name: llama3-3b        # llama3.2:3b, better quality, ~1.2 tok/s
+      model: ollama_chat/gpt-oss:120b
+      api_base: http://100.64.0.5:11434
+      timeout: 600
+  - model_name: local-general        # llama3.3:70b (slow; quality alt)
     litellm_params:
-      model: ollama/llama3.2:3b
-      api_base: http://10.0.45.1:11434
+      model: ollama_chat/llama3.3:70b
+      api_base: http://100.64.0.5:11434
+      timeout: 900
+  - model_name: local-coder          # qwen2.5-coder:32b
+    litellm_params:
+      model: ollama_chat/qwen2.5-coder:32b
+      api_base: http://100.64.0.5:11434
+      timeout: 600
+  - model_name: local-fast           # qwen2.5:7b (~51 tok/s)
+    litellm_params:
+      model: ollama_chat/qwen2.5:7b
+      api_base: http://100.64.0.5:11434
       timeout: 300
-      stream: true
+  - model_name: local-embed          # bge-m3 (1024-dim, multilingual)
+    litellm_params:
+      model: ollama/bge-m3
+      api_base: http://100.64.0.5:11434
+      timeout: 60
+  - model_name: local-reasoning      # deepseek-r1:32b distill (reasoning)
+    litellm_params:
+      model: ollama_chat/deepseek-r1:32b
+      api_base: http://100.64.0.5:11434
+      timeout: 900
+  - model_name: deepseek-r1          # alias
+    litellm_params:
+      model: ollama_chat/deepseek-r1:32b
+      api_base: http://100.64.0.5:11434
+      timeout: 900
+  - model_name: local-vision         # gemma3:27b (multimodal — qwen2.5vl had a CLIP-load bug on this build)
+    litellm_params:
+      model: ollama_chat/gemma3:27b
+      api_base: http://100.64.0.5:11434
+      timeout: 600
+  - model_name: deepseek-coder        # deepseek-coder-v2:16b MoE (fast coder alt)
+    litellm_params:
+      model: ollama_chat/deepseek-coder-v2:16b
+      api_base: http://100.64.0.5:11434
+      timeout: 600
+  - model_name: qwen3                 # qwen3:30b-a3b (newer general MoE)
+    litellm_params:
+      model: ollama_chat/qwen3:30b-a3b
+      api_base: http://100.64.0.5:11434
+      timeout: 600
 
   # ===========================================================
-  # TIER 2 — Self-hosted GPU burst (RunPod vLLM)
-  # Primary path for coding + heavy reasoning. Currently serves
-  # Qwen2.5-Coder-7B; plan: upgrade to Qwen3-Coder-30B-A3B MoE.
+  # OVERFLOW — RunPod vLLM kept as NAMED fallback only (no longer
+  # primary; spark replaces it). Auto-scales to zero when idle.
   # ===========================================================
-  - model_name: qwen-coder       # primary coder (backward-compat name)
+  - model_name: qwen-coder-runpod
     litellm_params:
       model: openai/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
       api_base: os.environ/RUNPOD_VLLM_BASE_URL
-      api_key: os.environ/RUNPOD_API_KEY
+      api_key: os.environ/RUNPOD_VLLM_BEARER
       timeout: 300
-  - model_name: qwen-coder       # fallback → local 3b
+
+  # CPU Ollama (Netcup host) — last-resort self-hosted fallback
+  - model_name: llama3-3b
     litellm_params:
       model: ollama/llama3.2:3b
       api_base: http://10.0.45.1:11434
       timeout: 300
 
-  - model_name: qwen3-coder      # new canonical name
+  # ===========================================================
+  # PRODUCTION ALIASES — now SPARK-primary (single entry each;
+  # failover handled by fallbacks: below). These are the names
+  # the stack + funion-mcp + rspace-online already call.
+  # ===========================================================
+  - model_name: qwen-coder           # → spark coder:32b (was RunPod)
     litellm_params:
-      model: openai/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
-      api_base: os.environ/RUNPOD_VLLM_BASE_URL
-      api_key: os.environ/RUNPOD_API_KEY
+      model: ollama_chat/qwen2.5-coder:32b
+      api_base: http://100.64.0.5:11434
+      timeout: 600
+  - model_name: qwen3-coder          # → spark coder:32b (was RunPod)
+    litellm_params:
+      model: ollama_chat/qwen2.5-coder:32b
+      api_base: http://100.64.0.5:11434
+      timeout: 600
+  - model_name: qwen                 # → spark coder:32b (was RunPod)
+    litellm_params:
+      model: ollama_chat/qwen2.5-coder:32b
+      api_base: http://100.64.0.5:11434
+      timeout: 600
+  - model_name: cheap-code           # → spark fast qwen7b (was RunPod)
+    litellm_params:
+      model: ollama_chat/qwen2.5:7b
+      api_base: http://100.64.0.5:11434
       timeout: 300
-
-  # Generic aliases used by rspace-online etc. — self-hosted primary.
-  - model_name: llama3           # was → Gemini. Now → local 3b (or 1b fallback).
+  - model_name: llama3               # → spark fast qwen7b (was CPU 3b)
     litellm_params:
-      model: ollama/llama3.2:3b
-      api_base: http://10.0.45.1:11434
+      model: ollama_chat/qwen2.5:7b
+      api_base: http://100.64.0.5:11434
       timeout: 300
-  - model_name: llama3           # fallback → 1b
+  - model_name: llama3-small         # → spark fast qwen7b (was CPU 1b)
     litellm_params:
-      model: ollama/llama3.2:1b
-      api_base: http://10.0.45.1:11434
-      timeout: 120
-
-  - model_name: qwen             # was → Gemini. Now → RunPod primary.
-    litellm_params:
-      model: openai/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
-      api_base: os.environ/RUNPOD_VLLM_BASE_URL
-      api_key: os.environ/RUNPOD_API_KEY
+      model: ollama_chat/qwen2.5:7b
+      api_base: http://100.64.0.5:11434
       timeout: 300
-  - model_name: qwen             # fallback → local 3b
+  - model_name: llama3.1              # rspace folk-mermaid/pantheon → spark
     litellm_params:
-      model: ollama/llama3.2:3b
-      api_base: http://10.0.45.1:11434
+      model: ollama_chat/qwen2.5:7b
+      api_base: http://100.64.0.5:11434
       timeout: 300
-
-  - model_name: cheap-code       # RunPod → local 3b → local 1b
+  - model_name: llama3.2              # rspace alias → spark
     litellm_params:
-      model: openai/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
-      api_base: os.environ/RUNPOD_VLLM_BASE_URL
-      api_key: os.environ/RUNPOD_API_KEY
+      model: ollama_chat/qwen2.5:7b
+      api_base: http://100.64.0.5:11434
       timeout: 300
-  - model_name: cheap-code
-    litellm_params:
-      model: ollama/llama3.2:3b
-      api_base: http://10.0.45.1:11434
-      timeout: 300
-  - model_name: cheap-code
-    litellm_params:
-      model: ollama/llama3.2:1b
-      api_base: http://10.0.45.1:11434
-      timeout: 120
 
   # ===========================================================
   # TIER 3 — External APIs (paid fallback)
-  # Keys injected at startup via Infisical wrapper from
-  # litellm-proxy/prod/{ANTHROPIC_API_KEY,GEMINI_API_KEY}.
+  # Keys via Infisical wrapper (litellm-proxy/prod/*).
   # ===========================================================
   - model_name: gemini-flash
     litellm_params:
       model: gemini/gemini-2.0-flash
       api_key: os.environ/GEMINI_API_KEY
       timeout: 300
-
+  - model_name: gemini-2.5-flash
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 300
+  - model_name: gemini-2.5-pro
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      api_key: os.environ/GEMINI_API_KEY
+      max_tokens: 8192
+      timeout: 300
+  - model_name: gemini-pro
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      api_key: os.environ/GEMINI_API_KEY
+      max_tokens: 8192
+      timeout: 300
   - model_name: claude-sonnet
     litellm_params:
       model: anthropic/claude-sonnet-4-20250514
       api_key: os.environ/ANTHROPIC_API_KEY
       max_tokens: 8192
       timeout: 300
-
   - model_name: claude-haiku
     litellm_params:
       model: anthropic/claude-haiku-4-5-20251001
       api_key: os.environ/ANTHROPIC_API_KEY
       max_tokens: 8192
       timeout: 300
-
-  # ===========================================================
-  # TIER 1.5 — funion sidecar (Phi-3-mini, Netcup CPU)
-  # OpenAI-compatible endpoint on ai-internal docker network.
-  # Auth-gated by FUNION_SIDECAR_TOKEN. No public Cloudflare exposure.
-  # Backed by /opt/apps/funion-sidecar/ (zknet-labs-src compute-courier).
-  # ===========================================================
-  - model_name: funion-phi3
+  - model_name: claude-opus            # Opus 4.8 — top frontier escalation for hardest tasks
     litellm_params:
-      model: openai/phi-3-mini-4k-instruct-Q4
-      api_base: http://funion-sidecar:9100/v1
-      api_key: os.environ/FUNION_SIDECAR_TOKEN
-      timeout: 300
-
-  - model_name: funion-llama-3-8b
-    litellm_params:
-      model: openai/meta-llama-3.1-8b-instruct-Q4
-      api_base: http://funion-sidecar-llama3:9100/v1
-      api_key: os.environ/FUNION_SIDECAR_TOKEN
+      model: anthropic/claude-opus-4-8
+      api_key: os.environ/ANTHROPIC_API_KEY
+      max_tokens: 8192
       timeout: 600
 
   # ===========================================================
-  # TIER 3 — funion sidecar (Qwen3-Coder-30B-A3B-FP8, RunPod serverless)
-  # GPU-accelerated MoE coding model. Auto-scales to zero. Aliases the
-  # existing qwen-coder endpoint under the funion-* naming so the
-  # funion-mcp catalogue is consistent. Same underlying RunPod
-  # endpoint as qwen-coder; no new infra deployed.
+  # funion sidecars (Netcup CPU) — unchanged
   # ===========================================================
-  - model_name: funion-qwen-coder
+  # funion sidecars RETIRED 2026-06-05 — CPU containers removed; funion
+  # now runs on the spark GB10 via LiteLLM (same model names, GPU-backed).
+  - model_name: funion-phi3           # → spark qwen2.5:7b (was Netcup CPU phi-3)
     litellm_params:
-      model: openai/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
-      api_base: os.environ/RUNPOD_VLLM_BASE_URL
-      api_key: os.environ/RUNPOD_API_KEY
+      model: ollama_chat/qwen2.5:7b
+      api_base: http://100.64.0.5:11434
       timeout: 300
+  - model_name: funion-llama-3-8b     # → spark qwen2.5:7b (was Netcup CPU llama3.1-8b)
+    litellm_params:
+      model: ollama_chat/qwen2.5:7b
+      api_base: http://100.64.0.5:11434
+      timeout: 300
+  - model_name: funion-qwen-coder     # → spark coder:32b (was RunPod)
+    litellm_params:
+      model: ollama_chat/qwen2.5-coder:32b
+      api_base: http://100.64.0.5:11434
+      timeout: 600
+
+  # ===========================================================
+  # EMBEDDING TIER — nomic-embed-text (768-dim) via host Ollama.
+  # UNCHANGED: existing vector stores are keyed to 768-dim nomic;
+  # bge-m3 (1024-dim) is available separately as local-embed.
+  # ===========================================================
+  - model_name: nomic-embed-text
+    litellm_params:
+      model: ollama/nomic-embed-text
+      api_base: http://100.64.0.5:11434
+      timeout: 60
+  - model_name: text-embedding-3-small
+    litellm_params:
+      model: ollama/nomic-embed-text
+      api_base: http://100.64.0.5:11434
+      timeout: 60
 
 litellm_settings:
   drop_params: true
-  request_timeout: 300
+  request_timeout: 600
   num_retries: 2
   set_verbose: false
   max_budget: 50.0
   budget_duration: "30d"
   default_fallbacks: ["llama3-3b"]   # safe self-hosted fallback
+  fallbacks:
+    - {"local-flagship": ["local-general", "claude-sonnet"]}
+    - {"local-general": ["local-flagship", "claude-sonnet"]}
+    - {"local-coder": ["qwen-coder-runpod", "claude-haiku"]}
+    - {"local-fast": ["llama3-3b", "claude-haiku"]}
+    - {"qwen-coder": ["qwen-coder-runpod", "claude-haiku"]}
+    - {"qwen3-coder": ["qwen-coder-runpod", "claude-haiku"]}
+    - {"qwen": ["qwen-coder-runpod", "claude-haiku"]}
+    - {"cheap-code": ["llama3-3b", "claude-haiku"]}
+    - {"llama3": ["llama3-3b", "claude-haiku"]}
+    - {"llama3-small": ["llama3-3b", "claude-haiku"]}
+    - {"llama3.1": ["llama3-3b", "claude-haiku"]}
+    - {"llama3.2": ["llama3-3b", "claude-haiku"]}
+    - {"local-reasoning": ["local-flagship", "claude-opus", "claude-sonnet"]}
+    - {"local-vision": ["gemini-2.5-flash"]}
+    - {"qwen3": ["local-flagship", "claude-haiku"]}
+    - {"funion-phi3": ["llama3-3b"]}
+    - {"funion-llama-3-8b": ["llama3-3b"]}
+    - {"funion-qwen-coder": ["qwen-coder-runpod", "claude-haiku"]}
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
