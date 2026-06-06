@@ -347,6 +347,23 @@ tier2_thirdparty:
       Dirs are NOT git repos -> changes on disk only. twenty-rnetwork dir is INACTIVE (no
       containers) -> skipped. Script: /tmp/twenty_migrate.sh."
 
+  # listmonk cluster (migrated 2026-06-07, init-container pattern)
+  - slug: p2p/commons-hub/crypto-commons/pwf/worldplay -listmonk
+    service: listmonk newsletter (5 instances)
+    location: /opt/apps/*-listmonk
+    runtime: go-binary (no node/python/curl/jq in image -> wrapper impossible)
+    secrets_count: 2
+    status: migrated
+    batch: medium
+    notes: "Config-file shape: secrets in config.toml ([db].password, [app].admin_password) +
+      ./db_password docker-secret file (db password == [db].password, 32 chars). Image lacks any
+      wrapper runtime, so used INIT-CONTAINER pattern: node:22-alpine sidecar (init-secrets.js,
+      reaches infisical via traefik-public) regenerates config.toml (from config.toml.tmpl) +
+      db_password from Infisical before app/db start (depends_on service_completed_successfully).
+      Secrets pushed as LISTMONK_DB_PASSWORD / LISTMONK_ADMIN_PASSWORD. Dirs NOT git repos ->
+      changes on disk. pwf public site is pre-existing 404 (dead domain) -> verified internally
+      (:9000). Scripts: /tmp/listmonk_{prep,cutover}.sh."
+
   # Batch A: Postiz instances
   - slug: postiz-bcrg
     service: Postiz BCRG
