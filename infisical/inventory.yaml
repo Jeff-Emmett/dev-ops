@@ -382,6 +382,20 @@ tier2_thirdparty:
       TEMPORAL_ADDRESS=temporal:7233 doesn't resolve (others use <inst>-temporal:7233) -> orchestrator
       temporal worker fails; app otherwise runs. /opt/apps/postiz (dhsven/postiz fork) = separate, status unclear."
 
+  # GHOST (verified 2026-06-07): BOTH instances ALREADY migrated (no work needed).
+  - slug: ghost-cc / ghost-cosmolocal
+    service: Ghost blogs (blog.crypto-commons.org, blog.cosmolocal.world)
+    location: /opt/apps/ghost-crypto-commons, /opt/websites/cosmolocal-website
+    runtime: node
+    status: migrated
+    batch: hard
+    notes: "Already on Infisical: wrapper injects ghost DB/mail secrets (3 + 4); MySQL sidecar
+      creds kept in .env (standard DB pattern); sites 200. NOTE /opt/websites/cosmolocal-website
+      is a MULTI-APP dir (ghost via override + the cosmolocal WEBSITE + n8n-cosmolocal): its .env
+      still holds plaintext secrets for the NON-ghost services (cosmolocal-website uses TWENTY_API_KEY/
+      LISTMONK_CREDENTIALS/SMTP_*; n8n uses N8N_DB_PASSWORD). Those are SEPARATE migration targets.
+      N8N_API_KEY in that .env is unused/dead."
+
   # (legacy inventory) Batch A: Postiz instances
   - slug: postiz-bcrg
     service: Postiz BCRG
