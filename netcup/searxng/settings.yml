@@ -1,0 +1,90 @@
+# SearXNG settings — rendered from this template by entrypoint.sh
+# Reference: https://docs.searxng.org/admin/settings/index.html
+
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "SearXNG @ jeffemmett.com"
+  privacypolicy_url: false
+  donation_url: false
+  contact_url: false
+  enable_metrics: true
+
+server:
+  port: 8080
+  bind_address: "0.0.0.0"
+  # secret_key injected at runtime from Infisical (/searxng/SEARXNG_SECRET)
+  secret_key: "${SEARXNG_SECRET}"
+  base_url: https://search.jeffemmett.com/
+  limiter: true
+  public_instance: false
+  image_proxy: true
+  method: "GET"
+  default_http_headers:
+    X-Content-Type-Options: nosniff
+    X-Download-Options: noopen
+    X-Robots-Tag: noindex, nofollow
+    Referrer-Policy: no-referrer
+
+redis:
+  url: redis://searxng-valkey:6379/0
+
+ui:
+  static_use_hash: true
+  default_locale: "en"
+  query_in_title: true
+  infinite_scroll: false
+  center_alignment: true
+  results_on_new_tab: false
+  theme_args:
+    simple_style: auto
+
+search:
+  safe_search: 0
+  autocomplete: "duckduckgo"
+  default_lang: "en"
+  formats:
+    - html
+    - json
+
+# Engine whitelist — bot-tolerant only.
+# Default settings disables Google/Bing automatically; we explicitly disable
+# anything else that's likely to CAPTCHA a self-hosted single-IP instance.
+engines:
+  - name: duckduckgo
+    disabled: false
+  - name: brave
+    disabled: false
+  - name: mojeek
+    disabled: false
+  - name: startpage
+    disabled: false
+  - name: wikipedia
+    disabled: false
+  - name: wikidata
+    disabled: false
+  - name: github
+    disabled: false
+  - name: stackoverflow
+    disabled: false
+  - name: arxiv
+    disabled: false
+  - name: hackernews
+    disabled: false
+  - name: reddit
+    disabled: false
+  # Explicitly disable engines that block self-hosted instances
+  - name: google
+    disabled: true
+  - name: bing
+    disabled: true
+  - name: yahoo
+    disabled: true
+
+outgoing:
+  request_timeout: 5.0
+  max_request_timeout: 15.0
+  pool_connections: 100
+  pool_maxsize: 20
+  enable_http2: true
