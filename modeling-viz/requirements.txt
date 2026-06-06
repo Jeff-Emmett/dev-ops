@@ -5,6 +5,7 @@ numpy
 pandas
 scipy
 networkx                # graph / network models
+mesa                    # agent-based modeling (complements cadCAD's state-update style)
 # --- analysis / interactive ---
 jupyterlab
 ipykernel
@@ -13,3 +14,6 @@ matplotlib
 plotly
 seaborn
 bokeh
+holoviews               # high-level declarative viz (ties bokeh + datashader + panel)
+panel                   # interactive dashboards / web apps from notebooks
+datashader              # render millions of points / big-data rasterization

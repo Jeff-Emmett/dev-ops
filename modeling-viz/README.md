@@ -12,17 +12,39 @@ source .venv/bin/activate          # or: .venv/bin/python …
 jupyter lab                        # kernel: "modeling-viz (cadCAD)"
 ```
 
-Installed (`requirements.txt`): **cadCAD 0.5.3**, **radCAD 0.14** (faster, cadCAD-compatible
-engine), numpy, pandas, scipy, **networkx**; **matplotlib, plotly, seaborn, bokeh**; JupyterLab.
+Installed (`requirements.txt`):
+- **Modeling** — **cadCAD 0.5.3**, **radCAD 0.14** (faster, cadCAD-compatible engine),
+  **mesa 3.x** (agent-based modeling; complements cadCAD's state-update style),
+  numpy, pandas, scipy, **networkx**.
+- **Viz** — **matplotlib, plotly, seaborn, bokeh**; **HoloViz** stack:
+  **holoviews** (declarative), **panel** (interactive dashboards/apps),
+  **datashader** (rasterize millions of points); JupyterLab.
 
 ## JS (browser visualization)
 `package.json` (installed via `bun install` → `node_modules/`):
-**D3 7.9**, **three.js 0.170**, **@observablehq/plot 0.6.17**, topojson-client.
+**D3 7.9**, **three.js 0.170**, **@observablehq/plot 0.6.17**, topojson-client,
+**deck.gl 9** (GPU layers — `ArcLayer`/`TripsLayer` for space-time trajectories),
+**Vega-Lite 5** (+ vega, vega-embed; declarative complex charts),
+**Cytoscape 3** (interactive in-browser network viz).
 
 ```js
 import * as Plot from "@observablehq/plot";
 import * as THREE from "three";
 import * as d3 from "d3";
+import { Deck } from "deck.gl";
+import vegaEmbed from "vega-embed";
+import cytoscape from "cytoscape";
+```
+
+## Headless render / viz smoke test
+`render.mjs` opens any local viz HTML headless, screenshots it, and **exits
+non-zero if the page logged a JS error** — so it doubles as CI for visualizations.
+Uses the locally-pinned **Playwright** (devDependency, reuses `~/.cache/ms-playwright`
+chromium), so it survives nvm version churn — no puppeteer/global-chromium needed.
+
+```bash
+bun run render path/to/viz.html [out.png] --wait=900 --w=1280 --h=900
+# or: node render.mjs path/to/viz.html
 ```
 
 ## Technique references
