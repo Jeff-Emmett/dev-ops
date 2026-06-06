@@ -364,7 +364,25 @@ tier2_thirdparty:
       changes on disk. pwf public site is pre-existing 404 (dead domain) -> verified internally
       (:9000). Scripts: /tmp/listmonk_{prep,cutover}.sh."
 
-  # Batch A: Postiz instances
+  # POSTIZ (2026-06-07): /opt/postiz/{p2pfoundation,crypto-commons,main,bondingcurve} were
+  # ALREADY migrated (wrapper + Infisical postiz-* projects). postiz-votc migrated now:
+  - slug: postiz-votc-app
+    service: Postiz VOTC (votc-socials.jeffemmett.com)
+    location: /opt/apps/postiz-votc
+    runtime: node
+    secrets_count: 2
+    status: migrated
+    batch: hard
+    notes: "Sablier scaled-to-zero + multi-service (postgres/redis). Matched the p2pf pattern:
+      wrapper injects JWT_SECRET + EMAIL_PASS; VOTC_POSTGRES_PASSWORD kept in .env for DB/DATABASE_URL
+      (as p2pf keeps POSTGRES_PASSWORD). Verified: PM2 backend/frontend/orchestrator online, Injected 2.
+      GOTCHA: project slug 'postiz-votc' already existed org-wide but INVISIBLE to claude-ops admin
+      identity (not a member) -> used slug 'postiz-votc-app' instead; orphan 'postiz-votc' project
+      remains (needs Jeff cleanup; admin can't see/delete it). PRE-EXISTING BUG (not migration): votc
+      TEMPORAL_ADDRESS=temporal:7233 doesn't resolve (others use <inst>-temporal:7233) -> orchestrator
+      temporal worker fails; app otherwise runs. /opt/apps/postiz (dhsven/postiz fork) = separate, status unclear."
+
+  # (legacy inventory) Batch A: Postiz instances
   - slug: postiz-bcrg
     service: Postiz BCRG
     location: /opt/apps/postiz-bcrg
