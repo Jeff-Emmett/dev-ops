@@ -296,6 +296,19 @@ tier2_thirdparty:
       umami-db: POSTGRES_PASSWORD removed (DB already initialized, value retained in volume).
       Backups: .env.pre-infisical-* + docker-compose.yml.bak-*. Project id 5041ac53."
 
+  - slug: defectfi
+    service: DeFectFi (defectfi.xyz + foxsong/chorus)
+    location: /opt/apps/defectfi
+    runtime: node
+    secrets_count: 5
+    status: migrated
+    batch: pilot
+    notes: "Public Next.js site. Wrapper on defectfi container; INFISICAL_SECRET_PATH=/runtime
+      scopes injection to FOXSONG_DEN_TOKEN only (wrapper fetches RECURSIVELY). SMTP_* stored
+      in /smtp NOT injected (preserves prior behavior — compose never passed them).
+      NEXT_PUBLIC_SAFE_ADDRESS = literal (non-secret). IMAGE_TAG pinned in .env (was unset →
+      would fall to nonexistent :latest). relay service untouched. Project id 021353fd."
+
   # Batch A: Postiz instances
   - slug: postiz-bcrg
     service: Postiz BCRG
