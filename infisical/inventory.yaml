@@ -332,6 +332,21 @@ tier2_thirdparty:
       IMAGE_TAG pinned e3d92153. Benign pre-existing Ollama warmup warning (deferred load).
       Project id b42d9f99."
 
+  # twenty CRM cluster (migrated 2026-06-07, multi-container pattern)
+  - slug: twenty / twenty-votc / twenty-cc / twenty-cosmolocal
+    service: Twenty CRM (4 instances)
+    location: /opt/apps/{twenty,twenty-votc,twenty-cc,twenty-cosmolocal}
+    runtime: node
+    secrets_count: 15
+    status: migrated
+    batch: medium
+    notes: "Multi-container: wrapper on BOTH server + worker. PG_DATABASE_URL stored full
+      (resolves compose interpolation). postgres sidecar: POSTGRES_USER/DB made LITERAL,
+      POSTGRES_PASSWORD dropped, healthcheck ${PG_DATABASE_USER} de-interpolated (else
+      stripping .env blanks the healthcheck user -> unhealthy; this was the v1 failure+rollback).
+      Dirs are NOT git repos -> changes on disk only. twenty-rnetwork dir is INACTIVE (no
+      containers) -> skipped. Script: /tmp/twenty_migrate.sh."
+
   # Batch A: Postiz instances
   - slug: postiz-bcrg
     service: Postiz BCRG
