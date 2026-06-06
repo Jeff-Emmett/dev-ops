@@ -320,6 +320,18 @@ tier2_thirdparty:
       .env reduced to INFISICAL_* (still env_file-loaded so wrapper gets creds). read_only
       rootfs fine. :latest is the live image. Project id e0c022fa."
 
+  - slug: erowid-bot
+    service: Erowid Bot (erowid.psilo-cyber.net)
+    location: /opt/apps/erowid-bot
+    runtime: python
+    secrets_count: 13
+    status: migrated
+    batch: pilot
+    notes: "env_file + DB sidecar. 13 secrets at root all injected (uvicorn/python3).
+      erowid-db (pgvector) left untouched (already-init, :-default interpolation).
+      IMAGE_TAG pinned e3d92153. Benign pre-existing Ollama warmup warning (deferred load).
+      Project id b42d9f99."
+
   # Batch A: Postiz instances
   - slug: postiz-bcrg
     service: Postiz BCRG
