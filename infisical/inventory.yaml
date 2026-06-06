@@ -283,6 +283,19 @@ tier1_custom:
 # Tier 2: Third-party apps (volume-mount wrapper)
 # ========================================
 tier2_thirdparty:
+  # Pilot migration (2026-06-06): proved the wrapper pattern end-to-end.
+  - slug: umami
+    service: Umami Analytics
+    location: /opt/apps/umami
+    runtime: node
+    secrets_count: 2
+    status: migrated
+    batch: pilot
+    notes: "Wrapper entrypoint on umami container (node runtime). DATABASE_URL stored
+      as full string in Infisical (compose-interpolation can't be runtime-injected).
+      umami-db: POSTGRES_PASSWORD removed (DB already initialized, value retained in volume).
+      Backups: .env.pre-infisical-* + docker-compose.yml.bak-*. Project id 5041ac53."
+
   # Batch A: Postiz instances
   - slug: postiz-bcrg
     service: Postiz BCRG
