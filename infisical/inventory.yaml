@@ -309,6 +309,17 @@ tier2_thirdparty:
       NEXT_PUBLIC_SAFE_ADDRESS = literal (non-secret). IMAGE_TAG pinned in .env (was unset →
       would fall to nonexistent :latest). relay service untouched. Project id 021353fd."
 
+  - slug: email-relay
+    service: Email Relay (email-relay.jeffemmett.com)
+    location: /opt/apps/email-relay
+    runtime: python
+    secrets_count: 7
+    status: migrated
+    batch: pilot
+    notes: "Clean env_file case: all 7 secrets at root, all injected (python3 runtime).
+      .env reduced to INFISICAL_* (still env_file-loaded so wrapper gets creds). read_only
+      rootfs fine. :latest is the live image. Project id e0c022fa."
+
   # Batch A: Postiz instances
   - slug: postiz-bcrg
     service: Postiz BCRG
