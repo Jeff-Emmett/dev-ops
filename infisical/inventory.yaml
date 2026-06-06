@@ -396,6 +396,35 @@ tier2_thirdparty:
       LISTMONK_CREDENTIALS/SMTP_*; n8n uses N8N_DB_PASSWORD). Those are SEPARATE migration targets.
       N8N_API_KEY in that .env is unused/dead."
 
+  # Batch 2026-06-07 (read-back byte-verify + restart-stable health):
+  - slug: commons-hub-directus
+    service: Directus (admin.commons-hub.at)
+    location: /opt/apps/commons-hub-directus
+    runtime: node
+    status: migrated
+    notes: "env_file pattern, 19 secrets; KEY/SECRET env-only (not dual-source). http 200."
+  - slug: encryptid-up-service
+    service: EncryptID UP service
+    location: /opt/apps/encryptid-up-service
+    runtime: bun
+    status: migrated
+    notes: "env_file; RELAY_PRIVATE_KEY/JWT_SECRET byte-verified, 6 injected, :3100 up."
+  - slug: receipt-wrangler
+    service: Receipt Wrangler
+    location: /opt/receipt-wrangler
+    runtime: go/python
+    status: migrated
+    notes: "Targeted: only ENCRYPTION_KEY+SECRET_KEY -> Infisical; DB_*/REDIS_PASSWORD kept in
+      .env (sidecars + ${DB_USER} healthcheck untouched). :8081 up."
+  - slug: docmost (3 instances)
+    service: Docmost (docs.jeffemmett.com / cosmolocal.world / commons-hub.at)
+    location: /opt/apps/docmost
+    runtime: node
+    status: migrated
+    notes: "ONE project + 3 folders (/main,/cl,/voc), each instance scoped via
+      INFISICAL_SECRET_PATH (renamed-interp APP_SECRET/SMTP_PASSWORD). Shared DB: POSTGRES_PASSWORD
+      kept in .env, healthcheck hardcoded -U docmost. All 3 running."
+
   # (legacy inventory) Batch A: Postiz instances
   - slug: postiz-bcrg
     service: Postiz BCRG
