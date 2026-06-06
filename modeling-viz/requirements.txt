@@ -1,0 +1,15 @@
+# --- simulation / modeling ---
+cadCAD>=0.5.3            # complex-adaptive-systems simulation (the canonical engine)
+radcad>=0.13.0          # faster, cadCAD-compatible engine (radCAD)
+numpy
+pandas
+scipy
+networkx                # graph / network models
+# --- analysis / interactive ---
+jupyterlab
+ipykernel
+# --- python viz ---
+matplotlib
+plotly
+seaborn
+bokeh

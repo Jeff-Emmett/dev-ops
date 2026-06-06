@@ -1,0 +1,5 @@
+.venv/
+node_modules/
+bun.lockb
+__pycache__/
+.ipynb_checkpoints/
