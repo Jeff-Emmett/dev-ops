@@ -67,18 +67,20 @@ def transcribe(path):
         return (json.loads(r.read().decode()).get("text") or "").strip()
 
 
-def fetch_transcript(url, lang="en"):
+def fetch_transcript(url, lang="en", force_asr=False):
     vid = YT_RE.search(url)
     if not vid:
         return {"ok": False, "error": "not a YouTube URL"}
     d = tempfile.mkdtemp(prefix="yt-")
     try:
         title = get_title(url)
-        # 1) captions
-        run([YT_DLP, "--skip-download", "--write-subs", "--write-auto-subs",
-             "--sub-langs", f"{lang}.*,{lang}", "--convert-subs", "vtt", "--no-warnings",
-             "-o", os.path.join(d, "v.%(ext)s"), url], 150)
-        vtts = glob.glob(os.path.join(d, "*.vtt"))
+        # 1) captions (skipped when force_asr=true → exercises the ASR path)
+        vtts = []
+        if not force_asr:
+            run([YT_DLP, "--skip-download", "--write-subs", "--write-auto-subs",
+                 "--sub-langs", f"{lang}.*,{lang}", "--convert-subs", "vtt", "--no-warnings",
+                 "-o", os.path.join(d, "v.%(ext)s"), url], 150)
+            vtts = glob.glob(os.path.join(d, "*.vtt"))
         if vtts:
             text = vtt_to_text(open(vtts[0], encoding="utf-8", errors="ignore").read())
             if len(text) > 40:
@@ -129,7 +131,7 @@ class H(BaseHTTPRequestHandler):
         url = (body.get("url") or "").strip()
         if not url:
             return self._send(400, {"ok": False, "error": "url required"})
-        res = fetch_transcript(url, (body.get("lang") or "en").strip())
+        res = fetch_transcript(url, (body.get("lang") or "en").strip(), bool(body.get("force_asr")))
         self._send(200 if res.get("ok") else 502, res)
 
 
