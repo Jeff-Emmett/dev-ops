@@ -98,7 +98,7 @@ model_list:
       timeout: 300
   - model_name: gemini-flash
     litellm_params:
-      model: gemini/gemini-2.0-flash
+      model: gemini/gemini-2.5-flash   # gemini-2.0-flash retired 2026; pinned 2026-06-07
       api_key: os.environ/GEMINI_API_KEY
       timeout: 300
 
