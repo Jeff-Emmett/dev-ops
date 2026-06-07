@@ -425,6 +425,27 @@ tier2_thirdparty:
       INFISICAL_SECRET_PATH (renamed-interp APP_SECRET/SMTP_PASSWORD). Shared DB: POSTGRES_PASSWORD
       kept in .env, healthcheck hardcoded -U docmost. All 3 running."
 
+  - slug: soulsync-dl
+    service: SoulSync Downloader
+    location: /opt/apps/soulsync-dl
+    runtime: python
+    status: migrated
+    notes: "single service, 5 secrets byte-verified, uvicorn :8080."
+  - slug: soulsync-player
+    service: SoulSync Player
+    location: /opt/soulsync-player
+    runtime: node
+    status: migrated
+    notes: "single service, 4 secrets byte-verified."
+  - slug: commons-hub-app
+    service: Commons Hub website
+    location: /opt/apps/commons-hub-app
+    runtime: node
+    status: pending
+    notes: "ABORTED by read-back verify: MAIL_FROM value mangled by migrate-env.sh (special chars,
+      likely quotes/<>). No changes made. Fix: push MAIL_FROM with byte-exact value (curl json),
+      then re-run. (This mangling is the likely n8n encryption-key root cause.)"
+
   # (legacy inventory) Batch A: Postiz instances
   - slug: postiz-bcrg
     service: Postiz BCRG
