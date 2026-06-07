@@ -56,14 +56,58 @@ def get_smtp_password():
 
 
 def find_task_file(task_id):
-    """Locate the task markdown file via glob."""
-    # Task IDs come as TASK-123 from callback but files are task-123
-    file_id = task_id.lower()
-    matches = glob.glob(f"backlog/tasks/{file_id}*")
-    if not matches:
+    """Locate the task markdown file, matching the ID EXACTLY.
+
+    Task IDs come as TASK-123 from the callback but files are named
+    `task-123 - <slug>.md`. A naive prefix glob (`task-396.1*`) collides for
+    hierarchical IDs — it also matches `task-396.10`, `task-396.11`, …,
+    `task-396.16` — and picking matches[0] reads the WRONG task's acceptance
+    criteria (the bug that made the AC gate revert 396.1 based on 396.14's
+    unchecked ACs). We disambiguate two ways, strongest first:
+
+      1. the `id:` frontmatter field equals task_id (case-insensitive), or
+      2. the filename's id segment (text between `task-` prefix and the
+         ` - ` slug separator, or the `.md` end) equals the numeric id.
+    """
+    file_id = task_id.lower()                 # "task-396.1"
+    numeric_id = file_id[len("task-"):]       # "396.1"
+    candidates = glob.glob(f"backlog/tasks/{file_id}*")
+    if not candidates:
         print(f"ERROR: No task file found for {task_id} (glob: backlog/tasks/{file_id}*)", file=sys.stderr)
         sys.exit(1)
-    return matches[0]
+
+    def id_segment(path):
+        """The id portion of the filename, e.g. '396.1' from 'task-396.1 - x.md'."""
+        name = os.path.basename(path)
+        if name.lower().endswith(".md"):
+            name = name[:-3]
+        stem = name[len("task-"):] if name.lower().startswith("task-") else name
+        # The slug (if any) is separated by " - "; the id is everything before it.
+        return stem.split(" - ", 1)[0].strip().lower()
+
+    # 1. Exact filename id-segment match (cheap, no file read).
+    exact = [p for p in candidates if id_segment(p) == numeric_id]
+    if len(exact) == 1:
+        return exact[0]
+
+    # 2. Tie-break / fallback on the `id:` frontmatter field.
+    for path in (exact or candidates):
+        try:
+            head = Path(path).read_text()[:512]
+            m = re.search(r'^id:\s*(\S+)\s*$', head, re.MULTILINE | re.IGNORECASE)
+            if m and m.group(1).strip().lower() == file_id:
+                return path
+        except OSError:
+            continue
+
+    if exact:
+        return exact[0]
+    print(
+        f"ERROR: Could not disambiguate task file for {task_id} among "
+        f"{[os.path.basename(p) for p in candidates]}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 def get_project_name():
