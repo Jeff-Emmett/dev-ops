@@ -441,10 +441,9 @@ tier2_thirdparty:
     service: Commons Hub website
     location: /opt/apps/commons-hub-app
     runtime: node
-    status: pending
-    notes: "ABORTED by read-back verify: MAIL_FROM value mangled by migrate-env.sh (special chars,
-      likely quotes/<>). No changes made. Fix: push MAIL_FROM with byte-exact value (curl json),
-      then re-run. (This mangling is the likely n8n encryption-key root cause.)"
+    status: migrated
+    notes: "13 secrets byte-exact-pushed (python json, NOT migrate-env.sh which mangled MAIL_FROM);
+      all byte-verified, injected. node web app."
 
   # (legacy inventory) Batch A: Postiz instances
   - slug: postiz-bcrg
