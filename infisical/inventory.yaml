@@ -688,3 +688,11 @@ tier2_thirdparty:
     status: pending
     batch: E
     notes: "Launcher pattern: modify app.yml run section"
+
+# Deferred 2026-06-07 (entangled / low-ROI / data-critical):
+#   immich + rphotos-online: parse-time vars in .env (volumes/image) + DB sidecar in .env +
+#     IMMICH_API_KEY required-interp in power-tools -> not cleanly removable; photo data. LEAVE.
+#   provider-registry: no real secrets (skip).
+#   meeting-intelligence: hybrid (GPU ASR already on GX10 via parakeet; rspace bot-mi-bridge
+#     integration exists). Netcup-side secrets migratable later as multi-service (api+jibri+db).
+#   media-server: jellyfin/arr + VPN (gluetun wireguard) -> careful, deferred.
