@@ -1,0 +1,19 @@
+[Unit]
+Description=yt-transcript (YouTube captions/ASR for rSpace Notebook)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mycopunk
+Environment=YT_TRANSCRIPT_TOKEN=__SET_ME__
+Environment=YT_DLP_BIN=/home/mycopunk/.local/bin/yt-dlp
+Environment=ASR_URL=http://127.0.0.1:8990/v1/audio/transcriptions
+Environment=ASR_MODEL=whisper-large-v3
+Environment=PORT=8991
+ExecStart=/usr/bin/python3 /opt/yt-transcript/server.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
