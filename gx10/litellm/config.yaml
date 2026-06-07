@@ -14,25 +14,32 @@
 
 model_list:
   # ---------- TIER 0 — GX10 local (primary, owned, free) ----------
-  - model_name: gx10-vl                 # Qwen3-VL multimodal — the headline
+  - model_name: gx10-vl                 # Qwen2.5-VL multimodal — the headline
     litellm_params:
-      model: ollama/qwen3-vl:32b        # TODO: pin exact tag (TASK-91 AC#6)
+      model: ollama/qwen2.5vl:32b       # pinned to installed tag 2026-06-07
       api_base: http://host.docker.internal:11434
       timeout: 600
       stream: true
 
   - model_name: gx10-coder              # primary coding model
     litellm_params:
-      model: ollama/qwen3-coder:30b     # TODO: pin exact tag
+      model: ollama/qwen2.5-coder:32b   # pinned to installed tag 2026-06-07
       api_base: http://host.docker.internal:11434
       timeout: 600
       stream: true
 
   - model_name: gx10-fast               # small, low-latency tasks
     litellm_params:
-      model: ollama/qwen3:4b            # TODO: pin exact tag
+      model: ollama/qwen3:30b-a3b       # pinned to installed tag (MoE, fast) 2026-06-07
       api_base: http://host.docker.internal:11434
       timeout: 120
+      stream: true
+
+  - model_name: gx10-agent              # Hermes-4-70B: steerable, low-refusal, tool-calling/structured-output
+    litellm_params:
+      model: ollama/hf.co/unsloth/Hermes-4-70B-GGUF:Q4_K_M
+      api_base: http://host.docker.internal:11434
+      timeout: 600
       stream: true
 
   - model_name: gx10-embed
@@ -46,7 +53,7 @@ model_list:
   # same-group fallback entry (LiteLLM cooldown failover).
   - model_name: qwen3-coder
     litellm_params:
-      model: ollama/qwen3-coder:30b
+      model: ollama/qwen2.5-coder:32b   # pinned to installed tag 2026-06-07
       api_base: http://host.docker.internal:11434
       timeout: 600
   - model_name: qwen3-coder             # fallback → RunPod burst
@@ -58,7 +65,7 @@ model_list:
 
   - model_name: llama3                  # generic small alias
     litellm_params:
-      model: ollama/qwen3:4b
+      model: ollama/qwen3:30b-a3b       # pinned to installed tag (MoE, fast) 2026-06-07
       api_base: http://host.docker.internal:11434
       timeout: 120
   - model_name: llama3                  # fallback → Netcup CPU Ollama (Tailscale)
@@ -103,6 +110,7 @@ litellm_settings:
     - gx10-coder: ["runpod-coder", "netcup-small", "claude-sonnet"]
     - gx10-vl: ["claude-sonnet", "gemini-flash"]   # vision-capable cloud fallback
     - gx10-fast: ["netcup-small"]
+    - gx10-agent: ["gx10-coder", "claude-sonnet"]
   context_window_fallbacks:
     - gx10-coder: ["claude-sonnet"]
 
