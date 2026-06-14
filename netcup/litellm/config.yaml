@@ -165,6 +165,41 @@ model_list:
       timeout: 600
 
   # ===========================================================
+  # TIER 4 — Max-quality COMPOUND (OpenRouter Fusion). OPT-IN ONLY.
+  # INACTIVE: commented out until OPENROUTER_API_KEY is provisioned.
+  # To activate: add OPENROUTER_API_KEY to Infisical litellm-proxy/prod,
+  # uncomment below, then redeploy the litellm container.
+  # Fusion fans the prompt to a frontier panel + judge synthesis.
+  # Cost = SUM of all panel completions + judge (NOT one completion).
+  # NEVER add to fallbacks/default_fallbacks (cost-runaway risk).
+  # PRIVACY: routes to Anthropic+OpenAI+Google + web search — never
+  # send funion/private prompts here.
+  # Note double prefix: provider=openrouter, model=openrouter/fusion.
+  # ===========================================================
+  # - model_name: fusion                 # Quality preset (Opus+GPT+Gemini-pro panel)
+  #   litellm_params:
+  #     model: openrouter/openrouter/fusion
+  #     api_key: os.environ/OPENROUTER_API_KEY
+  #     timeout: 900
+  #   model_info:
+  #     mode: chat
+  # - model_name: fusion-budget          # cheaper explicit panel
+  #   litellm_params:
+  #     model: openrouter/openrouter/fusion
+  #     api_key: os.environ/OPENROUTER_API_KEY
+  #     timeout: 900
+  #     max_tokens: 8192
+  #     extra_body:
+  #       plugins:
+  #         - id: fusion
+  #           analysis_models:
+  #             - openai/gpt-5.1-mini
+  #             - google/gemini-2.5-flash
+  #             - anthropic/claude-haiku-4.5
+  #   model_info:
+  #     mode: chat
+
+  # ===========================================================
   # funion sidecars (Netcup CPU) — unchanged
   # ===========================================================
   # funion sidecars RETIRED 2026-06-05 — CPU containers removed; funion
