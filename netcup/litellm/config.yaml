@@ -66,11 +66,14 @@ model_list:
       api_key: os.environ/RUNPOD_VLLM_BEARER
       timeout: 300
 
-  # CPU Ollama (Netcup host) — last-resort self-hosted fallback
+  # Local Ollama (100.64.0.5 over Tailscale) — same host as every other
+  # ollama-backed model in this config. The old 10.0.45.1 target was a
+  # Netcup-CPU host that's no longer reachable; llama3.2:3b is pulled on
+  # 100.64.0.5 too, so just repoint here.
   - model_name: llama3-3b
     litellm_params:
       model: ollama/llama3.2:3b
-      api_base: http://10.0.45.1:11434
+      api_base: http://100.64.0.5:11434
       timeout: 300
 
   # ===========================================================
@@ -125,7 +128,7 @@ model_list:
   # ===========================================================
   - model_name: gemini-flash
     litellm_params:
-      model: gemini/gemini-2.0-flash
+      model: gemini/gemini-2.5-flash
       api_key: os.environ/GEMINI_API_KEY
       timeout: 300
   - model_name: gemini-2.5-flash
@@ -147,7 +150,7 @@ model_list:
       timeout: 300
   - model_name: claude-sonnet
     litellm_params:
-      model: anthropic/claude-sonnet-4-20250514
+      model: anthropic/claude-sonnet-4-6
       api_key: os.environ/ANTHROPIC_API_KEY
       max_tokens: 8192
       timeout: 300
