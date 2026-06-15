@@ -1,0 +1,51 @@
+# Umami analytics — source of truth for per-site website IDs.
+# Platform: Umami v3.0.3 @ https://analytics.rspace.online (tracker: collect.js)
+# Minted via mint.sql (idempotent on domain). Edit mint.sql + re-run to add sites,
+# then update this file and the hub auto-discovers from the DB.
+#
+# wired: true  = snippet deployed to the live site
+# wired: false = website_id exists in Umami, snippet NOT yet on the site
+#
+# delivery:
+#   env    = app reads UMAMI_URL + UMAMI_WEBSITE_ID and emits the tag itself
+#   static = inject <head> tag directly into template/index.html
+
+umami_url: https://analytics.rspace.online
+tracker_script: collect.js
+
+sites:
+  # ---- already wired (pre-existing) ----
+  - name: rStack
+    domain: rspace.online            # + 24 *.online subdomains incl. rdata.online
+    website_id: 292f6ac6-79f8-497b-ba6a-7a51e3b87b9f
+    repo: /opt/websites/rspace-online
+    delivery: env
+    wired: true
+    note: single shared ID for the whole rStack; segment by hostname in the hub
+
+  # ---- minted, pending rollout ----
+  - { name: canvas-website,       domain: jeffemmett.com,                website_id: 9fbac801-ac4f-405a-8c63-0e8a78693abf, repo: /opt/apps/canvas-website,        delivery: static, wired: false }
+  - { name: cadcad-website,       domain: cadcad.org,                    website_id: c0b26112-2411-43e0-9515-171f2efbe9c9, repo: /opt/websites/cadcad-website,     delivery: static, wired: false }
+  - { name: the-last-draw,        domain: the-last-draw.cinesthesia.art, website_id: d60fa7d8-f85d-40f6-a520-d138df1acb02, repo: /opt/apps/the-last-draw,          delivery: static, wired: false }
+  - { name: cineasthesia-landing, domain: cineasthesia.com,              website_id: d09e0ffa-01a1-4845-8634-c519ad14b5b6, repo: /opt/apps/cineasthesia-landing,   delivery: static, wired: false }
+  - { name: cineasthesia-home,    domain: home.cineasthesia.com,         website_id: 101106ee-3275-4a8b-811e-eb710dd6cf40, repo: /opt/apps/cineasthesia-home,      delivery: static, wired: false }
+  - { name: worldplay,            domain: worldplay.art,                 website_id: 27f22707-ec01-402e-af79-1c8f77edaaa0, repo: /opt/websites/worldplay-website,  delivery: static, wired: false }
+  - { name: dinner-worldplay,     domain: dinner.worldplay.art,          website_id: e6be495c-f9e9-477e-841c-009e6bb72ede, repo: /opt/websites/dinner-worldplay,   delivery: static, wired: false }
+  - { name: defectfi,             domain: defectfi.xyz,                  website_id: 734bd9fd-70c9-43b1-8a33-ca7ac352d963, repo: /opt/apps/defectfi,               delivery: static, wired: false }
+  - { name: cosmolocal,           domain: cosmolocal.world,              website_id: fb4d3ae5-2ae6-494c-92f5-0bbba795c1a5, repo: /opt/websites/cosmolocal-website, delivery: static, wired: false }
+  - { name: mycofi-earth,         domain: mycofi.earth,                  website_id: 6d28b116-acb6-4c21-bfe9-62bb6e9d4f3f, repo: /opt/websites/mycofi-earth-website, delivery: static, wired: false }
+  - { name: mycrozine,            domain: zine.mycofi.earth,             website_id: 344681e1-afbb-45ba-886f-48526976e2b8, repo: /opt/websites/mycro-zine,         delivery: static, wired: false }
+  - { name: jefflix,              domain: jefflix.lol,                   website_id: 2fa87933-16d3-438d-bdce-6996836dae92, repo: /opt/websites/jefflix-website,    delivery: static, wired: false }
+  - { name: ccg,                  domain: cryptocommonsgather.ing,       website_id: 96115179-d52b-4922-8995-086c1fd75f2a, repo: /opt/websites/crypto-commons-gather.ing-website, delivery: static, wired: false }
+  - { name: tino-ardez,           domain: tinoandri.ch,                  website_id: 7bc7e125-4b25-48b9-9b4c-d984780920f7, repo: /opt/websites/tino-ardez-website, delivery: static, wired: false }
+  - { name: elle-o-elle,          domain: elle-o-elle.lol,               website_id: 6c3a9732-6774-4dea-b4d8-0d2138de316a, repo: /opt/apps/elle-o-elle,            delivery: static, wired: false }
+  - { name: compost-capitalism,   domain: compostcapitalism.xyz,         website_id: 08f85787-b456-4e60-89d4-7a4dc4d74126, repo: /opt/websites/compost-capitalism-website, delivery: static, wired: false }
+  - { name: katheryn-mirror,      domain: mirror.katheryntrenshaw.com,   website_id: 329b31c7-f929-476b-a5d0-f61cf5856a76, repo: /opt/websites/katheryn-static,    delivery: static, wired: false }
+  - { name: demos-jeffemmett,     domain: demos.jeffemmett.com,          website_id: 2c2c6ab0-0a2b-43a9-a9a8-e6691ff862df, repo: /opt/apps/demos-jeffemmett,       delivery: static, wired: false }
+  - { name: relos-landing,        domain: relos.jeffemmett.com,          website_id: 95f7b85c-d70a-4566-a859-091584fd240e, repo: /opt/apps/relos-landing,          delivery: static, wired: false }
+  - { name: payment-forge,        domain: pay.jeffemmett.com,            website_id: c03e9e8c-bd5d-4894-8738-0184fb78d2b3, repo: /opt/apps/payment-infra,          delivery: static, wired: false }
+  - { name: p2pforum,             domain: forum.p2pfoundation.net,       website_id: 82d11844-4b05-4092-ab23-1cf9bfcddaa0, repo: /opt/discourse,                   delivery: static, wired: false, note: "Discourse — add via theme <head> or admin > customize" }
+  - { name: forgejo-peer,         domain: forge-lab.jeffemmett.com,      website_id: 91e67a3a-e7f9-44c4-a677-ec080004e4e2, repo: /opt/apps/forgejo-peer,           delivery: static, wired: false, note: "Forgejo — add via app.ini [other] or custom/templates/custom/header.tmpl" }
+
+# Unresolved — confirm domain before minting:
+#   cca-website  (/opt/apps/cca-website) — no Traefik host label found
