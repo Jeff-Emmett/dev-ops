@@ -52,14 +52,11 @@ Idempotent on domain; prints the full domain→website_id mapping.
 `hub/` — FastAPI + asyncpg, single-page dashboard (`/`), JSON at `/api/summary?days=7|30|90`.
 Deployed at `/opt/apps/analytics-hub` on Netcup.
 
-### View it now (before public exposure)
-Not yet public (intentional — it shows ALL sites' traffic). Reach it via SSH tunnel:
-```bash
-ssh -L 8899:127.0.0.1:8000 netcup-full 'docker port analytics-hub >/dev/null; sleep 600' &
-# hub listens inside the container; tunnel to it via the container IP, or:
-ssh netcup-full 'docker exec analytics-hub python -c "import urllib.request;print(urllib.request.urlopen(\"http://127.0.0.1:8000/api/summary?days=30\").read().decode())"'
-```
-(Simplest: open over Tailscale once a host port-publish or CF Access route is added.)
+### Access — Tailscale only (live)
+The hub is bound to the Netcup Tailscale IP, reachable only from the tailnet:
+- **http://100.64.0.2:8899** (or `http://netcup.mesh.jeffemmett.com:8899` with MagicDNS)
+Container publishes `100.64.0.2:8899:8000`; UFW rule `allow in on tailscale0 ... 8899/tcp`
+gates it to authenticated mesh traffic. NOT exposed to the public internet (no CF/DNS).
 
 ### Make it public (needs zone-edit CF token — NOT in ~/.cloudflare-credentials.env)
 The dashboard exposes all sites' analytics → **must sit behind Cloudflare Access.**

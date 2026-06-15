@@ -6,6 +6,8 @@ services:
     restart: unless-stopped
     env_file: .env          # DATABASE_URL=postgresql://umami_ro:...@umami-db:5432/umami
     mem_limit: 256m
+    ports:
+      - "100.64.0.2:8899:8000"   # Tailscale-only: reachable at netcup.mesh.jeffemmett.com:8899
     networks:
       - umami_umami-internal   # reach umami-db (read-only role)
       - traefik-public
