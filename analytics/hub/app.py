@@ -46,7 +46,7 @@ async def summary(days: int = Query(30, ge=1, le=365)):
         # Per-site totals (only sites with traffic in window, plus names).
         sites = await c.fetch(
             """
-            SELECT w.website_id, w.name, w.domain,
+            SELECT w.website_id::text AS website_id, w.name, w.domain,
                    COUNT(*) FILTER (WHERE e.event_type = 1) AS pageviews,
                    COUNT(DISTINCT e.session_id)            AS visitors
             FROM website w
