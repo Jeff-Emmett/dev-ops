@@ -19,6 +19,8 @@ TIER0_NAMES=(
   restic
   crowdsec
   bouncer-traefik
+  rspace-online
+  rspace-db
 )
 TIER0_PATTERN='^mailcowdockerized-(postfix|dovecot|mysql|rspamd|sogo|redis|nginx|php-fpm)-mailcow-1$'
 

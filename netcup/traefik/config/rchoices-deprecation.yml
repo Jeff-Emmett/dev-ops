@@ -1,0 +1,24 @@
+## rchoices.online retired 2026-06-15 — brand consolidated into rspace.online.
+## The rChoices app was pulled into the rspace-online monolith; the old
+## standalone deploy (/opt/apps/rchoices-online, image 2026-03-16) is removed.
+##
+## Apex + www get a permanent redirect to rspace.online. Per-space subdomains
+## ({sub}.rchoices.online) are intentionally NOT matched here so the monolith
+## keeps space-mapping them. High priority shadows the monolith apex router
+## without recreating the (critical, never-down) rspace-online container.
+http:
+  middlewares:
+    rchoices-to-rspace:
+      redirectRegex:
+        regex: '^https?://(www\.)?rchoices\.online(?:/.*)?$'
+        replacement: 'https://rspace.online/'
+        permanent: true
+  routers:
+    rchoices-deprecated:
+      rule: 'Host(`rchoices.online`) || Host(`www.rchoices.online`)'
+      entrypoints:
+        - web
+      middlewares:
+        - rchoices-to-rspace
+      service: noop@internal
+      priority: 100000
