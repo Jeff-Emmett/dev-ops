@@ -14,9 +14,13 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public
-      - traefik.http.routers.analytics-hub.rule=Host(`analytics-hub.jeffemmett.com`)
-      - traefik.http.routers.analytics-hub.entrypoints=web
-      - traefik.http.services.analytics-hub.loadbalancer.server.port=8000
+      - traefik.http.routers.stats.rule=Host(`stats.jeffemmett.com`)
+      - traefik.http.routers.stats.entrypoints=web
+      - traefik.http.routers.stats.middlewares=stats-auth
+      - traefik.http.routers.stats.service=stats
+      # basic-auth gate (apr1). Rotate: openssl passwd -apr1 <pw>, double every $ for compose.
+      - traefik.http.middlewares.stats-auth.basicauth.users=jeff:$$apr1$$Yi32D7FJ$$R/xSw7jiJbvMkiiuOzj0M.
+      - traefik.http.services.stats.loadbalancer.server.port=8000
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz').status==200 else 1)"]
       interval: 60s

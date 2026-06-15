@@ -52,11 +52,15 @@ Idempotent on domain; prints the full domain→website_id mapping.
 `hub/` — FastAPI + asyncpg, single-page dashboard (`/`), JSON at `/api/summary?days=7|30|90`.
 Deployed at `/opt/apps/analytics-hub` on Netcup.
 
-### Access — Tailscale only (live)
-The hub is bound to the Netcup Tailscale IP, reachable only from the tailnet:
-- **http://100.64.0.2:8899** (or `http://netcup.mesh.jeffemmett.com:8899` with MagicDNS)
-Container publishes `100.64.0.2:8899:8000`; UFW rule `allow in on tailscale0 ... 8899/tcp`
-gates it to authenticated mesh traffic. NOT exposed to the public internet (no CF/DNS).
+### Access (live)
+- **Public:** https://stats.jeffemmett.com — Traefik **basic-auth** (user `jeff`).
+  DNS CNAME → tunnel `a838e9dc…`; tunnel ingress → Traefik (`web`); router `stats`
+  + middleware `stats-auth` (apr1 hash in compose labels, `$` doubled for compose).
+  Rotate pw: `openssl passwd -apr1 <pw>`, double every `$`, update the
+  `traefik.http.middlewares.stats-auth.basicauth.users` label, `docker compose up -d`,
+  then `docker restart traefik` (label hot-reload is unreliable — restart to register).
+- **Tailscale:** also http://100.64.0.2:8899 (UFW `allow in on tailscale0 ... 8899/tcp`).
+- `dashboard.jeffemmett.com` is NOT us — it's the separate `personal-dashboard` app.
 
 ### Make it public (needs zone-edit CF token — NOT in ~/.cloudflare-credentials.env)
 The dashboard exposes all sites' analytics → **must sit behind Cloudflare Access.**
