@@ -31,7 +31,7 @@ sites:
   - { name: cineasthesia-home,    domain: home.cineasthesia.com,         website_id: 101106ee-3275-4a8b-811e-eb710dd6cf40, repo: /opt/apps/cineasthesia-home,      delivery: static, wired: true }
   - { name: worldplay,            domain: worldplay.art,                 website_id: 27f22707-ec01-402e-af79-1c8f77edaaa0, repo: /opt/websites/worldplay-website,  delivery: static, wired: true }
   - { name: dinner-worldplay,     domain: dinner.worldplay.art,          website_id: e6be495c-f9e9-477e-841c-009e6bb72ede, repo: /opt/websites/dinner-worldplay,   delivery: static, wired: true }
-  - { name: defectfi,             domain: defectfi.xyz,                  website_id: 734bd9fd-70c9-43b1-8a33-ca7ac352d963, repo: /opt/apps/defectfi,               delivery: static, wired: false }
+  - { name: defectfi,             domain: defectfi.xyz,                  website_id: 734bd9fd-70c9-43b1-8a33-ca7ac352d963, repo: /opt/apps/defectfi,               delivery: static, wired: true }
   - { name: cosmolocal,           domain: cosmolocal.world,              website_id: fb4d3ae5-2ae6-494c-92f5-0bbba795c1a5, repo: /opt/websites/cosmolocal-website, delivery: static, wired: true }
   - { name: mycofi-earth,         domain: mycofi.earth,                  website_id: 6d28b116-acb6-4c21-bfe9-62bb6e9d4f3f, repo: /opt/websites/mycofi-earth-website, delivery: static, wired: true }
   - { name: mycrozine,            domain: zine.mycofi.earth,             website_id: 344681e1-afbb-45ba-886f-48526976e2b8, repo: /opt/websites/mycro-zine,         delivery: static, wired: false }
@@ -48,13 +48,13 @@ sites:
   - { name: forgejo-peer,         domain: forge-lab.jeffemmett.com,      website_id: 91e67a3a-e7f9-44c4-a677-ec080004e4e2, repo: /opt/apps/forgejo-peer,           delivery: static, wired: false, note: "Forgejo — add via app.ini [other] or custom/templates/custom/header.tmpl" }
 
 # Rollout status (2026-06-15):
-#   LIVE (16): canvas/jeffemmett.com, cadcad.org, worldplay.art, elle-o-elle.lol,
+#   LIVE (17): canvas/jeffemmett.com, cadcad.org, worldplay.art, elle-o-elle.lol,
 #     tinoandri.ch, cineasthesia.com, home.cineasthesia.com, the-last-draw,
 #     dinner.worldplay.art, cosmolocal.world, mycofi.earth, compostcapitalism.xyz,
 #     cryptocommonsgather.ing, relos.jeffemmett.com, demos.jeffemmett.com,
 #     mirror.katheryntrenshaw.com
-#   defectfi   — tag committed (master); BLOCKED: `pnpm install --frozen-lockfile`
-#                build fails (pre-existing). Deploys once that's fixed.
+#   defectfi.xyz — LIVE (fixed 2026-06-15: bumped Dockerfile to node:22-alpine +
+#                pnpm@10; node:20 broke on pnpm's node:sqlite requirement).
 #   mycrozine  — tag committed (web/app/layout.tsx); ships on next Gitea CI build.
 #   jefflix.lol — DEFERRED: served by /opt/media-server jellyfin stack (a tool, not a
 #                 content site). Add via Jellyfin custom HTML if ever wanted.
