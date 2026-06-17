@@ -67,6 +67,14 @@ dump_postgres_databases() {
             continue
         fi
 
+        # pkmn-db is ~59G; a full logical dump is ~69G and dominates the repo.
+        # Dump it WEEKLY (Sundays) only, so daily snapshots stay small. The
+        # Sunday snapshot is the last of the ISO week -> kept by keep-weekly.
+        if [ "$container" = "pkmn-db" ] && [ "$(date +%u)" -ne 7 ]; then
+            log "  SKIP: pkmn-db (weekly dump only; today is not Sunday)"
+            continue
+        fi
+
         log "Dumping PostgreSQL: $container"
         pg_user=$(docker exec "$container" printenv POSTGRES_USER 2>/dev/null || echo "postgres")
 
@@ -156,10 +164,14 @@ run_backup() {
 # Cleanup old backups (keep 7 daily, 4 weekly, 6 monthly)
 cleanup_old_backups() {
     log "Pruning old backups..."
+    # --group-by host: ignore the (drifting) path set so all snapshots from this
+    # host form ONE retention group. Without it, path changes (e.g. adding a dump
+    # dir) fragment retention and snapshots accumulate far past the policy.
     restic forget \
+        --group-by host \
         --keep-daily 7 \
         --keep-weekly 4 \
-        --keep-monthly 6 \
+        --keep-monthly 3 \
         --prune \
         2>&1 | tee -a "$BACKUP_LOG"
     log "Prune completed"
