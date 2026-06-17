@@ -157,6 +157,7 @@ run_backup() {
         --exclude="core.[0-9][0-9][0-9][0-9]*" \
         --exclude="*.db.bak.*" \
         --exclude="/var/lib/docker/volumes/p2pwiki_p2pwiki-db-data" \
+        --exclude="/var/lib/docker/volumes/p2pfoundation_db_data" \
         --exclude="*-es-data" \
         --exclude="*elasticsearch-data" \
         --exclude="*_model-cache" \
