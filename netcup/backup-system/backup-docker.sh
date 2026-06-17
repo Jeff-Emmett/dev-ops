@@ -143,7 +143,7 @@ run_backup() {
         --exclude="**/immich_model-cache/**" \
         --exclude="**/p2pwiki-ai/data/chroma/**" \
         --exclude="**/sql-dumps/**" \
-        --exclude="core.[0-9]*" \
+        --exclude="core.[0-9][0-9][0-9][0-9]*" \
         --exclude="*.db.bak.*" \
         "$VOLUMES_DIR" \
         "$DB_DUMP_DIR" \
