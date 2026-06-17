@@ -92,7 +92,10 @@ dump_postgres_databases() {
 dump_mariadb_databases() {
     log "Starting MariaDB/MySQL database dumps..."
 
-    for container in $(docker ps --format "{{.Names}}" | grep -iE "mariadb|mysql"); do
+    # Include "*-db" containers (e.g. p2pwiki-db) — they don't match mariadb|mysql
+    # by name but DO run MariaDB. The capability check below filters non-MariaDB
+    # (postgres "*db" containers lack mysqldump/mariadb-dump and fall through).
+    for container in $(docker ps --format "{{.Names}}" | grep -iE "mariadb|mysql|db"); do
         # Check if it actually runs mysql/mariadb
         if ! docker exec "$container" which mysqldump >/dev/null 2>&1 && \
            ! docker exec "$container" which mariadb-dump >/dev/null 2>&1; then
@@ -153,6 +156,11 @@ run_backup() {
         --exclude="**/sql-dumps/**" \
         --exclude="core.[0-9][0-9][0-9][0-9]*" \
         --exclude="*.db.bak.*" \
+        --exclude="/var/lib/docker/volumes/p2pwiki_p2pwiki-db-data" \
+        --exclude="*-es-data" \
+        --exclude="*elasticsearch-data" \
+        --exclude="*_model-cache" \
+        --exclude="*-images.tar" \
         "$VOLUMES_DIR" \
         "$DB_DUMP_DIR" \
         $CONFIG_DIRS \
