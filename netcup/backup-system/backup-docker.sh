@@ -26,12 +26,35 @@ trap 'rc=$?; if [[ $rc -eq 0 ]]; then push_kuma up OK; else push_kuma down "fail
 
 # Configuration
 BACKUP_LOG="/var/log/docker-backup.log"
-DB_DUMP_DIR="/tmp/db-dumps"
+# Disk-backed (NOT tmpfs): /tmp is a 32G RAM-backed tmpfs on this host, so a
+# large logical dump (e.g. pkmn ~59G) cannot fit and would also eat RAM on a
+# memory-tight server. Dumps go to real disk on /dev/vda4 (1.3T free).
+DB_DUMP_DIR="/var/backups/db-dumps"
 VOLUMES_DIR="/var/lib/docker/volumes"
-CONFIG_DIRS="/opt /root/traefik /root/cloudflared"
+CONFIG_DIRS="/opt /root/traefik /root/cloudflared /root/KeePass /root/Sync/KeePass /root/.config/keepassxc"
+# Per-DB dump timeout. 120s was too short for large DBs (pkmn ~59G silently
+# failed every night, mislabeled "access denied"). 1h covers the big ones.
+DB_DUMP_TIMEOUT="${DB_DUMP_TIMEOUT:-3600}"
 
 log() {
     echo "[$(date "+%Y-%m-%d %H:%M:%S")] $1" | tee -a "$BACKUP_LOG"
+}
+
+# Pre-backup: Dump SQLite-backed services for crash consistency
+dump_sqlite_databases() {
+    log "Starting SQLite database dumps..."
+    # Vaultwarden — uses SQLite at /data/db.sqlite3.
+    # Container image lacks the sqlite3 CLI; use the built-in `/vaultwarden backup`
+    # which writes /data/db_<timestamp>.sqlite3 (consistent SQLite snapshot).
+    if docker ps --format "{{.Names}}" | grep -q "^vaultwarden$"; then
+        if docker exec vaultwarden /vaultwarden backup >/dev/null 2>&1; then
+            log "  SUCCESS: vaultwarden SQLite checkpointed via /vaultwarden backup"
+            # Trim timestamped backups older than 1 day so the volume stays small.
+            docker exec vaultwarden sh -c "find /data -maxdepth 1 -name 'db_*.sqlite3' -mtime +1 -delete" >/dev/null 2>&1 || true
+        else
+            log "  WARN: vaultwarden /vaultwarden backup failed"
+        fi
+    fi
 }
 
 # Pre-backup: Dump all Postgres databases
@@ -47,7 +70,7 @@ dump_postgres_databases() {
         log "Dumping PostgreSQL: $container"
         pg_user=$(docker exec "$container" printenv POSTGRES_USER 2>/dev/null || echo "postgres")
 
-        if timeout 120 docker exec "$container" pg_dumpall -U "$pg_user" > "$DB_DUMP_DIR/${container}.sql" 2>/dev/null; then
+        if timeout "$DB_DUMP_TIMEOUT" docker exec "$container" pg_dumpall -U "$pg_user" > "$DB_DUMP_DIR/${container}.sql" 2>/dev/null; then
             size=$(du -h "$DB_DUMP_DIR/${container}.sql" | cut -f1)
             log "  SUCCESS: $container ($size)"
         else
@@ -82,7 +105,7 @@ dump_mariadb_databases() {
             dump_cmd="mariadb-dump"
         fi
 
-        if timeout 120 docker exec "$container" $dump_cmd --all-databases -u root -p"$root_pw" > "$DB_DUMP_DIR/${container}.sql" 2>/dev/null; then
+        if timeout "$DB_DUMP_TIMEOUT" docker exec "$container" $dump_cmd --all-databases -u root -p"$root_pw" > "$DB_DUMP_DIR/${container}.sql" 2>/dev/null; then
             size=$(du -h "$DB_DUMP_DIR/${container}.sql" | cut -f1)
             log "  SUCCESS: $container ($size)"
         else
@@ -109,6 +132,19 @@ run_backup() {
         --exclude="**/__pycache__/**" \
         --exclude="**/venv/**" \
         --exclude="**/.git/objects/**" \
+        --exclude="/var/lib/docker/volumes/GITEA-ACTIONS-*" \
+        --exclude="/var/lib/docker/volumes/pkmn_postgres_data" \
+        --exclude="/opt/backups" \
+        --exclude="/opt/retired" \
+        --exclude="*.osm.pbf" \
+        --exclude="**/elevation_cache/**" \
+        --exclude="*.gguf" \
+        --exclude="**/whisper-local/models/**" \
+        --exclude="**/immich_model-cache/**" \
+        --exclude="**/p2pwiki-ai/data/chroma/**" \
+        --exclude="**/sql-dumps/**" \
+        --exclude="core.[0-9]*" \
+        --exclude="*.db.bak.*" \
         "$VOLUMES_DIR" \
         "$DB_DUMP_DIR" \
         $CONFIG_DIRS \
@@ -162,6 +198,7 @@ main() {
     rm -rf "$DB_DUMP_DIR"
     mkdir -p "$DB_DUMP_DIR"
 
+    dump_sqlite_databases
     dump_postgres_databases
     dump_mariadb_databases
     run_backup
