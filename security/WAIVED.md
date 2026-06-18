@@ -57,6 +57,30 @@ Same — record of the 2026-05-05 rspace rapp key generation.
 
 ---
 
+## Services not currently deployed (rotation N/A until restarted)
+
+Waived 2026-06-18. These had inventory entries but **no container exists**
+(running or stopped) and the DB can't be `ALTER USER`'d while down. The `.env`
+files still exist on Netcup, so the secrets aren't gone — just dormant. **If the
+service is redeployed, move the entry back into `secrets-inventory.yaml`** and
+do the listmonk-incident same-`${VAR}` check (app + postgres share the var →
+add a `postgres-profile` + `mode: auto`; split-config → manual lockstep).
+Tracked under TASK-89 AC #3.
+
+### `rnotes-database`
+rnotes (rspace-online sub-app). `/opt/secrets/rnotes/.env` exists (mtime
+2026-02-13); no `rnotes` container. Not deployed.
+
+### `mattermost-postgres`
+`/opt/apps/mattermost/.env` exists (mtime 2026-02-13); no `mattermost`
+container. Stack stopped/undeployed.
+
+### `cyclos-postgres`
+Cyclos mutual-credit platform. `/opt/apps/cyclos/.env` exists (mtime
+2026-04-15); no `cyclos` container. Stack stopped/undeployed.
+
+---
+
 ## Effectively-never-rotated values
 
 ### `relos-release.keystore`
