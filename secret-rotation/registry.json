@@ -122,6 +122,44 @@
     },
 
     {
+      "_comment_exposed_2026_06_19": "Deployment secrets that leaked into a chat transcript on 2026-06-19 (docker-exec env dump). Tracked here so each gets a manual-rotation email prompt to jeffemmett@gmail.com. ROTATE THESE NOW (the exposed values are compromised); the cadence governs ongoing rotation thereafter. Marked manual (not auto) because each is shared with a sidecar/DB/bootstrap path where silent rotation would break prod.",
+      "name": "INFISICAL_CLIENT_SECRET",
+      "rotator": "manual",
+      "cadenceDays": 60,
+      "config": { "rotateAt": "secrets.jeffemmett.com → Access Control → Machine Identities → rspace identity → roll client secret; then update INFISICAL_CLIENT_SECRET in host /opt/rspace-online/.env and redeploy. CRITICAL: this is the bootstrap credential that fetches all other secrets — verify the new value works before removing the old." }
+    },
+    {
+      "name": "INFISICAL_AI_CLIENT_SECRET",
+      "rotator": "manual",
+      "cadenceDays": 60,
+      "config": { "rotateAt": "secrets.jeffemmett.com → Access Control → Machine Identities → claude-ops identity → roll client secret; then update INFISICAL_AI_CLIENT_SECRET wherever the claude-ops UA consumes it (.env)." }
+    },
+    {
+      "name": "FALKORDB_PASSWORD",
+      "rotator": "manual",
+      "cadenceDays": 90,
+      "config": { "rotateAt": "Rotate the FalkorDB/Redis password: docker exec falkordb redis-cli CONFIG SET requirepass <new>; persist it (compose/CONFIG REWRITE); update FALKORDB_PASSWORD at secrets.jeffemmett.com (rspace/prod); restart dependents (rspace + KOI consumers). Future: add a falkordb rotator to automate." }
+    },
+    {
+      "name": "FORGE_IMPORT_KEY",
+      "rotator": "manual",
+      "cadenceDays": 90,
+      "config": { "rotateAt": "Regenerate a 32-byte hex (openssl rand -hex 32); update FORGE_IMPORT_KEY at secrets.jeffemmett.com (rspace/prod) AND in every external forge caller that authenticates with it; redeploy rspace. Upgrade to rotator='internal' once confirmed pure-internal (no external callers)." }
+    },
+    {
+      "name": "SCRIBUS_BRIDGE_SECRET",
+      "rotator": "manual",
+      "cadenceDays": 90,
+      "config": { "rotateAt": "Regenerate a 32-byte hex; update SCRIBUS_BRIDGE_SECRET at secrets.jeffemmett.com (rspace/prod); redeploy rspace AND manually rebuild/restart the scribus-novnc sidecar (it is NOT recreated by the batch deploy) so both ends share the new shared secret." }
+    },
+    {
+      "name": "COMPUTE_COURIER_REQUEST_CAP",
+      "rotator": "manual",
+      "cadenceDays": 90,
+      "config": { "rotateAt": "Regenerate the compute-courier capability token (contains an sk) via the compute-courier issuer; update COMPUTE_COURIER_REQUEST_CAP at secrets.jeffemmett.com (rspace/prod); redeploy rspace." }
+    },
+
+    {
       "_comment_manual": "Below are not rotatable from our side. Tracked here so the audit log can flag them past expiry threshold.",
       "name": "STRIPE_WEBHOOK_SECRET",            "rotator": "manual", "cadenceDays": 365,
       "config": { "rotateAt": "dashboard.stripe.com → Developers → Webhooks → Roll secret" }

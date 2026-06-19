@@ -234,8 +234,12 @@ async function main(): Promise<void> {
 		try {
 			const summary = results.map((r) => `${r.result.padEnd(8)} ${r.secret} ${r.error ?? ''}`).join('\n');
 			const subject = `Secret rotation — ${rotatedCount} rotated, ${failedCount} failed, ${manualCount} manual-due`;
-			const body = `${subject}\n\n${summary}\n`;
-			const cmd = `printf '%s' '${body.replace(/'/g, `'"'"'`)}' | mail -s '${subject.replace(/'/g, `'"'"'`)}' jeff@jeffemmett.com 2>/dev/null || true`;
+			const footer = manualCount > 0
+				? `\nManual-due tasks above need action — do them in Infisical at https://secrets.jeffemmett.com (rspace/prod), per each secret's "where=" instruction.\n`
+				: '';
+			const body = `${subject}\n\n${summary}\n${footer}`;
+			// Alert recipient: jeffemmett@gmail.com (Jeff's explicit choice for rotation prompts).
+			const cmd = `printf '%s' '${body.replace(/'/g, `'"'"'`)}' | mail -s '${subject.replace(/'/g, `'"'"'`)}' jeffemmett@gmail.com 2>/dev/null || true`;
 			spawn('sh', ['-c', cmd], { stdio: 'ignore' });
 		} catch { /* notification is best-effort */ }
 	}
