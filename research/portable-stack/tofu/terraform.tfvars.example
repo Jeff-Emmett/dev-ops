@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars and fill in. NEVER commit the filled file.
+rspace_endpoint     = "http://rspace-online:3000" # sibling container
+rspace_internal_key = "set-from-infisical"
+state_passphrase    = "set-from-infisical"
+machine_did         = "did:key:z6Mk..."
