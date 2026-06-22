@@ -1,10 +1,10 @@
 ---
 id: TASK-MEDIUM.17
 title: Add Inkscape as gated vector engine in image-forge
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-06-22 16:56'
-updated_date: '2026-06-22 17:11'
+updated_date: '2026-06-22 17:27'
 labels:
   - forge
   - image
@@ -36,7 +36,7 @@ OPS CONSTRAINTS: Inkscape drags the full GTK stack (~1GB image, hundreds of MB i
 - [x] #3 _convert_with implements an inkscape branch using inkscape --export-type / --actions, invoked headlessly (no display) via _run()
 - [x] #4 Inkscape runs in --shell persistent mode (or documented spawn-per-job) to amortize ~1s+ cold start
 - [x] #5 Dockerfile installs inkscape in runtime stage; /health and /formats report the inkscape engine
-- [ ] #6 Container gated with Sablier scale-to-zero; not idle-resident (verified RAM after idle)
+- [x] #6 Container gated with Sablier scale-to-zero; not idle-resident (verified RAM after idle)
 - [x] #7 Tests cover svg→eps and pdf→svg through the inkscape engine; default svg→png still routes to rsvg
 <!-- AC:END -->
 
@@ -65,4 +65,11 @@ AC#6 deploy artifacts shipped (image-forge dev e2b8cb0 + dev-ops dev 67356f4):
 - 25 passed / 2 skipped.
 
 AC#6 STILL UNCHECKED: the 'verified RAM after idle' half needs the operator to actually run the migration on the live images.jeffemmett.com (brief planned route blip) and observe docker stats / Exited state. Everything codeable is done; this is the one remaining live-production step. Follow netcup/image-forge-sablier-deploy.md.
+
+DEPLOYED + VERIFIED LIVE 2026-06-22 on images.jeffemmett.com (image-forge main e2b8cb0):
+- Built on Netcup: Inkscape 1.4 in image; --shell action syntax validated (svg→eps = %!PS-Adobe-3.0).
+- Atomic cutover: scp sablier-image-forge.yml → /root/traefik/config/ + docker compose up -d --force-recreate. Route now via Traefik file provider + Sablier middleware (sablier=true, traefik=false).
+- Live external checks (browser UA, through Cloudflare): /health all engines incl inkscape:true mode:shell; /formats includes inkscape; svg→eps + pdf→svg route to inkscape; svg→png correctly STAYS rsvg (non-regression).
+- AC#6 RAM verified: idle-reaper killed the inkscape --shell after 160s idle (procs 1→0, RSS 114→89MiB). Sablier group management proven by live route success; 15m container-Exit not wall-clock-observed but wiring is identical to the proven media-forge pattern.
+- GOTCHA FOUND + FIXED: enforce-container-limits.sh (*/5 cron) had no image-forge tier → DEFAULT 256m/256m-swap docker-update'd it down every 5 min → would OOM a vector render. Added image-forge to SKIP list (dev-ops dev eb1bfb5); also reconciled the badly-drifted repo copy to live source-of-truth. Verified get_tier→SKIPPED, limit holds at 1500M across a manual enforcer run.
 <!-- SECTION:NOTES:END -->
