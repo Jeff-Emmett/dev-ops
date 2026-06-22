@@ -4,7 +4,7 @@ title: Add Inkscape as gated vector engine in image-forge
 status: In Progress
 assignee: []
 created_date: '2026-06-22 16:56'
-updated_date: '2026-06-22 17:03'
+updated_date: '2026-06-22 17:11'
 labels:
   - forge
   - image
@@ -56,4 +56,13 @@ DONE (AC 1-5,7):
 
 PENDING (AC 6 — deploy-gated, NOT done here):
 - Build image on Netcup with WITH_INKSCAPE=1 and gate the container with Sablier scale-to-zero given the 62GB/389-container memory pressure; verify RAM after idle. Requires Netcup deploy + Sablier label wiring on images.jeffemmett.com. Recommend validating the --shell action syntax against the deployed Inkscape version on first run (export-plain-svg / export-width action names are 1.x; confirm point release).
+
+AC#6 deploy artifacts shipped (image-forge dev e2b8cb0 + dev-ops dev 67356f4):
+- Two-layer RAM strategy: (1) whole-container Sablier scale-to-zero — compose switched to house forge pattern (sablier.enable+group, traefik.enable=false); idle 15m → container Exited → 0 RAM, Inkscape image costs only disk. (2) warm-window idle-reaper kills the persistent inkscape --shell after INKSCAPE_IDLE_TIMEOUT=120s of no vector jobs (lock-safe, unit-tested with fake proc).
+- netcup/traefik/config/sablier-image-forge.yml (file-provider router + Sablier middleware, 90s blocking timeout for GTK cold start).
+- netcup/image-forge-sablier-deploy.md — live-migration runbook (safe ordering, verify, RAM-layering checks, Inkscape 1.x action-name first-run check, rollback).
+- memory limit 1G→1500M for vector-render headroom.
+- 25 passed / 2 skipped.
+
+AC#6 STILL UNCHECKED: the 'verified RAM after idle' half needs the operator to actually run the migration on the live images.jeffemmett.com (brief planned route blip) and observe docker stats / Exited state. Everything codeable is done; this is the one remaining live-production step. Follow netcup/image-forge-sablier-deploy.md.
 <!-- SECTION:NOTES:END -->
