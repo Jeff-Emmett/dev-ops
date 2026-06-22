@@ -97,6 +97,15 @@
         - config.yaml
         - docker-compose.yml
 
+    - name: Copy LiteLLM scripts (executable)
+      ansible.builtin.copy:
+        src: "../litellm/{{ item }}"
+        dest: "{{ litellm_dir }}/{{ item }}"
+        mode: "0755"
+      loop:
+        - entrypoint-wrapper.sh
+        - heal.sh
+
     - name: Check for the LiteLLM .env
       ansible.builtin.stat:
         path: "{{ litellm_dir }}/.env"

@@ -11,18 +11,22 @@ services:
     image: ghcr.io/berriai/litellm:main-stable
     container_name: gx10-litellm
     restart: unless-stopped
-    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    entrypoint: ["/infisical-entrypoint.sh"]
+    command: ["docker/prod_entrypoint.sh", "--config", "/app/config.yaml", "--port", "4000"]
     ports:
-      - "4000:4000"
+      - "100.64.0.5:4000:4000"
+      - "100.64.0.5:4001:4000"
     volumes:
       - ./config.yaml:/app/config.yaml:ro
+      - ./entrypoint-wrapper.sh:/infisical-entrypoint.sh:ro
     env_file:
       - .env
     extra_hosts:
       # lets the container reach the GX10 host's Ollama at :11434
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:4000/health/liveliness || exit 1"]
+      # image ships no curl/wget — use the venv python (urllib) instead
+      test: ["CMD", "python3", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:4000/health/liveliness').status==200 else 1)"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -31,4 +35,22 @@ services:
       driver: json-file
       options:
         max-size: "10m"
+        max-file: "3"
+
+  # Self-heal watchdog (added 2026-06-22). Restarts gx10-litellm on
+  # stop / unhealthy / host-port-unpublished (tailscale-bind race). Uses
+  # the docker socket; no network needed. See heal.sh.
+  litellm-watchdog:
+    image: docker:cli
+    container_name: gx10-litellm-watchdog
+    restart: unless-stopped
+    network_mode: none
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./heal.sh:/heal.sh:ro
+    entrypoint: ["/bin/sh", "/heal.sh"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
         max-file: "3"

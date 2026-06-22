@@ -51,3 +51,18 @@ Confirmed facts that shaped this:
 6. Run `benchmark/harness.py` — populate TASK-91.
 
 See TASK-91 in Backlog for the benchmark plan.
+
+## LiteLLM deploy reality (2026-06-22)
+
+`gx10/litellm/` is the **canonical source**. The live proxy on spark currently
+runs **hand-rolled from `~/gx10-litellm`** (mirror of this dir, gitea
+`jeffemmett/gx10-litellm`), published on `100.64.0.5:4000` + `:4001` (`:4001`
+= commit-review hook contract). It self-heals via the `litellm-watchdog`
+sidecar (`heal.sh`).
+
+The ansible play (`ansible/provision-gx10.yml`, `litellm_dir: /opt/gx10-litellm`,
+`become: true`) is the **formal** target but has **not been run for litellm**
+(`/opt/gx10-litellm` does not exist). Migrating the live deploy from
+`~/gx10-litellm` → `/opt` via ansible is a future maintenance-window step
+(the play also enables UFW + manages ollama/systemd — review blast radius
+before running). Until then, edit here and copy to `~/gx10-litellm`.
