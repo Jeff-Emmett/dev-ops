@@ -78,9 +78,11 @@ on the backend + frontend. It serves Streamable-HTTP at `:4401/mcp` (+ legacy
 `/sse`); the frontend nginx proxies the public `/mcp/*` path to it.
 
 To connect Claude (or any MCP client):
-1. In Penpot → **Account → Integrations → MCP Server**, copy your personal URL —
-   `https://penpot.jeffemmett.com/mcp/stream?userToken=<YOUR_MCP_KEY>`. The key is
-   per-user (acts as you); treat it like a password.
+1. The `userToken` is a Penpot **access token** (2.16 has no "MCP Server" tab —
+   that's a cloud/newer-version feature). Generate one: avatar → **Your account →
+   Access tokens → Generate new token** → copy it. It acts as you; treat it like
+   a password. Then the URL is
+   `https://penpot.jeffemmett.com/mcp/stream?userToken=<ACCESS_TOKEN>`.
 2. Register it (global, so it loads everywhere):
    ```bash
    claude mcp add penpot -t http "https://penpot.jeffemmett.com/mcp/stream?userToken=<YOUR_MCP_KEY>"
