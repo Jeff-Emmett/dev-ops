@@ -28,9 +28,11 @@ services:
     depends_on:
       - penpot-backend
       - penpot-exporter
+      - penpot-mcp
     labels: *sablier
     environment:
-      PENPOT_FLAGS: "disable-registration disable-email-verification disable-secure-session-cookies"
+      # enable-mcp: the frontend nginx proxies /mcp/* to the penpot-mcp service.
+      PENPOT_FLAGS: "disable-registration disable-email-verification disable-secure-session-cookies enable-mcp"
     networks:
       - penpot
       - traefik-public
@@ -53,7 +55,8 @@ services:
     environment:
       # enable-prepl-server: the management REPL on :6063 that manage.py needs
       # (create-profile etc.). Without it those commands get ECONNREFUSED.
-      PENPOT_FLAGS: "disable-registration disable-email-verification disable-secure-session-cookies enable-prepl-server"
+      # enable-mcp: backend exposes the MCP RPC the penpot-mcp service consumes.
+      PENPOT_FLAGS: "disable-registration disable-email-verification disable-secure-session-cookies enable-prepl-server enable-mcp"
       PENPOT_PUBLIC_URI: "https://penpot.jeffemmett.com"
       PENPOT_SECRET_KEY: "${PENPOT_SECRET_KEY:?set in .env}"
       PENPOT_DATABASE_URI: "postgresql://penpot-postgres/penpot"
@@ -85,6 +88,23 @@ services:
     networks:
       - penpot
     mem_limit: 512m
+
+  # AI control surface — the frontend proxies /mcp/* here when enable-mcp is set.
+  # Clients connect at https://penpot.jeffemmett.com/mcp/stream?userToken=<KEY>
+  # (per-user key from Penpot → Account → Integrations → MCP Server).
+  penpot-mcp:
+    image: penpotapp/mcp:2.16
+    container_name: penpot-mcp
+    restart: unless-stopped
+    depends_on:
+      - penpot-backend
+    labels: *sablier
+    environment:
+      PENPOT_PUBLIC_URI: "https://penpot.jeffemmett.com"
+      PENPOT_SECRET_KEY: "${PENPOT_SECRET_KEY:?set in .env}"
+    networks:
+      - penpot
+    mem_limit: 256m
 
   penpot-postgres:
     image: postgres:15

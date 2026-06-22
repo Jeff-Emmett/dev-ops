@@ -71,6 +71,29 @@ curl -s -A "$UA" -o /dev/null -w '%{http_code}\n' https://penpot.jeffemmett.com
 # first hit after idle: a few seconds (Sablier wake), then 200 + the login UI
 ```
 
+## AI control (penpot-mcp)
+
+The `penpot-mcp` service (official `penpotapp/mcp`) is enabled via `enable-mcp`
+on the backend + frontend. It serves Streamable-HTTP at `:4401/mcp` (+ legacy
+`/sse`); the frontend nginx proxies the public `/mcp/*` path to it.
+
+To connect Claude (or any MCP client):
+1. In Penpot → **Account → Integrations → MCP Server**, copy your personal URL —
+   `https://penpot.jeffemmett.com/mcp/stream?userToken=<YOUR_MCP_KEY>`. The key is
+   per-user (acts as you); treat it like a password.
+2. Register it (global, so it loads everywhere):
+   ```bash
+   claude mcp add penpot -t http "https://penpot.jeffemmett.com/mcp/stream?userToken=<YOUR_MCP_KEY>"
+   ```
+   or add to `~/.claude.json` `mcpServers`:
+   ```json
+   "penpot": { "type": "http", "url": "https://penpot.jeffemmett.com/mcp/stream?userToken=<KEY>" }
+   ```
+3. Restart Claude Code → the Penpot design tools load.
+
+Sablier: penpot-mcp is in the `penpot` group, so an MCP request wakes the whole
+stack (first call after idle waits for cold-start, then is warm).
+
 ## Notes
 - **Registration**: re-enable by swapping `disable-registration` out of
   `PENPOT_FLAGS` in both frontend + backend, or front the domain with CF Access.
