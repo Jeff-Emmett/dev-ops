@@ -89,6 +89,26 @@ model_list:
       api_base: http://100.64.0.2:11434
       timeout: 300
 
+  # ---------- TIER 2.5 — Moonshot cloud (Kimi K2.7 Code) ----------
+  # 1T MoE (32B active) — too big for GX10's 128GB unified RAM, so routed
+  # to Moonshot's first-party OpenAI-compatible API. Heavy agentic coding /
+  # tool-use tier: 256K ctx, 81.1% MCPMark (> Opus 4.8). $0.95/$4.00 per Mtok.
+  # NOTE: paid egress over the public internet — NOT mesh-only/sovereign.
+  - model_name: gx10-code-pro           # Kimi K2.7 Code — best open-weight coder
+    litellm_params:
+      model: openai/kimi-k2.7-code
+      api_base: https://api.moonshot.ai/v1
+      api_key: os.environ/MOONSHOT_API_KEY
+      timeout: 600
+      stream: true
+  - model_name: kimi-code               # friendly alias → same model
+    litellm_params:
+      model: openai/kimi-k2.7-code
+      api_base: https://api.moonshot.ai/v1
+      api_key: os.environ/MOONSHOT_API_KEY
+      timeout: 600
+      stream: true
+
   # ---------- TIER 3 — cloud paid fallback ----------
   - model_name: claude-sonnet
     litellm_params:
@@ -111,8 +131,10 @@ litellm_settings:
     - gx10-vl: ["claude-sonnet", "gemini-flash"]   # vision-capable cloud fallback
     - gx10-fast: ["netcup-small"]
     - gx10-agent: ["gx10-coder", "claude-sonnet"]
+    - gx10-code-pro: ["gx10-coder", "claude-sonnet"]   # Kimi down → local coder → cloud
   context_window_fallbacks:
-    - gx10-coder: ["claude-sonnet"]
+    - gx10-coder: ["gx10-code-pro", "claude-sonnet"]   # overflow local 32K → Kimi 256K
+    - gx10-code-pro: ["claude-sonnet"]
 
 general_settings:
   # All /v1/* calls require  Authorization: Bearer <LITELLM_MASTER_KEY>
