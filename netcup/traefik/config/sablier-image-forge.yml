@@ -1,0 +1,41 @@
+# Sablier scale-to-zero routing for image-forge (images.jeffemmett.com).
+#
+# Lives in the Traefik FILE provider (loaded from /etc/traefik/config, watched)
+# so the route stays registered while the container is stopped — the docker
+# provider would drop it on stop and 404 the wake request. The container sets
+# `traefik.enable=false` + `sablier.enable=true` + `sablier.group=image-forge`
+# so this file is the single source of truth for routing.
+#
+# Deploy: this file must be present BEFORE the container is recreated with the
+# Sablier labels (see netcup/image-forge-sablier-deploy.md) or the live route
+# blips. TLS terminates at the Cloudflare edge; origin is HTTP on `web`.
+http:
+  middlewares:
+    sablier-image-forge:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000
+          group: image-forge
+          sessionDuration: 15m
+          # Blocking mode — image-forge is an HTTP API; callers wait inline for
+          # the converted bytes rather than seeing a loading page. 90s ceiling
+          # is generous over the typical cold-start: uvicorn boots in a couple
+          # seconds; the heavy Inkscape/GTK image only adds disk, and its
+          # --shell process spawns lazily on the first vector job (not at boot),
+          # so a wake serving a libvips/rsvg request is fast.
+          blocking:
+            timeout: 90s
+  routers:
+    image-forge:
+      rule: "Host(`images.jeffemmett.com`)"
+      entryPoints:
+        - web
+      middlewares:
+        - sablier-image-forge
+      service: image-forge
+      priority: 100
+  services:
+    image-forge:
+      loadBalancer:
+        servers:
+          - url: "http://image-forge:8000"
