@@ -49,11 +49,19 @@ cloudflared tunnel route dns <TUNNEL_ID> penpot.jeffemmett.com
 
 `disable-registration` is set (public endpoint). Create users via the backend CLI:
 
+2.16 ships `manage.py` (Python), and Sablier may have stopped the stack — so use
+non-interactive args (NO TTY needed; `-it` would fail with "no TTY allowed"):
+
 ```bash
-docker exec -it penpot-backend ./manage.sh create-profile
-#   prompts for name / email / password
-# (older builds: ./manage.sh create-profile <fullname> <email>)
+# wake the stack if Sablier scaled it to zero, then create the profile
+ssh netcup-full 'cd /opt/services/penpot && docker compose up -d && sleep 12 && \
+  docker exec penpot-backend python3 /opt/penpot/backend/manage.py create-profile \
+    -n "Your Name" -e "you@example.com" -p "your-password"'
 ```
+
+`-n/-e/-p` (fullname/email/password) skip the interactive `input()`/`getpass()`
+prompts entirely. Omit them to be prompted (needs `docker exec -it` + a real TTY,
+e.g. via `ssh -t`).
 
 ## 5. Verify
 
