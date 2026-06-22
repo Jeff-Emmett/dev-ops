@@ -34,7 +34,11 @@ services:
     networks:
       - penpot
       - traefik-public
-    mem_limit: 128m
+    # nginx `worker_processes auto` reads _SC_NPROCESSORS_ONLN (system-wide = 20
+    # cores), which cpuset affinity does NOT shrink — so it spawns 20 workers
+    # (~28MB rss each). Rather than override the baked nginx.conf, give them
+    # room; Sablier means this is 0 when idle anyway.
+    mem_limit: 700m
 
   penpot-backend:
     image: penpotapp/backend:2.16
@@ -74,6 +78,8 @@ services:
       # The exporter renders via headless Chromium; it talks to the public URI.
       PENPOT_PUBLIC_URI: "http://penpot-frontend:8080"
       PENPOT_REDIS_URI: "redis://penpot-valkey/0"
+      # 2.x exporter validates a required secret-key (shared with backend).
+      PENPOT_SECRET_KEY: "${PENPOT_SECRET_KEY:?set in .env}"
     networks:
       - penpot
     mem_limit: 512m
