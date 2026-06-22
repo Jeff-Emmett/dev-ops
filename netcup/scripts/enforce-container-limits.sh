@@ -29,6 +29,10 @@ get_tier() {
         # (GTK + cairo surface). DEFAULT 256m would OOM-kill a real render.
         # Sablier scale-to-zero already frees the RAM when idle. Compose owns it.
         image-forge) return 1 ;;
+        # 2026-06-22: Penpot stack — compose sets per-service mem_limits (backend
+        # JVM 1200m etc); DEFAULT 256m would OOM the backend. Sablier scale-to-
+        # zero frees it all when idle. Compose owns the limits.
+        penpot-frontend|penpot-backend|penpot-exporter|penpot-postgres|penpot-valkey) return 1 ;;
         open-notebook|open-notebook-cca|open-notebook-votc) return 1 ;;
         blender-worker|blender-api|kicad-mcp|freecad-mcp) return 1 ;;
         meeting-intelligence-transcriber|whisper-local|docling-service) return 1 ;;
