@@ -51,7 +51,9 @@ services:
     volumes:
       - penpot_assets:/opt/data/assets
     environment:
-      PENPOT_FLAGS: "disable-registration disable-email-verification disable-secure-session-cookies"
+      # enable-prepl-server: the management REPL on :6063 that manage.py needs
+      # (create-profile etc.). Without it those commands get ECONNREFUSED.
+      PENPOT_FLAGS: "disable-registration disable-email-verification disable-secure-session-cookies enable-prepl-server"
       PENPOT_PUBLIC_URI: "https://penpot.jeffemmett.com"
       PENPOT_SECRET_KEY: "${PENPOT_SECRET_KEY:?set in .env}"
       PENPOT_DATABASE_URI: "postgresql://penpot-postgres/penpot"
