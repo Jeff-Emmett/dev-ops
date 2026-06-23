@@ -65,6 +65,27 @@ guix describe -f channels > channels.scm   # stamps exact commit hashes
 guix time-machine -C channels.scm -- system reconfigure config.scm
 ```
 
+## WSL2 install gotchas (hit & solved on the dev box, 2026-06-24)
+
+The foreign-distro install on WSL2 needed three fixes — record for any rebuild:
+
+1. **`newgidmap` missing** → `sudo apt-get install -y uidmap` before the installer.
+2. **`guix pull` git SSL "unknown error"** → client libgit2 had no CA certs.
+   Fix: `guix install nss-certs`, then export
+   `SSL_CERT_FILE=~/.guix-profile/etc/ssl/certs/ca-certificates.crt` (and
+   `SSL_CERT_DIR`, `GIT_SSL_CAINFO`).
+3. **`guix pull` then `SSL syscall failure: Resource temporarily unavailable`**
+   → libgit2's full-history clone stalls on WSL2 (`EAGAIN`) where system `git`
+   succeeds. Fix: mirror-clone with system git and point the channel at the
+   local repo so libgit2 reads from disk:
+   ```sh
+   git clone --mirror https://codeberg.org/guix/guix.git ~/guix-src.git
+   # ~/.config/guix/channels-local.scm: (url "/home/jeffe/guix-src.git") + same introduction
+   guix pull -C ~/.config/guix/channels-local.scm
+   ```
+   This is a **WSL2-only workaround** — the committed `channels.scm` keeps the
+   upstream URL (the portable truth for real bare-metal Linux).
+
 ## Honest caveats
 
 - **NVIDIA / GX10 GB10** desktop accel on Guix ≈ nonexistent today. Keep GPU

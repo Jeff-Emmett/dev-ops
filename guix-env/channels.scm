@@ -14,9 +14,10 @@
 (list
  (channel
   (name 'guix)
-  (url "https://git.savannah.gnu.org/git/guix.git")
+  ;; Upstream now lives on Codeberg (git.guix.gnu.org redirects there).
+  (url "https://codeberg.org/guix/guix.git")
   (branch "master")
-  ;; (commit "PIN-ME")          ; fill via `guix describe -f channels`
+  (commit "fc2ebba94a1489dc360f208dc22924ce319e5efb")   ; pinned Phase-1 pull
   (introduction
    (make-channel-introduction
     "9edb3f66fd807b096b48283debdcddccfea34bad"
