@@ -1,0 +1,9 @@
+;; Marks this tree as a Guix channel. Package modules live under ./jmjmj/.
+;; Becomes a real channel once split into its own Gitea repo and added to
+;; ../channels.scm. Until then, test locally with the load path:
+;;
+;;   guix build -L guix-env/jmjmj-channel jmjmj-forge-toolchain
+;;   guix challenge -L guix-env/jmjmj-channel jmjmj-forge-toolchain
+(channel
+ (version 0)
+ (directory ""))
