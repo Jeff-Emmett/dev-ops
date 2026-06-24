@@ -18,7 +18,7 @@
              (nongnu system linux-initrd))
 
 (use-service-modules desktop networking ssh xorg)
-(use-package-modules certs ssh version-control)
+(use-package-modules nss ssh version-control)   ; nss-certs lives in (gnu packages nss)
 
 (operating-system
   (host-name "guixtop")                       ; CHANGE
