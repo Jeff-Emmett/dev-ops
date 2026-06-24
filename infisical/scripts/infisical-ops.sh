@@ -45,12 +45,20 @@ get_token() {
     -d "{\"clientId\": \"$CLIENT_ID\", \"clientSecret\": \"$CLIENT_SECRET\"}" | jq -r '.accessToken'
 }
 
+# Normalise a secret path: ensure exactly one leading slash so the Infisical API
+# resolves nested folders. "ai" -> "/ai", "/ai" -> "/ai", "" or "/" -> "/".
+np() {
+  local p="${1:-/}"
+  [ "$p" = "/" ] && { printf '/'; return; }
+  printf '/%s' "${p#/}"
+}
+
 CMD="${1:-help}"
 shift || true
 
 case "$CMD" in
   list)
-    FOLDER="${1:-/}"
+    FOLDER="$(np "${1:-/}")"
     TOKEN=$(get_token)
     echo "Secrets in $FOLDER:"
     curl -sf $CF_ACCESS_HEADERS "$INFISICAL_URL/api/v3/secrets/raw?workspaceId=$PROJECT_ID&environment=prod&secretPath=$FOLDER" \
@@ -72,7 +80,7 @@ case "$CMD" in
   get)
     # Gets a single secret value — intended for piping to commands, not display
     KEY="${1:?Usage: infisical-ops get KEY [folder]}"
-    FOLDER="${2:-/}"
+    FOLDER="$(np "${2:-/}")"
     TOKEN=$(get_token)
     curl -sf $CF_ACCESS_HEADERS "$INFISICAL_URL/api/v3/secrets/raw/$KEY?workspaceId=$PROJECT_ID&environment=prod&secretPath=$FOLDER" \
       -H "Authorization: Bearer $TOKEN" | jq -r '.secret.secretValue'
@@ -90,6 +98,7 @@ case "$CMD" in
       esac
     done
     shift # skip --
+    FOLDER="$(np "$FOLDER")"
 
     TOKEN=$(get_token)
     QUERY="workspaceId=$PROJECT_ID&environment=prod&secretPath=$FOLDER"
@@ -108,7 +117,7 @@ case "$CMD" in
     # Set/create a secret: infisical-ops set KEY VALUE [folder]
     KEY="${1:?Usage: infisical-ops set KEY VALUE [folder]}"
     VALUE="${2:?Usage: infisical-ops set KEY VALUE [folder]}"
-    FOLDER="${3:-/}"
+    FOLDER="$(np "${3:-/}")"
     TOKEN=$(get_token)
 
     # Create folder if needed (ignore errors for existing folders)
@@ -141,7 +150,7 @@ case "$CMD" in
 
   mkdir)
     # Create a folder: infisical-ops mkdir /path/to/folder
-    FOLDER="${1:?Usage: infisical-ops mkdir /path/to/folder}"
+    FOLDER="$(np "${1:?Usage: infisical-ops mkdir /path/to/folder}")"
     TOKEN=$(get_token)
     PARENT_PATH=$(dirname "$FOLDER")
     [ "$PARENT_PATH" = "." ] && PARENT_PATH="/"
