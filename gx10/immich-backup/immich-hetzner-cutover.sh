@@ -9,6 +9,12 @@ source "$HOME/.hetzner_backup_credentials"
 
 echo "=== cutover: verify Hetzner repo ==="
 restic snapshots --tag gx10-immich --compact
+# Gate: restic only saves a snapshot on success, so a complete gx10-immich
+# snapshot is proof the seed finished. Abort the swap if none exists.
+if ! restic snapshots --tag gx10-immich --latest 1 --json | grep -q gx10-immich; then
+    echo "ERROR: no complete gx10-immich snapshot on Hetzner — seed incomplete/failed; not swapping" >&2
+    exit 1
+fi
 echo "--- structural integrity (metadata) ---"
 restic check
 echo "--- spot data integrity (5% random pack subset) ---"
