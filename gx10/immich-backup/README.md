@@ -22,11 +22,16 @@ on gx10 (mode 600, NOT in git). SSH host `hetzner-box` → `u521871.your-storage
   `~/immich-backup.sh` at cutover. Cron unchanged: `30 4 * * *`.
 - `immich-hetzner-firstbackup.sh` — original one-shot full seed. **Superseded by
   the guard** (it had no reboot recovery — see history below).
-- `immich-hetzner-seed-guard.sh` — **idempotent self-healing seed.** No-ops once
-  a `gx10-immich` snapshot exists; else clears stale locks and (re)launches the
-  seed detached. Cron `*/30 * * * *` so a mid-seed reboot self-recovers within
-  30 min. restic resumes from already-uploaded blobs via dedup. **Remove the
-  cron line + script at cutover.**
+- `immich-hetzner-seed-guard.sh` — **idempotent self-healing seed + auto-cutover.**
+  Cron `*/30 * * * *`, single-flighted with `flock -n`. State machine (cheap
+  local check first to avoid the slow repo query over the seed-saturated SFTP):
+  - seed process running → no-op (instant, local `pgrep`)
+  - seed not running, snapshot exists, nightly still on R2 → **auto-run
+    `immich-hetzner-cutover.sh`** (verify + swap; NEVER touches R2)
+  - seed not running, no snapshot → it died (e.g. reboot) → clear lock + relaunch
+  - fully migrated → no-op
+  restic resumes from already-uploaded blobs via dedup. **Remove the cron line +
+  script after the R2 drop.**
 - `immich-hetzner-cutover.sh` — run after the seed completes: verifies the
   Hetzner repo (`restic check` + 5% data subset), then swaps the nightly script.
   Does NOT touch R2.
@@ -44,16 +49,18 @@ on gx10 (mode 600, NOT in git). SSH host `hetzner-box` → `u521871.your-storage
 
 1. **Seed** (in progress, self-healing via guard): resumes from partial; ~262
    GiB / ~10h remaining. The `*/30` guard cron restarts it after any reboot.
-2. **Verify + cutover**: when the seed completes (a `gx10-immich` snapshot
-   appears), run `~/immich-hetzner-cutover.sh` on gx10. It verifies integrity and
-   swaps the nightly script R2 → Hetzner. **Then remove the seed-guard cron + script.**
-3. **Drop immich from R2** (separate, destructive, confirm first):
+2. **Verify + cutover** (AUTOMATIC): the seed-guard auto-runs
+   `immich-hetzner-cutover.sh` on the first `*/30` tick after the seed completes —
+   verifies (`restic check` + 5% subset) and swaps the nightly R2 → Hetzner.
+   Check `~/immich-hetzner-cutover.log` for the result.
+3. **Drop immich from R2** (MANUAL, destructive, confirm first):
    ```bash
    source ~/.r2_backup_credentials
    restic forget --host spark-be57 --prune   # frees ~468 GiB from R2
    ```
    Removes all 12 `spark-be57` snapshots (4× gx10-immich + 8× gx10-apps) from
-   the shared R2 repo. apps is trivial and also in Gitea.
+   the shared R2 repo. apps is trivial and also in Gitea. **Then remove the
+   seed-guard cron line + `~/immich-hetzner-seed-guard.sh`.**
 4. **Monitoring**: point the netcup `backup-healthcheck.sh` immich freshness
    check at the Hetzner repo (it currently checks the R2 `gx10-immich` tag) +
    add a Kuma push. TODO.
