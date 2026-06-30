@@ -1,8 +1,15 @@
 # GX10 LiteLLM router — docker compose.
 #
-# Port 4000 is bound on all interfaces; UFW (see ansible/provision-gx10.yml)
-# restricts ingress to the tailscale0 interface only. Defense in depth:
-# the master key still gates every request.
+# Ports are published on the tailnet IP ONLY (100.64.0.5:4000/4001). This is
+# the actual security boundary: Docker-published ports bypass UFW (DOCKER-USER
+# chain), so a 0.0.0.0 bind would expose LiteLLM on every interface. The
+# IP-specific bind keeps it tailnet-only. The master key still gates requests.
+#
+# Boot race: docker.service is ordered After=tailscaled.service, but that only
+# means tailscaled *started* — 100.64.0.5 is assigned asynchronously after.
+# If litellm starts before the IP exists, the publish silently fails and the
+# port never binds. The litellm-watchdog heals this by compose-recreating
+# (NOT restarting — restart can't republish). See heal.sh.
 #
 # NOTE: verify the litellm image publishes an arm64 variant. If not, build
 #       locally on the GX10 (DGX OS is aarch64).
@@ -37,16 +44,20 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Self-heal watchdog (added 2026-06-22). Restarts gx10-litellm on
-  # stop / unhealthy / host-port-unpublished (tailscale-bind race). Uses
-  # the docker socket; no network needed. See heal.sh.
+  # Self-heal watchdog (added 2026-06-22; recreate-on-bind-race 2026-06-29).
+  # Heals gx10-litellm on stop / unhealthy / host-port-unpublished (the
+  # tailscale-bind race). docker:cli ships `docker compose`; the project dir
+  # is mounted at its real host path so compose resolves the litellm bind
+  # mounts (./config.yaml, .env) to identical host paths. See heal.sh.
   litellm-watchdog:
     image: docker:cli
     container_name: gx10-litellm-watchdog
     restart: unless-stopped
     network_mode: none
+    working_dir: /home/mycopunk/gx10-litellm
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /home/mycopunk/gx10-litellm:/home/mycopunk/gx10-litellm:ro
       - ./heal.sh:/heal.sh:ro
     entrypoint: ["/bin/sh", "/heal.sh"]
     logging:
