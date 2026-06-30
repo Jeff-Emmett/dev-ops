@@ -20,19 +20,33 @@ on gx10 (mode 600, NOT in git). SSH host `hetzner-box` → `u521871.your-storage
 - `immich-backup.sh` — **new** nightly script (Hetzner target + self-managed
   retention). Staged on gx10 as `~/immich-backup.sh.hetzner`; becomes the active
   `~/immich-backup.sh` at cutover. Cron unchanged: `30 4 * * *`.
-- `immich-hetzner-firstbackup.sh` — one-shot full seed (no parent → reads all
-  468 GiB). Run manually 2026-06-27 14:11 EDT.
+- `immich-hetzner-firstbackup.sh` — original one-shot full seed. **Superseded by
+  the guard** (it had no reboot recovery — see history below).
+- `immich-hetzner-seed-guard.sh` — **idempotent self-healing seed.** No-ops once
+  a `gx10-immich` snapshot exists; else clears stale locks and (re)launches the
+  seed detached. Cron `*/30 * * * *` so a mid-seed reboot self-recovers within
+  30 min. restic resumes from already-uploaded blobs via dedup. **Remove the
+  cron line + script at cutover.**
 - `immich-hetzner-cutover.sh` — run after the seed completes: verifies the
   Hetzner repo (`restic check` + 5% data subset), then swaps the nightly script.
   Does NOT touch R2.
 
+## History
+
+- 2026-06-27 14:11 EDT — first seed launched. Uploaded ~206 GiB.
+- 2026-06-29 10:26 EDT — **gx10 power-cycled** → systemd SIGTERM'd the seed mid
+  run (`signal terminated received` / ssh exit 255). No snapshot saved; one
+  stale lock left. R2 nightly kept running, so no backup gap.
+- 2026-06-29 ~20:07 EDT — added `immich-hetzner-seed-guard.sh` (+ `*/30` cron),
+  cleared the lock, resumed the seed from the 206 GiB partial.
+
 ## Procedure
 
-1. **Seed** (in progress): `immich-hetzner-firstbackup.sh` uploads the full
-   library to Hetzner. ~17–18h at ~7 MiB/s. Durable (reparented to init).
-2. **Verify + cutover**: when the seed PID exits, run
-   `~/immich-hetzner-cutover.sh` on gx10. It verifies integrity and swaps the
-   nightly script R2 → Hetzner.
+1. **Seed** (in progress, self-healing via guard): resumes from partial; ~262
+   GiB / ~10h remaining. The `*/30` guard cron restarts it after any reboot.
+2. **Verify + cutover**: when the seed completes (a `gx10-immich` snapshot
+   appears), run `~/immich-hetzner-cutover.sh` on gx10. It verifies integrity and
+   swaps the nightly script R2 → Hetzner. **Then remove the seed-guard cron + script.**
 3. **Drop immich from R2** (separate, destructive, confirm first):
    ```bash
    source ~/.r2_backup_credentials
